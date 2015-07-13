@@ -18,7 +18,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *	@category		Library
- *	@package		CeusMedia_Database_PDO_PDO
+ *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2015 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -28,7 +28,7 @@ namespace CeusMedia\Database\PDO\Table;
 /**
  *	Table with column definition and indices.
  *	@category		Library
- *	@package		CeusMedia_Database_PDO_PDO
+ *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2015 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
