@@ -88,25 +88,24 @@ class Reader
 	{
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $conditions ? ' WHERE '.$conditions : '';
-		$query	= 'SELECT COUNT(`'.$this->primaryKey.'`) as count FROM '.$this->getTableName().$conditions;
-		$result	= $this->dbc->query( $query );
-		$count	= $result->fetch( $this->getFetchMode() );
-		switch( $this->fetchMode )
-		{
-			case \PDO::FETCH_NUM:
-			case \PDO::FETCH_BOTH:
-				return (int) $count[0];
-			case \PDO::FETCH_INTO:
-			case \PDO::FETCH_LAZY:
-			case \PDO::FETCH_OBJ:
-			case \PDO::FETCH_SERIALIZE:
-				return (int) $count->count;
-			case \PDO::FETCH_ASSOC:
-			case \PDO::FETCH_NAMED:
-				return (int) $count['count'];
-			default:
-				throw new \RuntimeException( 'Unsupported fetch mode' );
-		}
+		$query	= 'SELECT COUNT(`%s`) as count FROM %s%s';
+		$query	= sprintf( $query, $this->primaryKey, $this->getTableName(), $conditions );
+		return $this->dbc->query( $query )->fetch( \PDO::FETCH_OBJ )->count;
+	}
+
+	/**
+	 *	Returns count of all entries of this large table (containing many entries) covered by conditions.
+	 *	Attention: The returned number may be inaccurat, but this is much faster.
+	 *	@access		public
+	 *	@param		array		$conditions		Map of columns and values to filter by
+	 *	@return		integer
+	 */
+	public function countFast( $conditions = array() )
+	{
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
+		$conditions	= $conditions ? ' WHERE '.$conditions : '';
+		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
+		return $this->dbc->query( $query )->fetch( \PDO::FETCH_OBJ )->rows;
 	}
 
 	/**
@@ -452,16 +451,24 @@ class Reader
 
 	protected function realizeConditionQueryPart( $column, $value, $maskColumn = TRUE )
 	{
-		$pattern	= '/^(<=|>=|<|>|!=)(.+)/';
+		$patternOperators	= '/^(<=|>=|<|>|!=)(.+)/';
+		$patternBetween		= '/^(><|!><)([0-9]+)&([0-9]+)$/';
 		if( preg_match( '/^%/', $value ) || preg_match( '/%$/', $value ) )
 		{
 			$operation	= ' LIKE ';
 			$value		= $this->secureValue( $value );
 		}
-		else if( preg_match( $pattern, $value, $result ) )
+		else if( preg_match( $patternBetween, trim( $value ), $result ) )
 		{
 			$matches	= array();
-			preg_match_all( $pattern, $value, $matches );
+			preg_match_all( $patternBetween, $value, $matches );
+			$operation	= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
+			$value		= $this->secureValue( $matches[2][0] ).' AND '.$this->secureValue( $matches[3][0] );
+		}
+		else if( preg_match( $patternOperators, $value, $result ) )
+		{
+			$matches	= array();
+			preg_match_all( $patternOperators, $value, $matches );
 			$operation	= ' '.$matches[1][0].' ';
 			$value		= $this->secureValue( $matches[2][0] );
 		}
@@ -471,7 +478,7 @@ class Reader
 				$operation	= ' ';
 			else if( $value === NULL )
 			{
-				$operation	= ' is ';
+				$operation	= ' IS ';
 				$value		= 'NULL';
 			}
 			else
