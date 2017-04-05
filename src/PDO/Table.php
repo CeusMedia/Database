@@ -440,6 +440,7 @@ abstract class Table{
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
 
+		$number	= 0;
 		$rows	= $this->table->get( FALSE );
 		if( count( $rows ) ){
 			$number	= $this->table->delete();
