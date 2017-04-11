@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<config>
+
+	<!--  PROJECT(S)  -->  
+	<project>
+		<path>src/</path>
+		<extension>php</extension>
+		<ignore type="file">/^(_|[a-z])/</ignore>
+		<ignore type="folder"></ignore>
+		<category by="default">Library</category>
+		<package by="default">CeusMedia_Database</package>
+	</project>
+<!--	<project>
+		<path>vendor/ceus-media/common/src/</path>
+		<extension>php</extension>
+		<ignore type="file">/^(_|[a-z])/</ignore>
+		<ignore type="folder"></ignore>
+		<category by="default">Library</category>
+		<package by="default">CeusMedia_Common</package>
+	</project>-->
+
+	<!--  READER SETTINGS  -->  
+	<reader>
+		<plugin>Statistics</plugin>
+		<plugin>Unicode</plugin>
+		<plugin>Defaults</plugin>
+		<plugin>Relations</plugin>
+		<plugin>Primitives</plugin>
+		<plugin>Search</plugin>
+	</reader>
+
+	<!--  BUILDER(S) -->  
+	<builder format="HTML" theme="Default-SilverFire">
+		<path type="target">doc/API/</path>
+		<path type="documents">doc/</path>
+		<title version="0.2">CeusMedia::Database</title>
+		<author email="christian.wuerker@ceusmedia.de">Christian Würker</author>
+		<company url="http://ceusmedia.de/">CeuS Media</company>
+<!--		<logo href="https://github.com/CeusMedia/Common" title="CeusMedia/Common @ GitHub">logo/construction.png</logo>-->
+		<language timezone="Europe/Berlin">en</language>
+		<option name="showSourceCode">1</option>
+		<plugin>Home</plugin>
+		<plugin>ClassList</plugin>
+		<plugin>Search</plugin>
+		<plugin>About</plugin>
+		<plugin>Installation</plugin>
+		<plugin>History</plugin>
+		<plugin>Changes</plugin>
+		<plugin>Deprecations</plugin>
+		<plugin>Todos</plugin>
+		<plugin>Bugs</plugin>
+		<plugin>ParseErrors</plugin>
+		<plugin>Statistics</plugin>
+		<plugin>UnusedVariables</plugin>
+		<plugin>MethodOrder</plugin>
+		<plugin>MethodAccess</plugin>
+		<plugin>License</plugin>
+		<plugin>DocHints</plugin>
+	</builder>
+
+	<!--  GENERAL SETTINGS  -->  
+	<creator timeLimit="60">
+		<limit name="time">60</limit>
+		<path name="temp">/tmp/</path>
+		<path name="log">/var/log/</path>
+		<file name="serial">DocCreator.doc.serial</file>
+		<file name="archive">DocCreator.doc.serial.gz</file>
+		<file name="errors">docCreatorErrors.log</file>
+		<skip parser="FALSE" creator="FALSE" info="FALSE" resources="FALSE"/>
+		<verbose general="TRUE" skip="TRUE" config="FALSE" info="TRUE" trace="FALSE"/>
+		<mail></mail>
+	</creator>
+
+</config>
