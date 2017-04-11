@@ -34,8 +34,7 @@ namespace CeusMedia\Database\PDO\Table;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Reader
-{
+class Reader{
 	/**	@var	BaseConnection	$dbc				Database connection resource object */
 	protected $dbc;
 	/**	@var	array			$columns			List of table columns */
@@ -66,8 +65,7 @@ class Reader
 	 *	@param		int			$focus			Focused primary key on start up
 	 *	@return		void
 	 */
-	public function __construct( $dbc, $tableName, $columns, $primaryKey, $focus = NULL )
-	{
+	public function __construct( $dbc, $tableName, $columns, $primaryKey, $focus = NULL ){
 		$this->setDbConnection( $dbc );
 		$this->setTableName( $tableName );
 		$this->setColumns( $columns );
@@ -100,8 +98,7 @@ class Reader
 	 *	@param		array		$conditions		Map of columns and values to filter by
 	 *	@return		integer
 	 */
-	public function countFast( $conditions = array() )
-	{
+	public function countFast( $conditions = array() ){
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $conditions ? ' WHERE '.$conditions : '';
 		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
@@ -114,8 +111,7 @@ class Reader
 	 *	@param		bool		$primaryOnly		Flag: delete focus on primary key only
 	 *	@return		bool
 	 */
-	public function defocus( $primaryOnly = FALSE )
-	{
+	public function defocus( $primaryOnly = FALSE ){
 		if( !$this->focusedIndices )
 			return FALSE;
 		if( $primaryOnly )
@@ -140,8 +136,7 @@ class Reader
 	 *	@param		array		$havings		List of conditions to apply after grouping
 	 *	@return		array		List of fetched table rows
 	 */
-	public function find( $columns = array(), $conditions = array(), $orders = array(), $limits = array(), $groupings = array(), $havings = array() )
-	{
+	public function find( $columns = array(), $conditions = array(), $orders = array(), $limits = array(), $groupings = array(), $havings = array() ){
 		$this->validateColumns( $columns );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );					//  render WHERE clause if needed, uncursored, allow functions
 		$conditions = $conditions ? ' WHERE '.$conditions : '';
@@ -158,8 +153,7 @@ class Reader
 		return array();
 	}
 
-	public function findWhereIn( $columns, $column, $values, $orders = array(), $limits = array() )
-	{
+	public function findWhereIn( $columns, $column, $values, $orders = array(), $limits = array() ){
 		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
 			$columns	= array();																	//  otherwise use empty array
 		$this->validateColumns( $columns );
@@ -179,8 +173,7 @@ class Reader
 		return array();
 	}
 
-	public function findWhereInAnd( $columns, $column, $values, $conditions = array(), $orders = array(), $limits = array() )
-	{
+	public function findWhereInAnd( $columns, $column, $values, $conditions = array(), $orders = array(), $limits = array() ){
 		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
 			$columns	= array();																	//  otherwise use empty array
 		$this->validateColumns( $columns );
@@ -210,8 +203,7 @@ class Reader
 	 *	@param		int			$value			Index to focus on
 	 *	@return		void
 	 */
-	public function focusIndex( $column, $value )
-	{
+	public function focusIndex( $column, $value ){
 		if( !in_array( $column, $this->indices ) && $column != $this->primaryKey )				//  check column name
 			throw new \InvalidArgumentException( 'Column "'.$column.'" is neither an index nor primary key and cannot be focused' );
 		$this->focusedIndices[$column] = $value;													//  set Focus
@@ -224,8 +216,7 @@ class Reader
 	 *	@param		bool		$clearIndices	Flag: clear all previously focuses indices
 	 *	@return		void
 	 */
-	public function focusPrimary( $id, $clearIndices = TRUE )
-	{
+	public function focusPrimary( $id, $clearIndices = TRUE ){
 		if( $clearIndices )
 			$this->focusedIndices	= array();
 		$this->focusedIndices[$this->primaryKey] = $id;
@@ -239,14 +230,13 @@ class Reader
 	 *	@param		array	$limits		Array of offset and limit
 	 *	@return		array
 	 */
-	public function get( $first = TRUE, $orders = array(), $limits = array() )
-	{
+	public function get( $first = TRUE, $orders = array(), $limits = array() ){
 		$this->validateFocus();
 		$data = array();
 		$conditions	= $this->getConditionQuery( array(), TRUE, TRUE, FALSE );						//  render WHERE clause if needed, cursored, without functions
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
-		$columns	= "'". join( "', '", $this->columns )."'";
+		$columns	= "`". join( "`, `", $this->columns )."`";
 		$query = 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$orders.$limits;
 
 		$resultSet	= $this->dbc->query( $query );
@@ -263,8 +253,7 @@ class Reader
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getColumns()
-	{
+	public function getColumns(){
 		return $this->columns;
 	}
 
@@ -276,13 +265,10 @@ class Reader
 	 *	@param		bool		$useIndices		Flag: use focused indices
 	 *	@return		string
 	 */
-	protected function getConditionQuery( $conditions, $usePrimary = TRUE, $useIndices = TRUE, $allowFunctions = FALSE )
-	{
+	protected function getConditionQuery( $conditions, $usePrimary = TRUE, $useIndices = TRUE, $allowFunctions = FALSE ){
 		$columnConditions = array();
-		foreach( $this->columns as $column )														//  iterate all columns
-		{
-			if( isset( $conditions[$column] ) )														//  if condition given
-			{
+		foreach( $this->columns as $column ){														//  iterate all columns
+			if( isset( $conditions[$column] ) ){														//  if condition given
 				$columnConditions[$column] = $conditions[$column];									//  note condition pair
 				unset( $conditions[$column] );
 			}
@@ -292,13 +278,11 @@ class Reader
 			if( preg_match( "/^[a-z]+\(.+\)$/i", $key ) )											//  column key is a aggregate function
 				$functionConditions[$key]	= $value;
 
-		if( $usePrimary && $this->isFocused( $this->primaryKey ) )									//  if using primary key & is focused primary
-		{
+		if( $usePrimary && $this->isFocused( $this->primaryKey ) ){									//  if using primary key & is focused primary
 			if( !array_key_exists( $this->primaryKey, $columnConditions ) )							//  if primary key is not already in conditions
 				$columnConditions = $this->getFocus();												//  note primary key pair
 		}
-		if( $useIndices && count( $this->focusedIndices ) )											//  if using indices
-		{
+		if( $useIndices && count( $this->focusedIndices ) ){											//  if using indices
 			foreach( $this->focusedIndices as $index => $value )									//  iterate focused indices
 				if( $index != $this->primaryKey )													//  skip primary key
 					if( !array_key_exists( $index, $columnConditions ) )							//  if index column is not already in conditions
@@ -307,10 +291,8 @@ class Reader
 
 		$conditions = array();																		//  restart with fresh conditions array
 
-		foreach( $columnConditions as $column => $value )											//  iterate noted column conditions
-		{
-			if( is_array( $value ) )
-			{
+		foreach( $columnConditions as $column => $value ){											//  iterate noted column conditions
+			if( is_array( $value ) ){
 				foreach( $value as $nr => $part )
 					$value[$nr]	= $this->realizeConditionQueryPart( $column, $part );
 				$part	= '('.implode( ' OR ', $value ).')';
@@ -333,10 +315,9 @@ class Reader
 	/**
 	 *	Returns reference the database connection.
 	 *	@access		public
-	 *	@return		Object
+	 *	@return		object
 	 */
-	public function & getDBConnection()
-	{
+	public function getDBConnection(){
 		return $this->dbc;
 	}
 
@@ -345,8 +326,7 @@ class Reader
 	 *	@access		public
 	 *	@return		int			$fetchMode		Currently set fetch mode
 	 */
-	protected function getFetchMode()
-	{
+	protected function getFetchMode(){
 		return $this->fetchMode;
 	}
 
@@ -355,8 +335,7 @@ class Reader
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getFocus()
-	{
+	public function getFocus(){
 		return $this->focusedIndices;
 	}
 
@@ -365,8 +344,7 @@ class Reader
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getIndices()
-	{
+	public function getIndices(){
 		return $this->indices;
 	}
 
@@ -375,8 +353,7 @@ class Reader
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getLastQuery()
-	{
+	public function getLastQuery(){
 		return $this->dbc->lastQuery;
 	}
 
@@ -386,8 +363,7 @@ class Reader
 	 *	@param		array		$limits			Array of Offset and Limit
 	 *	@return		string
 	 */
-	protected function getLimitCondition( $limits = array() )
-	{
+	protected function getLimitCondition( $limits = array() ){
 		if( !is_array( $limits ) )
 			return;
 		$limit		= !isset( $limits[1] ) ? 0 : abs( $limits[1] );
@@ -402,8 +378,7 @@ class Reader
 	 *	@param		array		$orders			Associative Array with Orders
 	 *	@return		string
 	 */
-	protected function getOrderCondition( $orders = array() )
-	{
+	protected function getOrderCondition( $orders = array() ){
 		$order	= '';
 		if( is_array( $orders ) && count( $orders ) )
 		{
@@ -420,8 +395,7 @@ class Reader
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getPrimaryKey()
-	{
+	public function getPrimaryKey(){
 		return $this->primaryKey;
 	}
 
@@ -430,8 +404,7 @@ class Reader
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getTableName()
-	{
+	public function getTableName(){
 		return $this->tableName;
 	}
 
@@ -440,8 +413,7 @@ class Reader
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function isFocused( $index = NULL )
-	{
+	public function isFocused( $index = NULL ){
 		if( !count( $this->focusedIndices ) )
 			return FALSE;
 		if( $index && !array_key_exists( $index, $this->focusedIndices ) )
@@ -449,40 +421,33 @@ class Reader
 		return TRUE;
 	}
 
-	protected function realizeConditionQueryPart( $column, $value, $maskColumn = TRUE )
-	{
+	protected function realizeConditionQueryPart( $column, $value, $maskColumn = TRUE ){
 		$patternOperators	= '/^(<=|>=|<|>|!=)(.+)/';
 		$patternBetween		= '/^(><|!><)([0-9]+)&([0-9]+)$/';
-		if( preg_match( '/^%/', $value ) || preg_match( '/%$/', $value ) )
-		{
+		if( preg_match( '/^%/', $value ) || preg_match( '/%$/', $value ) ){
 			$operation	= ' LIKE ';
 			$value		= $this->secureValue( $value );
 		}
-		else if( preg_match( $patternBetween, trim( $value ), $result ) )
-		{
+		else if( preg_match( $patternBetween, trim( $value ), $result ) ){
 			$matches	= array();
 			preg_match_all( $patternBetween, $value, $matches );
 			$operation	= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
 			$value		= $this->secureValue( $matches[2][0] ).' AND '.$this->secureValue( $matches[3][0] );
 		}
-		else if( preg_match( $patternOperators, $value, $result ) )
-		{
+		else if( preg_match( $patternOperators, $value, $result ) ){
 			$matches	= array();
 			preg_match_all( $patternOperators, $value, $matches );
 			$operation	= ' '.$matches[1][0].' ';
 			$value		= $this->secureValue( $matches[2][0] );
 		}
-		else
-		{
+		else{
 			if( strtolower( $value ) == 'is null' || strtolower( $value ) == 'is not null')
 				$operation	= ' ';
-			else if( $value === NULL )
-			{
+			else if( $value === NULL ){
 				$operation	= ' IS ';
 				$value		= 'NULL';
 			}
-			else
-			{
+			else{
 				$operation	= ' = ';
 				$value		= $this->secureValue( $value );
 			}
@@ -497,8 +462,7 @@ class Reader
 	 *	@param		string		$value		String to be secured
 	 *	@return		string
 	 */
-	protected function secureValue( $value )
-	{
+	protected function secureValue( $value ){
 #		if( !ini_get( 'magic_quotes_gpc' ) )
 #			$value = addslashes( $value );
 #		$value	= htmlentities( $value );
@@ -515,8 +479,7 @@ class Reader
 	 *	@return		void
 	 *	@throws		Exception
 	 */
-	public function setColumns( $columns )
-	{
+	public function setColumns( $columns ){
 		if( !( is_array( $columns ) && count( $columns ) ) )
 			throw new \InvalidArgumentException( 'Column array must not be empty' );
 		$this->columns = $columns;
@@ -528,8 +491,7 @@ class Reader
 	 *	@param		PDO		$dbc		Database connection resource object
 	 *	@return		void
 	 */
-	public function setDbConnection( $dbc )
-	{
+	public function setDbConnection( $dbc ){
 		if( !is_object( $dbc ) )
 			throw new \InvalidArgumentException( 'Database connection resource must be an object' );
 		if( !is_a( $dbc, 'PDO' ) )
@@ -614,8 +576,7 @@ class Reader
 	 *	@throws		RuntimeException
 	 *	@return		void
 	 */
-	protected function validateFocus()
-	{
+	protected function validateFocus(){
 		if( !$this->isFocused() )
 			throw new \RuntimeException( 'No Primary Key or Index focused for Table "'.$this->tableName.'"' );
 	}

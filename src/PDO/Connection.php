@@ -61,6 +61,7 @@ class Connection extends \PDO{
 	 *	@see		http://php.net/manual/en/pdo.drivers.php
 	 */
 	public function __construct( $dsn, $username = NULL, $password = NULL, $driverOptions = array() ){
+		$a		= 1;
 		$options	= $driverOptions + self::$defaultOptions;										//  extend given options by default options
 		parent::__construct( $dsn, $username, $password, $options );
 		$this->driver	= $this->getAttribute( \PDO::ATTR_DRIVER_NAME );							//  note name of used driver
