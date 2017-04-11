@@ -34,7 +34,7 @@ namespace CeusMedia\Database\OSQL\Query;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class CMM_OSQL_Query_Update extends \CeusMedia\Database\OSQL\Query\Abstract{
+class Update extends \CeusMedia\Database\OSQL\Query\Abstract{
 
 	protected $conditions	= array();
 	protected $fields		= array();

@@ -34,7 +34,7 @@ namespace CeusMedia\Database\OSQL;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Connection extends Database_PDO_Connection{
+class Connection extends \CeusMedia\Database\PDO\Connection{
 
 	public function select( $fields = NULL ){
 		return new \CeusMedia\Database\OSQL\Query\Select( $fields );
