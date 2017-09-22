@@ -1,6 +1,5 @@
 {
   "name": "ceus-media/database",
-  "version": "0.1",
   "license": [
     "GPL-3.0+"
   ],
@@ -20,7 +19,7 @@
   "require": {
     "php": "^5.3 | ^7",
     "ceus-media/common": "^0.8",
-    "ceus-media/cache": "dev-master"
+    "ceus-media/cache": "^0"
   },
   "require-dev": {
     "ceus-media/doc-creator": "^0.9"
