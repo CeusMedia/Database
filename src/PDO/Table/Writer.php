@@ -82,7 +82,7 @@ class Writer extends Reader{
 			$value = $data[$column];
 			if( $stripTags )
 				$value = strip_tags( $value );
-			$columns[$column]	= '`'.$column.'`';
+			$columns[$column]	= $column;
 			$values[$column]	= $this->secureValue( $value );
 		}
 		if( $this->isFocused() ){																	//  add focused indices to data
@@ -91,11 +91,11 @@ class Writer extends Reader{
 					continue;
 				if( $index == $this->primaryKey )													//  skip primary key
 					continue;
-				$columns[$index]	= '`'.$index.'`';												//  add key
+				$columns[$index]	= $index;														//  add key
 				$values[$index]		= $this->secureValue( $value );									//  add value
 			}
 		}
-		$columns	= implode( ', ', array_values( $columns ) );
+		$columns	= $this->getColumnEnumeration( $columns );										//  get enumeration of masked column names
 		$values		= implode( ', ', array_values( $values ) );
 		$query		= 'INSERT INTO '.$this->getTableName().' ('.$columns.') VALUES ('.$values.')';
 		$this->dbc->exec( $query );
