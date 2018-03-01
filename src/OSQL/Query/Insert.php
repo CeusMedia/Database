@@ -20,7 +20,7 @@
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2015 Christian Würker
+ *	@copyright		2010-2018 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -29,12 +29,14 @@ namespace CeusMedia\Database\OSQL\Query;
  *	Builder for INSERT statements.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
+ *	@extends		\CeusMedia\Database\OSQL\QueryAbstract
+ *	@implements		\CeusMedia\Database\OSQL\QueryInterface
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2015 Christian Würker
+ *	@copyright		2010-2018 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Insert extends \CeusMedia\Database\OSQL\Query\Abstract{
+class Insert extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedia\Database\OSQL\QueryInterface{
 	protected $fields;
 	protected $table		= NULL;
 

@@ -34,6 +34,7 @@ namespace CeusMedia\Database\OSQL;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-Interface Query{
+Interface QueryInterface{
+	public function render();
 }
 ?>
