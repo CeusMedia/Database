@@ -40,15 +40,14 @@ Existing database tables can be declared as tables:
 
 ```php
 class MyFirstTable extends \CeusMedia\Database\PDO\Table{
-	protected $name				= "my_first_table";
-	protected $columns			= array(
+	protected $name			= "my_first_table";
+	protected $columns		= array(
 		'id',
 		'maybeSomeForeignId',
 		'content',
-		'timestamp',
 	);
 	protected $primaryKey		= 'id';
-	protected $indices			= array(
+	protected $indices		= array(
 		'maybeSomeForeignId',
 	);
 	protected $fetchMode		= \PDO::FETCH_OBJ;
@@ -97,10 +96,11 @@ $someEntries	= $table->getAllByIndex( 'maybeSomeForeignId', 123 );
 A group of entries, filtered by several foreign keys:
 
 ```php
-$someEntries	= $table->getAllByIndices( array(
+$indices		= array(
 	'maybeSomeForeignId'	=> 123,
 	'notExistingKey'		=> 'will result in an exception',
 );
+$someEntries	= $table->getAllByIndices( $indices );
 ```
 To get **all entries**, call:
 
@@ -123,15 +123,106 @@ Orders are pairs of columns and directions, like:
 ```php
 $orders	= array(
 	'maybeSomeForeignId'	=> 'DESC',
-	'content'				=> 'ASC',
+	'content'		=> 'ASC',
 );
 ```
 There are more parameters possible for each of this indexing methods, which allow:
 
-- $fields: restricting columns in result set
+- fields: restricting columns in result set
 - grouping: apply GROUP BY
 - having: apply HAVING
 
+#### Counting
+
+To count entries by a foreign key:
+
+```php
+$number	= $table->countByIndex( 'maybeSomeForeignId', 123 );
+```
+
+To count entries, filtered by several foreign keys:
+
+```php
+$number	= $table->countByIndices( array(
+	'maybeSomeForeignId'	=> 123,
+	'notExistingKey'		=> 'will result in an exception',
+);
+```
+To get **all entries**, call:
+
+```php
+$number	= $table->count();
+```
+which may be bad in scaling, so reduce the result set by defining conditions:
+
+```php
+$Conditions	= array(
+	'maybeSomeForeignId'	=> 123,
+	'content'		=> '%test%',
+);
+$number	= $table->count( $conditions );
+```
+**Hint:** Counting having really large MySQL tables may be slow.
+There is a method to count in large tables in a faster way. You will find it.
+
+#### Adding an entry
+
+```php
+$data		= array(
+	'maybeSomeForeignId'	=> 123,
+	'content'				=> 'Second entry.',
+);
+$entryId	= $table->add( $data );
+```
+**Attention:** For security reasons, all HTML tags will be striped. Set second parameter to FALSE to avoid that, if needed. Make sure to strip HTML tags of none-HTML columns manually!
+
+
+#### Updating an entry
+
+```php
+$primaryKey	= 2;
+$data		= array(
+	'maybeSomeForeignId'	=> 124,
+	'content'				=> 'Second entry - changed.',
+);
+$result	= $table->edit( $primaryKey, $data );
+```
+where the result will be the number of changed entries.
+
+**Attention:** For security reasons, all HTML tags will be striped. Set third parameter to FALSE to avoid that, if needed. Make sure to strip HTML tags of none-HTML columns manually!
+
+#### Updating several entries
+
+```php
+$indices	= array(
+	'maybeSomeForeignId'	=> 123,
+);
+$data		= array(
+	'maybeSomeForeignId'	=> 124,
+);
+$result	= $table->editByIndices( $indices, $data );
+```
+where the result will be the number of changed entries.
+
+**Attention:** For security reasons, all HTML tags will be striped. Set third parameter to FALSE to avoid that, if needed. Make sure to strip HTML tags of none-HTML columns manually!
+
+#### Removing an entry
+
+```php
+$primaryKey	= 2;
+$result	= $table->remove( $primaryKey );
+```
+where the result will be the number of removed entries.
+
+#### Removing several entry
+
+```php
+$indices	= array(
+	'maybeSomeForeignId'	=> 123,
+);
+$result	= $table->removeByIndices( $indices );
+```
+where the result will be the number of removed entries.
 
 #### Change fetch mode
 
