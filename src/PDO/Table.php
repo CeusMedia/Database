@@ -211,9 +211,17 @@ abstract class Table{
 		return $result;
 	}
 
-	public function editByIndices( $indices, $data ){
+	/**
+	 *	Modifies data of several rows by indices.
+	 *	@access		public
+	 *	@param		array			$indices		Map of Index Keys and Values
+	 *	@param		array			$data			Data to edit
+	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
+	 *	@return		integer			Number of changed rows
+	 */
+	public function editByIndices( $indices, $data, $stripTags = TRUE ){
 		$indices	= $this->checkIndices( $indices, TRUE, TRUE );
-		return $this->table->updateByConditions( $data, $indices );
+		return $this->table->updateByConditions( $data, $indices, $stripTags );
 	}
 
 	/**
