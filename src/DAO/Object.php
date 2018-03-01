@@ -2,7 +2,7 @@
 /**
  *	...
  *
- *	Copyright (c) 2010-2015 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2018 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  *	@category		Library
  *	@package		CeusMedia_Database_DAO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2015 Christian Würker
+ *	@copyright		2010-2018 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -31,42 +31,36 @@ namespace CeusMedia\Database\DAO;
  *	@category		Library
  *	@package		CeusMedia_Database_DAO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2015 Christian Würker
+ *	@copyright		2010-2018 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Object
-{
+class Object{
 	protected $table		= NULL;
 	protected $primaryKey	= NULL;
 
-	public function __construct( \CeusMedia\Database\DAO\Table $table )
-	{
+	public function __construct( \CeusMedia\Database\DAO\Table $table ){
 		$this->table	= $table;
 	}
 
-	public function __get( $key )
-	{
+	public function __get( $key ){
 		throw new \Exception( get_class( $this ).': Field "'.$key.'" is not available' );
 	}
 
-	public function __set( $key, $value )
-	{
+	public function __set( $key, $value ){
 		if( !in_array( $key, $this->table->getFieldNames() ) )
 			throw new \Exception( get_class( $this ).': Field "'.$key.'" is not available' );
 		$this->$key	= $value;
 	}
 
-	public function getFieldNames()
-	{
+	public function getFieldNames(){
 		return $this->table->getFieldNames();
 	}
 
 	/**
 	 *	@todo		Should this be public?
 	 */
-	public function getTable()
-	{
+	public function getTable(){
 		return $this->table;
 	}
 
@@ -76,18 +70,15 @@ class Object
 	 *	@param		DataAccess_Table	$table		Database Access Table
 	 *	@return		void
 	 */
-	public function setTable( \CeusMedia\Database\DAO\Table $table )
-	{
+	public function setTable( \CeusMedia\Database\DAO\Table $table ){
 		$this->table	= $table;
 	}
 
-	public function updateField( $key, $value )
-	{
+	public function updateField( $key, $value ){
 		return $this->table->updateById( $this->table->getPrimaryKey(), array( $key => $value ) );
 	}
 
-	public function updateFields( $fields )
-	{
+	public function updateFields( $fields ){
 		return $this->table->updateById( $this->table->getPrimaryKey(), $fields );
 	}
 }
