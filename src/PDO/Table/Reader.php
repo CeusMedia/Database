@@ -269,7 +269,7 @@ class Reader{
 	protected function getColumnEnumeration( $columns ){
 		$list	= array();
 		foreach( $columns as $column )
-			$list[]	= '`'.$column.'`';
+			$list[]	= $column === '*' ? $column : '`'.$column.'`';
 		return implode( ', ', $list );
 	}
 
