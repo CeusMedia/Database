@@ -25,6 +25,10 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO;
+
+use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\Table\Writer as TableWriter;
+
 /**
  *	Abstract database table.
  *	@category		Library
@@ -37,37 +41,47 @@ namespace CeusMedia\Database\PDO;
  */
 abstract class Table{
 
-	/**	@var		DB_PDO_Connection				$dbc			PDO database connection object */
+	/**	@var	Connection				$dbc			PDO database connection object */
 	protected $dbc;
-	/**	@var		string							$name			Name of Database Table without Prefix */
-	protected $name									= "";
-	/**	@var		array							$columns		List of Database Table Columns */
-	protected $columns								= array();
-	/**	@var		array							$name			List of foreign Keys of Database Table */
-	protected $indices								= array();
-	/**	@var		string							$primaryKey		Primary Key of Database Table */
-	protected $primaryKey							= "";
-	/**	@var		Database_PDO_Table_Writer		$table			Database Table Writer Object for reading from and writing to Database Table */
+	/**	@var	string					$name			Name of Database Table without Prefix */
+	protected $name						= "";
+	/**	@var	array					$columns		List of Database Table Columns */
+	protected $columns					= array();
+	/**	@var	array					$name			List of foreign Keys of Database Table */
+	protected $indices					= array();
+	/**	@var	string					$primaryKey		Primary Key of Database Table */
+	protected $primaryKey				= "";
+	/**	@var	TableWriter				$table			Database Table Writer Object for reading from and writing to Database Table */
 	protected $table;
-	/**	@var		string							$prefix			Database Table Prefix */
+	/**	@var	string					$prefix			Database Table Prefix */
 	protected $prefix;
-	/**	@var		ADT_List_Dictionary				$cache			Model data cache */
+	/**	@var	ADT_List_Dictionary		$cache			Model data cache */
 	protected $cache;
-	/**	@var		integer							$fetchMode		PDO fetch mode */
-	protected $fetchMode;
+	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
+	protected $fetchMode				= \PDO::FETCH_OBJ;
 
-	public static $cacheClass						= 'ADT_List_Dictionary';
+	public static $cacheClass			= '\\ADT_List_Dictionary';
 
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		\CeusMedia\Database\PDO\Connection	$dbc		PDO database connection object
-	 *	@param		string				$prefix		Table name prefix
-	 *	@param		integer				$id			ID to focus on
+	 *	@param		Connection		$dbc		PDO database connection object
+	 *	@param		string			$prefix		Table name prefix
+	 *	@param		integer			$id			ID to focus on
 	 *	@return		void
 	 */
-	public function __construct( \CeusMedia\Database\PDO\Connection $dbc, $prefix = NULL, $id = NULL ){
+	public function __construct( Connection $dbc, $prefix = NULL, $id = NULL ){
+		$this->checkTableSetup();
 		$this->setDatabase( $dbc );
+	}
+
+	private function checkTableSetup(){
+		if( !$this->name )
+			throw new \RuntimeException( 'No table name set' );
+		if( !$this->columns )
+			throw new \RuntimeException( 'No table columns set' );
+		if( !$this->columns )
+			throw new \RuntimeException( 'No table columns set' );
 	}
 
 	/**
@@ -93,9 +107,9 @@ abstract class Table{
 	 *	@param		string			$mandatory		Force a value, otherwise return NULL or throw exception in strict mode
 	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE or NULL
 	 *	@return		string|NULL		Trimmed Field name if found, NULL otherwise or exception in strict mode
-	 *	@throws		InvalidArgumentException		in strict mode if field is not a string and strict mode is on
-	 *	@throws		InvalidArgumentException		in strict mode if field is empty but mandatory
-	 *	@throws		InvalidArgumentException		in strict mode if field is not a table column
+	 *	@throws		\InvalidArgumentException		in strict mode if field is not a string and strict mode is on
+	 *	@throws		\InvalidArgumentException		in strict mode if field is empty but mandatory
+	 *	@throws		\InvalidArgumentException		in strict mode if field is not a table column
 	 */
 	protected function checkField( $field, $mandatory = FALSE, $strict = TRUE ){
 		if( !is_string( $field ) ){
@@ -130,24 +144,36 @@ abstract class Table{
 	 *	@param		string			$indices		Map of Index Keys and Values
 	 *	@param		string			$mandatory		Force atleast one pair, otherwise return FALSE or throw exception in strict mode
 	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE
+	 *	@param		boolean			$withPrimaryKey	Flag: include table primary key within index list
 	 *	@return		array|boolean	Map if valid, FALSE otherwise or exceptions in strict mode
-	 *	@throws		InvalidArgumentException		in strict mode if field is not a string
-	 *	@throws		InvalidArgumentException		in strict mode if field is empty but mandatory
+	 *	@throws		\InvalidArgumentException		in strict mode if field is not a string
+	 *	@throws		\InvalidArgumentException		in strict mode if field is empty but mandatory
 	 */
-	protected function checkIndices( $indices, $mandatory = FALSE, $strict = TRUE ){
+	protected function checkIndices( $indices, $mandatory = FALSE, $strict = TRUE, $withPrimaryKey = FALSE ){
 		if( !is_array( $indices ) ){
 			if( !$strict )
 				return FALSE;
-			throw new InvalidArgumentException( 'Index map must be an array' );
+			throw new \InvalidArgumentException( 'Index map must be an array' );
 		}
 		if( !$indices ){
 			if( $mandatory ){
 				if( !$strict )
 					return FALSE;
-				throw new InvalidArgumentException( 'Index map must have atleast one pair' );
+				throw new \InvalidArgumentException( 'Index map must have atleast one pair' );
 			}
 		}
-		return $indices;
+
+		$list		= array();
+		$indexList	= $this->table->getIndices( $withPrimaryKey );
+		foreach( $indices as $index ){
+			if( !in_array( $index, $indexList ) ){
+				if( $strict )
+					throw \RangeException( 'Column "'.$index.'" is not an index' );
+				return FALSE;
+			}
+			$list[]	= $index;
+		}
+		return $list;
 	}
 
 	/**
@@ -277,13 +303,10 @@ abstract class Table{
 	 *	@return		array
 	 */
 	public function getAllByIndex( $key, $value, $orders = array(), $limits = array(), $fields = array(), $strict = FALSE ){
-		$this->table->focusIndex( $key, $value );
-		$data	= $this->table->get( FALSE, $orders, $limits );
-		$this->table->defocus();
-		if( $fields )
-			foreach( $data as $nr => $set )
-				$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
-		return $data;
+		if( !in_array( $key, $this>table->getIndices() ) )
+			throw new \DomainException( 'Requested column "'.$key.'" is not an index' );
+		$conditions	= array( $key => $value );
+		return $this->getAll( $conditions, $orders, $limits, $fields );
 	}
 
 	/**
@@ -319,7 +342,7 @@ abstract class Table{
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		mixed			Structure depending on fetch type, string if field selected, NULL if field selected and no entries
 	 *	@todo		change argument order: move fields to end
-	 *	@throws		InvalidArgumentException			If given fields list is neither a list nor a string
+	 *	@throws		\InvalidArgumentException			If given fields list is neither a list nor a string
 	 */
 	public function getByIndex( $key, $value, $orders = array(), $fields = array(), $strict = FALSE ){
 		if( is_string( $fields ) )
@@ -342,7 +365,7 @@ abstract class Table{
 	 *	@param		string			$fields			List of fields or one field to return from result
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		mixed			Structure depending on fetch type, string if field selected, NULL if field selected and no entries
-	 *	@throws		InvalidArgumentException			If given fields list is neither a list nor a string
+	 *	@throws		\InvalidArgumentException			If given fields list is neither a list nor a string
 	 *	@todo  		change default value of argument 'strict' to TRUE
 	 */
 	public function getByIndices( $indices, $orders = array(), $fields = array(), $strict = FALSE ){
@@ -375,8 +398,11 @@ abstract class Table{
 	 *	@param		mixed			$result			Query result as array or object
 	 *	@param		array|string	$fields			List of fields or one field
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty
-	 *	@return		string|array|object			Structure depending on result and field list length
-	 *	@throws		InvalidArgumentException			If given fields list is neither a list nor a string
+	 *	@return		string|array|object				Structure depending on result and field list length
+	 *	@throws		\InvalidArgumentException		If given fields list is neither a list nor a string
+	 *	@throws		\RangeException					If given result list is empty
+	 *	@throws		\DomainException				If requested field is not a table column
+	 *	@throws		\RangeException					If requested field is not within result fields
 	 */
 	protected function getFieldsFromResult( $result, $fields = array(), $strict = TRUE ){
 		if( is_string( $fields ) )
@@ -385,7 +411,7 @@ abstract class Table{
 			throw new \InvalidArgumentException( 'Fields must be of array or string' );
 		if( !$result ){
 			if( $strict )
-				throw new \Exception( 'Result is empty' );
+				throw new \RangeException( 'Result is empty' );
 			if( count( $fields ) === 1 )
 				return NULL;
 			return array();
@@ -394,18 +420,18 @@ abstract class Table{
 			return $result;
 		foreach( $fields as $field )
 			if( !in_array( $field, $this->columns ) )
-				throw new \InvalidArgumentException( 'Field "'.$field.'" is not an existing column' );
+				throw new \DomainException( 'Field "'.$field.'" is not an existing column' );
 
 		if( count( $fields ) === 1 ){
 			switch( $this->fetchMode ){
 				case \PDO::FETCH_CLASS:
 				case \PDO::FETCH_OBJ:
 					if( !isset( $result->$field ) )
-						throw new \DomainException( 'Field "'.$field.'" is not an column of result set' );
+						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
 					return $result->$field;
 				default:
 					if( !isset( $result[$field] ) )
-						throw new \DomainException( 'Field "'.$field.'" is not an column of result set' );
+						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
 					return $result[$field];
 			}
 		}
@@ -415,7 +441,7 @@ abstract class Table{
 				$map	= (object) array();
 				foreach( $fields as $field ){
 					if( !isset( $result->$field ) )
-						throw new \DomainException( 'Field "'.$field.'" is not an column of result set' );
+						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
 					$map->$field	= $result->$field;
 				}
 				return $map;
@@ -423,7 +449,7 @@ abstract class Table{
 				$list	= array();
 				foreach( $fields as $field ){
 					if( !isset( $result[$field] ) )
-						throw new \DomainException( 'Field "'.$field.'" is not an column of result set' );
+						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
 					$list[$field]	= $result[$field];
 				}
 				return $list;
