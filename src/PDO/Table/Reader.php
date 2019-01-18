@@ -231,9 +231,11 @@ class Reader{
 	 *	@param		bool	$first		Extract first entry of result
 	 *	@param		array	$orders		Associative array of orders
 	 *	@param		array	$limits		Array of offset and limit
+	 *	@param		array	$fields		List of colummn, otherwise all
 	 *	@return		array
+	 *	@todo		implement using given fields
 	 */
-	public function get( $first = TRUE, $orders = array(), $limits = array() ){
+	public function get( $first = TRUE, $orders = array(), $limits = array(), $fields = array() ){
 		$this->validateFocus();
 		$data = array();
 		$conditions	= $this->getConditionQuery( array(), TRUE, TRUE, FALSE );						//  render WHERE clause if needed, cursored, without functions
@@ -356,12 +358,18 @@ class Reader{
 	}
 
 	/**
-	 *	Returns all Indices of this Table.
+	 *	Returns all Indices of this table.
+	 *	By default only indices meant to be foreign keys are returned.
+	 *	Setting paramter "withPrimaryKey" to TRUE will include primary key as well.
 	 *	@access		public
-	 *	@return		array
+	 *	@param		boolean		$withPrimaryKey			Flag: include primary key (default: FALSE)
+	 *	@return		array								List of table indices
 	 */
-	public function getIndices(){
-		return $this->indices;
+	public function getIndices( $withPrimaryKey = FALSE ){
+		$indices	= $this->indices;
+		if( $this->primaryKey && $withPrimaryKey )
+			array_shift( $indices, $this->primaryKey );
+		return $indices;
 	}
 
 	/**
