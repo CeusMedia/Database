@@ -149,7 +149,7 @@ class Connection extends \PDO{
 			return;
 //			throw $exception;
 		$info		= $exception->errorInfo;
-		$sqlError	= $info[2];
+		$sqlError	= isset( $info[2] ) ? $info[2] : NULL;
 		$sqlCode	= $info[1];
 		$pdoCode	= $info[0];
 		$message	= $exception->getMessage();
@@ -165,7 +165,7 @@ class Connection extends \PDO{
 		$note	= str_replace( "{statement}", $statement, $note );
 
 		error_log( $note, 3, $this->logFileErrors );
-		throw new \Exception_SQL( $info[2], $info[1], $info[0] );
+		throw new \Exception_SQL( $sqlError, $sqlCode, $pdoCode );
 	}
 
 	/**
