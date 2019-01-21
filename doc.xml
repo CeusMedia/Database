@@ -32,11 +32,11 @@
 	<!--  BUILDER(S) -->
 	<builder format="HTML" theme="Default-SilverFire">
 		<path type="target">doc/API/</path>
-		<path type="documents">doc/</path>
+		<path type="documents">doc/API/</path>
 		<title version="0.3.3">Database</title>
 		<author email="christian.wuerker@ceusmedia.de">Christian Würker</author>
 		<company url="http://ceusmedia.de/">CeuS Media</company>
-<!--		<logo href="https://github.com/CeusMedia/Common" title="CeusMedia/Common @ GitHub">logo/construction.png</logo>-->
+		<logo href="https://github.com/CeusMedia/Database" title="CeusMedia/Database @ GitHub">logo/icon-database-black.png</logo>
 		<language timezone="Europe/Berlin">en</language>
 		<option name="showSourceCode">1</option>
 		<plugin>Home</plugin>

@@ -1,0 +1,126 @@
+@font-face {
+	font-family: "Fira Sans";
+	src: url(../fonts/FiraSans/FiraSans-Regular.ttf);
+}
+
+body {
+	padding: 1em;
+	background-color: #FFF;
+	background-color: #DFDFDF;
+	font-family: "Fira Sans";
+	}
+div {
+	margin: 0px;
+	padding: 0px;
+	}
+
+#control {
+	}
+
+#control #header h1 {
+	margin: 15px 0 0 80px;
+	padding: 0;
+	font-size:1.8em;
+	font-weight: lighter;
+	line-height: 1em;
+	}
+#control #header small {
+	margin-left: 80px;
+	color: #777;
+	font-size: 0.9em;
+	}
+
+#control #header #logo {
+	position: absolute;
+	left: 20px;
+	top: 22px;
+	width: 60px;
+	height: 60px;
+	}
+
+
+
+#control ul li {
+	list-style: none;
+	}
+
+#control ul li a {
+	text-decoration: none;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	-o-text-overflow: ellipsis; /*für Opera*/
+	white-space: nowrap;
+/*	width: 100%;
+*/	}
+
+#control ul.links {
+	margin-left: 0.1em;
+	}
+
+#control ul.links>li>a.info {
+	display: block;
+	padding-left: 26px;
+	height: 20px;
+	background-image: url(../images/mini/box.png);
+	background-repeat: no-repeat;
+	background-position: 5px 2px;
+	outline: 0px;
+	}
+#control ul.links>li>a.info:hover {
+	color: #F00;
+	}
+#control ul.links>li>a.info:active,
+#control ul.links>li>a.info.current {
+	color: #000;
+	cursor: default;
+	}
+#control ul.links>li>a.info.current {
+	}
+
+
+#control ul.links>li>a.info.home {
+	background-image: url(../images/mini/icon_home.png);
+	}
+#control ul.links>li>a.info.classList {
+	background-image: url(../images/mini/table.png);
+	}
+#control ul.links>li>a.info.search {
+	background-image: url(../images/mini/page_find.png);
+	}
+#control ul.links>li>a.info.statistics {
+	background-image: url(../images/silk/chart_bar.png);
+	}
+#control ul.links>li>a.info.parseErrors {
+	background-image: url(../images/mini/action_stop.png);
+	}
+#control ul.links>li>a.info.about {
+	background-image: url(../images/mini/page_text.png);
+	}
+#control ul.links>li>a.info.history {
+	background-image: url(../images/mini/icon_history.png);
+	}
+#control ul.links>li>a.info.changes {
+	background-image: url(../images/mini/page_dynamic.png);
+	}
+#control ul.links>li>a.info.deprecations {
+	background-image: url(../images/mini/icon_alert.png);
+	}
+#control ul.links>li>a.info.installation {
+	background-image: url(../images/mini/page_settings.png);
+	}
+#control ul.links>li>a.info.todos {
+	background-image: url(../images/mini/note.png);
+	}
+#control ul.links>li>a.info.bugs {
+	background-image: url(../images/silk/bug.png);
+	}
+#control ul.links li a.info.licenses {
+	background-image: url(../images/mini/page_bookmark.png);
+	}
+#control ul.links>li>a.info.triggers {
+	background-image: url(../images/mini/action_go.png);
+	}
+
+#control ul.links>li>a.info.methodOrder {
+	background-image: url(../images/silk/spellcheck.png);
+	}

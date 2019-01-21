@@ -12,8 +12,12 @@ composer-update-dev:
 	composer update
 
 dev-doc-api: composer-install-dev
-	@test -f doc/API/search.html && rm -Rf doc/API || true
+	@test -d doc/API && rm -Rf doc/API || true
+	@mkdir doc/API
+	@cp README.md doc/API/readme.md
 	@php vendor/ceus-media/doc-creator/doc.php --config-file=doc.xml
+	@cp doc/.theme/images/icon-database-black.png doc/API/images/logo/
+	@cp doc/.theme/css/control.css doc/API/css/
 
 dev-doc-coverage: composer-install-dev
 	@rm -Rf doc/Coverage
