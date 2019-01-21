@@ -34,8 +34,9 @@ div {
 	position: absolute;
 	left: 20px;
 	top: 22px;
-	width: 60px;
-	height: 60px;
+	width: 55px;
+	height: 55px;
+	opacity: 0.6;
 	}
 
 
