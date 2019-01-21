@@ -10,8 +10,7 @@ class CeusMedia_Database_Test_PDO_TransactionTable extends \CeusMedia\Database\P
 	);
 	protected $primaryKey			= 'id';
 	protected $indices				= array(
-		'topic',
-		'label'
+		'topic'
 	);
 
 	protected $prefix;

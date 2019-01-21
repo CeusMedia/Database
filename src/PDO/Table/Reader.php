@@ -2,7 +2,7 @@
 /**
  *	Table with column definition and indices.
  *
- *	Copyright (c) 2007-2018 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2018 Christian Würker
+ *	@copyright		2007-2019 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -30,7 +30,7 @@ namespace CeusMedia\Database\PDO\Table;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2018 Christian Würker
+ *	@copyright		2007-2019 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -154,13 +154,16 @@ class Reader{
 		return array();
 	}
 
+	/**
+	 *	@throws		\DomainException			if column is not an index
+	 */
 	public function findWhereIn( $columns, $column, $values, $orders = array(), $limits = array() ){
 		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
 			$columns	= array();																	//  otherwise use empty array
 		$this->validateColumns( $columns );
 
 		if( $column != $this->getPrimaryKey() && !in_array( $column, $this->getIndices() ) )
-			throw new \InvalidArgumentException( 'Field of WHERE IN-statement must be an index' );
+			throw new \DomainException( 'Field of WHERE IN-statement must be an index' );
 
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
@@ -175,13 +178,16 @@ class Reader{
 		return array();
 	}
 
+	/**
+	 *	@throws		\RangeException			if column is not an index
+	 */
 	public function findWhereInAnd( $columns, $column, $values, $conditions = array(), $orders = array(), $limits = array() ){
 		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
 			$columns	= array();																	//  otherwise use empty array
 		$this->validateColumns( $columns );
 
 		if( $column != $this->getPrimaryKey() && !in_array( $column, $this->getIndices() ) )
-			throw new \InvalidArgumentException( 'Field of WHERE IN-statement must be an index' );
+			throw new \RangeException( 'Field of WHERE IN-statement must be an index' );
 
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );					//  render WHERE clause if needed, uncursored, allow functions
 		$orders		= $this->getOrderCondition( $orders );
@@ -205,10 +211,11 @@ class Reader{
 	 *	@param		string		$column			Index column name
 	 *	@param		int			$value			Index to focus on
 	 *	@return		void
+	 *	@throws		\DomainException			if given column is not a defined column
 	 */
 	public function focusIndex( $column, $value ){
 		if( !in_array( $column, $this->indices ) && $column != $this->primaryKey )				//  check column name
-			throw new \InvalidArgumentException( 'Column "'.$column.'" is neither an index nor primary key and cannot be focused' );
+			throw new \DomainException( 'Column "'.$column.'" is neither an index nor primary key and cannot be focused' );
 		$this->focusedIndices[$column] = $value;													//  set Focus
 	}
 
@@ -501,25 +508,30 @@ class Reader{
 	 *	@access		public
 	 *	@param		array		$columns	List of table columns
 	 *	@return		void
-	 *	@throws		Exception
+	 *	@throws		\InvalidArgumentException		If given fields list is not a list
+	 *	@throws		\RangeException					If given fields list is empty
 	 */
 	public function setColumns( $columns ){
+		if( !is_array( $columns ) )
+			throw new \InvalidArgumentException( 'Columns must be an array' );
 		if( !( is_array( $columns ) && count( $columns ) ) )
-			throw new \InvalidArgumentException( 'Column array must not be empty' );
+			throw new \RangeException( 'Column array must not be empty' );
 		$this->columns = $columns;
 	}
 
 	/**
 	 *	Setting a reference to a database connection.
 	 *	@access		public
-	 *	@param		PDO		$dbc		Database connection resource object
+	 *	@param		\PDO		$dbc		Database connection resource object
 	 *	@return		void
+	 *	@throws		\InvalidArgumentException	if given resource is not an object
+	 *	@throws		\RuntimeException			if given resource object is not instance of PDO
 	 */
 	public function setDbConnection( $dbc ){
 		if( !is_object( $dbc ) )
 			throw new \InvalidArgumentException( 'Database connection resource must be an object' );
 		if( !is_a( $dbc, 'PDO' ) )
-			throw new \InvalidArgumentException( 'Database connection resource must be a direct or inherited PDO object' );
+			throw new \RuntimeException( 'Database connection resource must be a direct or inherited PDO object' );
 		$this->dbc = $dbc;
 	}
 
@@ -541,15 +553,17 @@ class Reader{
 	 *	@access		public
 	 *	@param		array		$indices		List of table indices
 	 *	@return		bool
+	 *	@throws		\DomainException			if column in index list is not a column
+	 *	@throws		\DomainException			if column in index list is already known as primary key
 	 */
 	public function setIndices( $indices )
 	{
 		foreach( $indices as $index )
 		{
 			if( !in_array( $index, $this->columns ) )
-				throw new \InvalidArgumentException( 'Column "'.$index.'" is not existing in table "'.$this->tableName.'" and cannot be an index' );
+				throw new \DomainException( 'Column "'.$index.'" is not existing in table "'.$this->tableName.'" and cannot be an index' );
 			if( $index === $this->primaryKey )
-				throw new \InvalidArgumentException( 'Column "'.$index.'" is already primary key and cannot be an index' );
+				throw new \DomainException( 'Column "'.$index.'" is already primary key and cannot be an index' );
 		}
 		$this->indices	= $indices;
 		array_unique( $this->indices );
@@ -559,14 +573,16 @@ class Reader{
 	 *	Setting the name of the primary key.
 	 *	@access		public
 	 *	@param		string		$column		Pimary key column of this table
+	 *	@throws		\RangeException			If given column is empty
+	 *	@throws		\DomainException		If given column is not a defined column
 	 *	@return		void
 	 */
 	public function setPrimaryKey( $column )
 	{
 		if( !strlen( trim( $column ) ) )
-			throw new \InvalidArgumentException( 'Primary key column cannot be empty' );
+			throw new \RangeException( 'Primary key column cannot be empty' );
 		if( !in_array( $column, $this->columns ) )
-			throw new \InvalidArgumentException( 'Column "'.$column.'" is not existing and can not be primary key' );
+			throw new \DomainException( 'Column "'.$column.'" is not existing and can not be primary key' );
 		$this->primaryKey = $column;
 	}
 
@@ -575,11 +591,12 @@ class Reader{
 	 *	@access		public
 	 *	@param		string		$tableName		Name of this table
 	 *	@return		void
+	 *	@throws		\RangeException				If given table name is empty
 	 */
 	public function setTableName( $tableName )
 	{
 		if( !strlen( trim( $tableName ) ) )
-			throw new \InvalidArgumentException( 'Table name cannot be empty' );
+			throw new \RangeException( 'Table name cannot be empty' );
 		$this->tableName = $tableName;
 	}
 
@@ -597,7 +614,7 @@ class Reader{
 	/**
 	 *	Checks if a focus is set for following operation and throws an exception if not.
 	 *	@access		protected
-	 *	@throws		RuntimeException
+	 *	@throws		\RuntimeException
 	 *	@return		void
 	 */
 	protected function validateFocus(){
@@ -610,6 +627,8 @@ class Reader{
 	 *	@access		protected
 	 *	@param		mixed		$columns			String or array of column names to validate
 	 *	@return		void
+	 *	@throws		\InvalidArgumentException		if columns is neither a list of columns nor *
+	 *	@throws		\DomainException				if column is neither a defined column nor *
 	 */
 	protected function validateColumns( &$columns )
 	{
@@ -624,7 +643,7 @@ class Reader{
 			throw new \InvalidArgumentException( 'Column keys must be an array of column names, a column name string or "*"' );
 		foreach( $columns as $column )
 			if( $column != '*' && !in_array( $column, $this->columns ) )
-				throw new \InvalidArgumentException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
+				throw new \DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 	}
 }
 ?>

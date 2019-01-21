@@ -2,7 +2,7 @@
 /**
  *	Abstract database table.
  *
- *	Copyright (c) 2007-2018 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2018 Christian Würker
+ *	@copyright		2007-2019 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -35,7 +35,7 @@ use CeusMedia\Database\PDO\Table\Writer as TableWriter;
  *	@package		CeusMedia_Database_PDO
  *	@uses			\CeusMedia\Database\PDO\Table\Writer
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2018 Christian Würker
+ *	@copyright		2007-2019 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -108,8 +108,8 @@ abstract class Table{
 	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE or NULL
 	 *	@return		string|NULL		Trimmed Field name if found, NULL otherwise or exception in strict mode
 	 *	@throws		\InvalidArgumentException		in strict mode if field is not a string and strict mode is on
-	 *	@throws		\InvalidArgumentException		in strict mode if field is empty but mandatory
-	 *	@throws		\InvalidArgumentException		in strict mode if field is not a table column
+	 *	@throws		\RangeException					in strict mode if field is empty but mandatory
+	 *	@throws		\DomainException				in strict mode if field is not a table column
 	 */
 	protected function checkField( $field, $mandatory = FALSE, $strict = TRUE ){
 		if( !is_string( $field ) ){
@@ -122,7 +122,7 @@ abstract class Table{
 			if( $mandatory ){
 				if( !$strict )
 					return FALSE;
-				throw new \InvalidArgumentException( 'Field must have a value' );
+				throw new \RangeException( 'Field must have a value' );
 			}
 			return NULL;
 		}
@@ -130,7 +130,7 @@ abstract class Table{
 			if( !$strict )
 				return FALSE;
 			$message	= 'Field "%s" is not an existing column of table %s';
-			throw new \InvalidArgumentException( sprintf( $message, $field, $this->getName() ) );
+			throw new \DomainException( sprintf( $message, $field, $this->getName() ) );
 		}
 		return $field;
 	}
@@ -141,13 +141,14 @@ abstract class Table{
 	 *	In strict mode exceptions will be thrown if map is not an array or empty but mandatory.
 	 *	FYI: The next logical check - if index keys are valid columns and noted indices - is done by used table reader class.
 	 *	@access		protected
-	 *	@param		string			$indices		Map of Index Keys and Values
+	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@param		string			$mandatory		Force atleast one pair, otherwise return FALSE or throw exception in strict mode
 	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE
 	 *	@param		boolean			$withPrimaryKey	Flag: include table primary key within index list
 	 *	@return		array|boolean	Map if valid, FALSE otherwise or exceptions in strict mode
 	 *	@throws		\InvalidArgumentException		in strict mode if field is not a string
-	 *	@throws		\InvalidArgumentException		in strict mode if field is empty but mandatory
+	 *	@throws		\RangeException					in strict mode if field is empty but mandatory
+	 *	@throws		\DomainException				in strict mode if field is not an index
 	 */
 	protected function checkIndices( $indices, $mandatory = FALSE, $strict = TRUE, $withPrimaryKey = FALSE ){
 		if( !is_array( $indices ) ){
@@ -159,19 +160,19 @@ abstract class Table{
 			if( $mandatory ){
 				if( !$strict )
 					return FALSE;
-				throw new \InvalidArgumentException( 'Index map must have atleast one pair' );
+				throw new \RangeException( 'Index map must have atleast one pair' );
 			}
 		}
 
 		$list		= array();
 		$indexList	= $this->table->getIndices( $withPrimaryKey );
-		foreach( $indices as $index ){
+		foreach( $indices as $index => $value ){
 			if( !in_array( $index, $indexList ) ){
 				if( $strict )
-					throw \RangeException( 'Column "'.$index.'" is not an index' );
+					throw new \DomainException( 'Column "'.$index.'" is not an index' );
 				return FALSE;
 			}
-			$list[]	= $index;
+			$list[$index]	= $value;
 		}
 		return $list;
 	}
@@ -246,7 +247,7 @@ abstract class Table{
 	 *	@return		integer			Number of changed rows
 	 */
 	public function editByIndices( $indices, $data, $stripTags = TRUE ){
-		$indices	= $this->checkIndices( $indices, TRUE, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE );
 		return $this->table->updateByConditions( $data, $indices, $stripTags );
 	}
 
@@ -303,7 +304,7 @@ abstract class Table{
 	 *	@return		array
 	 */
 	public function getAllByIndex( $key, $value, $orders = array(), $limits = array(), $fields = array(), $strict = FALSE ){
-		if( !in_array( $key, $this>table->getIndices() ) )
+		if( !in_array( $key, $this->table->getIndices() ) )
 			throw new \DomainException( 'Requested column "'.$key.'" is not an index' );
 		$conditions	= array( $key => $value );
 		return $this->getAll( $conditions, $orders, $limits, $fields );
@@ -321,7 +322,7 @@ abstract class Table{
 	 *	@return		array
 	 */
 	public function getAllByIndices( $indices = array(), $orders = array(), $limits = array(), $fields = array(), $strict = FALSE ){
-		$indices	= $this->checkIndices( $indices, TRUE, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
 		$data	= $this->table->get( FALSE, $orders, $limits );
@@ -577,7 +578,7 @@ abstract class Table{
 	 *	@return		integer			Number of removed entries
 	 */
 	public function removeByIndices( $indices ){
-		$indices	= $this->checkIndices( $indices, TRUE, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
 

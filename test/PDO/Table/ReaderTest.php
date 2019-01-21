@@ -475,7 +475,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testFindWhereInException1(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'DomainException' );
 		$this->reader->findWhereIn( array( 'not_valid' ), "id", 1 );
 	}
 
@@ -485,7 +485,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testFindWhereInException2(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'DomainException' );
 		$this->reader->findWhereIn( "*", "not_valid", 1 );
 	}
 
@@ -602,7 +602,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testFocusIndexException(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'DomainException' );
 		$this->reader->focusIndex( 'not_an_index', 'not_relevant' );
 	}
 
@@ -993,7 +993,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testSetColumnsException2(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'RangeException' );
 		$this->reader->setColumns( array() );
 	}
 
@@ -1027,7 +1027,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testSetDBConnection2(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'RuntimeException' );
 		$this->reader->setDBConnection( new stdClass() );
 	}
 
@@ -1065,7 +1065,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testSetIndicesException1(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'DomainException' );
 		$this->reader->setIndices( array( 'not_existing' ) );
 	}
 
@@ -1075,7 +1075,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testSetIndicesException2(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'DomainException' );
 		$this->reader->setIndices( array( 'id' ) );
 	}
 
@@ -1098,7 +1098,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testSetPrimaryKeyException(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->setExpectedException( 'DomainException' );
 		$this->reader->setPrimaryKey( 'not_existing' );
 	}
 

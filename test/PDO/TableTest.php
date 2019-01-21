@@ -257,10 +257,6 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$results	= $this->table->getAllByIndices( $indices );
 		$this->assertEquals( count( $results ), 3 );
 
-		$indices	= array( 'topic' => 'start', 'label' => 'label1' );
-		$results	= $this->table->getAllByIndices( $indices );
-		$this->assertEquals( count( $results ), 1 );
-
 		$indices	= array( 'topic' => 'start' );
 		$orders		= array( 'label' => 'ASC' );
 		$results	= $this->table->getAllByIndices( $indices, $orders );
@@ -306,7 +302,10 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$fields		= array( 'label', 'topic' );
 		$result		= $this->table->getByIndex( 'topic', 'start', $orders, $fields );
 		$this->assertEquals( $result, (object) array( 'label' => 'label2', 'topic' => 'start' ) );
+	}
 
+	public function testGetByIndexException1(){
+		$this->setExpectedException( 'DomainException' );
 		$result		= $this->table->getByIndex( 'label', 'label2' );
 		unset( $result->timestamp );
 		$this->assertEquals( $result, (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' ) );
@@ -337,6 +336,10 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$fields		= array( 'label', 'topic' );
 		$result		= $this->table->getByIndices( $indices, $orders, $fields );
 		$this->assertEquals( $result, (object) array( 'label' => 'label2', 'topic' => 'start' ) );
+	}
+
+	public function testGetByIndicesException1(){
+		$this->setExpectedException( 'DomainException' );
 
 		$indices	= array( 'label' => 'label2' );
 		$result		= $this->table->getByIndices( $indices );
@@ -349,7 +352,7 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	}
 
 	public function testGetIndices(){
-		$this->assertEquals( $this->table->getIndices(), array( 'topic', 'label' ) );
+		$this->assertEquals( $this->table->getIndices(), array( 'topic' ) );
 	}
 
 	public function testGetName(){
