@@ -176,8 +176,8 @@ class Connection extends \PDO{
 		$note	= str_replace( "{message}", $message, $note );
 		$note	= str_replace( "{statement}", $statement, $note );
 
-		throw new \Exception_SQL( $sqlError, $sqlCode, $pdoCode );
 		error_log( $note, 3, $this->logFileErrors );
+		throw new \Exception_SQL( $sqlError, $sqlCode, $pdoCode );
 	}
 
 	/**

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <config>
 
-	<!--  PROJECT(S)  -->  
+	<!--  PROJECT(S)  -->
 	<project>
 		<path>src/</path>
 		<extension>php</extension>
@@ -19,7 +19,7 @@
 		<package by="default">CeusMedia_Common</package>
 	</project>-->
 
-	<!--  READER SETTINGS  -->  
+	<!--  READER SETTINGS  -->
 	<reader>
 		<plugin>Statistics</plugin>
 		<plugin>Unicode</plugin>
@@ -29,11 +29,11 @@
 		<plugin>Search</plugin>
 	</reader>
 
-	<!--  BUILDER(S) -->  
+	<!--  BUILDER(S) -->
 	<builder format="HTML" theme="Default-SilverFire">
 		<path type="target">doc/API/</path>
 		<path type="documents">doc/</path>
-		<title version="0.2">CeusMedia::Database</title>
+		<title version="0.3.3">Database</title>
 		<author email="christian.wuerker@ceusmedia.de">Christian Würker</author>
 		<company url="http://ceusmedia.de/">CeuS Media</company>
 <!--		<logo href="https://github.com/CeusMedia/Common" title="CeusMedia/Common @ GitHub">logo/construction.png</logo>-->
@@ -58,7 +58,7 @@
 		<plugin>DocHints</plugin>
 	</builder>
 
-	<!--  GENERAL SETTINGS  -->  
+	<!--  GENERAL SETTINGS  -->
 	<creator timeLimit="60">
 		<limit name="time">60</limit>
 		<path name="temp">/tmp/</path>
