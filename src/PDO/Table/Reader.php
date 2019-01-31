@@ -453,8 +453,9 @@ class Reader{
 	}
 
 	protected function realizeConditionQueryPart( $column, $value, $maskColumn = TRUE ){
-		$patternOperators	= '/^(<=|>=|<|>|!=)(.+)/';
-		$patternBetween		= '/^(><|!><)([0-9]+)&([0-9]+)$/';
+		$patternBetween		= '/^(><|!><)( ?)([0-9]+)( ?)&( ?)([0-9]+)$/';
+		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)([0-9]+)$/';
+		$patternOperators	= '/^(<=|>=|<|>|!=)( ?)(.+)$/';
 		if( preg_match( '/^%/', $value ) || preg_match( '/%$/', $value ) ){
 			$operation	= ' LIKE ';
 			$value		= $this->secureValue( $value );
@@ -463,28 +464,42 @@ class Reader{
 			$matches	= array();
 			preg_match_all( $patternBetween, $value, $matches );
 			$operation	= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
-			$value		= $this->secureValue( $matches[2][0] ).' AND '.$this->secureValue( $matches[3][0] );
+			$value		= $this->secureValue( $matches[3][0] ).' AND '.$this->secureValue( $matches[6][0] );
+			if( !strlen( $matches[2][0] ) || !strlen( $matches[4][0] ) || !strlen( $matches[5][0] ) )
+				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
+		}
+		else if( preg_match( $patternBitwise, $value, $result ) ){
+			$matches	= array();
+			preg_match_all( $patternOperators, $value, $matches );
+			$operation	= ' '.$matches[1][0].' ';
+			$value		= $this->secureValue( $matches[3][0] );
+			if( !strlen( $matches[2][0] ) )
+				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
 		else if( preg_match( $patternOperators, $value, $result ) ){
 			$matches	= array();
 			preg_match_all( $patternOperators, $value, $matches );
 			$operation	= ' '.$matches[1][0].' ';
-			$value		= $this->secureValue( $matches[2][0] );
+			$value		= $this->secureValue( $matches[3][0] );
+			if( !strlen( $matches[2][0] ) )
+				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
 		else{
-			if( strtolower( $value ) == 'is null' || strtolower( $value ) == 'is not null')
-				$operation	= ' ';
+			if( strtolower( $value ) == 'is null' || strtolower( $value ) == 'is not null'){
+				$operation	= '';
+				$value		= strtoupper( $value );
+			}
 			else if( $value === NULL ){
-				$operation	= ' IS ';
+				$operation	= 'IS';
 				$value		= 'NULL';
 			}
 			else{
-				$operation	= ' = ';
+				$operation	= '=';
 				$value		= $this->secureValue( $value );
 			}
 		}
 		$column	= $maskColumn ? '`'.$column.'`' : $column;
-		return $column.$operation.$value;
+		return $column.' '.$operation.' '.$value;
 	}
 
 	/**
