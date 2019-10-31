@@ -2,7 +2,7 @@
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
  *
- *	Copyright (c) 2010-2011 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL;
+
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
  *	@category		Library
@@ -34,8 +35,8 @@ namespace CeusMedia\Database\OSQL;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Client{
-
+class Client
+{
 	protected $fetchMode;
 	public static $defaultFetchMode	= \PDO::FETCH_OBJ;
 
@@ -45,7 +46,8 @@ class Client{
 	 *	@param		PDO		$dbc		Database connection using PDO
 	 *	@return		void
 	 */
-	public function __construct( \PDO $dbc ){
+	public function __construct( \PDO $dbc )
+	{
 		$this->dbc	= $dbc;
 		$this->setFetchMode( self::$defaultFetchMode );
 	}
@@ -76,10 +78,11 @@ class Client{
 	/**
 	 *	Executes query and returns result.
 	 *	@access		public
-	 *	@param		CMM_OSQL_Query
+	 *	@param		QueryInterface
 	 *	@param		array
 	 */
-	public function execute( \CeusMedia\Database\OSQL\Query $query ){
+	public function execute( QueryInterface $query )
+	{
 		$clock	= new \Alg_Time_Clock();
 		$parts	= $query->render();
 		$query->timeRender	= $clock->stop( 6, 0 );
@@ -98,16 +101,18 @@ class Client{
 		}
 		$query->timeExecute	= $clock->stop( 6, 0 );
 
-		if( $query instanceof \CeusMedia\Database\OSQL\Query\Select )
+		if( $query instanceof Query\Select )
 			return $stmt->fetchAll( $this->fetchMode );
 		return $result;
 	}
 
-	public function getLastInsertId(){
+	public function getLastInsertId()
+	{
 		return $this->dbc->lastInsertId();
 	}
 
-	public function setFetchMode( $mode ){
+	public function setFetchMode( $mode )
+	{
 		$this->fetchMode	= $mode;
 	}
 }

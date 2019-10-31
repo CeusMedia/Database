@@ -2,7 +2,7 @@
 /**
  *	Builder for SELECT statements.
  *
- *	Copyright (c) 2010-2011 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -25,6 +25,11 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL\Query;
+
+use CeusMedia\Database\OSQL\QueryAbstract;
+use CeusMedia\Database\OSQL\QueryInterface;
+use CeusMedia\Database\OSQL\Table;
+
 /**
  *	Builder for SELECT statements.
  *	@category		Library
@@ -36,8 +41,8 @@ namespace CeusMedia\Database\OSQL\Query;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedia\Database\OSQL\QueryInterface{
-
+class Select extends QueryAbstract implements QueryInterface
+{
 	protected $conditions	= array();
 	protected $fields		= '*';
 	protected $tables		= array();
@@ -47,9 +52,10 @@ class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	Adds fields to select and returns query object for chainability.
 	 *	@access		public
 	 *	@param		string		$fields		List of fields to select or one field name or asterisk
-	 *	@return		CMM_OSQL_Query_Select
+	 *	@return		self
 	 */
-	public function get( $fields ){
+	public function get( $fields )
+	{
 		if( is_string( $fields ) )
 			$fields	= array( $fields );
 		if( !is_array( $fields ) )
@@ -72,7 +78,8 @@ class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup(){
+	protected function checkSetup()
+	{
 		if( !$this->tables )
 			throw new \Exception( 'No from clause set' );
 	}
@@ -80,31 +87,37 @@ class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	/**
 	 *	Sets table to select in and returns query object for chainability.
 	 *	@access		public
-	 *	@param		\CeusMedia\Database\OSQL\Table	$table		Table to select in
-	 *	@return		\CeusMedia\Database\OSQL\Query\Select
+	 *	@param		Table	$table		Table to select in
+	 *	@return		self
 	 */
-	public function from( \CeusMedia\Database\OSQL\Table $table ){
+	public function from( Table $table )
+	{
 		$this->tables[]	= $table;
 		return $this;
 	}
 
-	public function groupBy( $name ){
+	public function groupBy( $name )
+	{
 		$this->groupBy	= $name;
+		return $this;
 	}
 
-/*	public function having( $name, $value ){
+/*	public function having( $name, $value )
+	{
 		$this->having	= array( $name, $value );
 	}
 */
 	/**
 	 *	Join with another table and returns query object for chainability.
 	 *	@access		public
-	 *	@param		\CeusMedia\Database\OSQL\Table	$table		Another to join in
-	 *	@param		string			$keyLeft	Column key of current table for equi join
-	 *	@param		string			$rightLeft	Column key of new table for equi join
-	 *	@return		\CeusMedia\Database\OSQL\Query\Select
+	 *	@param		Table		$table		Another to join in
+	 *	@param		string		$keyLeft	Column key of current table for equi join
+	 *	@param		string		$rightLeft	Column key of new table for equi join
+	 *	@throws		\Exception	...
+	 *	@return		self
 	 */
-	public function join( \CeusMedia\Database\OSQL\Table $table, $keyLeft, $keyRight ){
+	public function join( \CeusMedia\Database\OSQL\Table $table, $keyLeft, $keyRight )
+	{
 		if( !$this->tables )
 			throw new \Exception( 'No table to join set' );
 		$lastTable	= array_pop( $this->tables );
@@ -118,7 +131,8 @@ class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		protected
 	 *	@return		string
 	 */
-	protected function renderFrom(){
+	protected function renderFrom()
+	{
 		if( !$this->tables )
 			throw new \RuntimeException( 'No table set' );
 		$list	= array();
@@ -132,7 +146,8 @@ class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function renderGrouping(){
+	protected function renderGrouping()
+	{
 		if( !$this->groupBy )
 			return '';
 		return ' GROUP BY '.$this->groupBy;
@@ -143,7 +158,8 @@ class Select extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render(){
+	public function render()
+	{
 		$clock	= new \Alg_Time_Clock();
 		$this->checkSetup();
 		$parameters	= array();

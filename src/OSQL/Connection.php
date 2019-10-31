@@ -2,7 +2,7 @@
 /**
  *	...
  *
- *	Copyright (c) 2010-2011 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -25,6 +25,9 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL;
+
+use CeusMedia\Database\PDO\Connection as PdoConnection;
+
 /**
  *	...
  *	@category		Library
@@ -34,10 +37,11 @@ namespace CeusMedia\Database\OSQL;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Connection extends \CeusMedia\Database\PDO\Connection{
+class Connection extends PdoConnection
+{
 
 	public function select( $fields = NULL ){
-		return new \CeusMedia\Database\OSQL\Query\Select( $fields );
+		return new Query\Select( $fields );
 	}
 }
 ?>

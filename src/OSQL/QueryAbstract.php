@@ -2,7 +2,7 @@
 /**
  *	Abstract query class.
  *
- *	Copyright (c) 2010-2011 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL;
+
 /**
  *	Abstract query class.
  *	@category		Library
@@ -34,8 +35,8 @@ namespace CeusMedia\Database\OSQL;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-abstract class QueryAbstract{
-
+abstract class QueryAbstract
+{
 	protected $conditions	= array();
 	protected $fields;
 	protected $limit;
@@ -48,11 +49,23 @@ abstract class QueryAbstract{
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		\CeusMedia\Database\OSQL\Client		$dbc	OSQL database connection
+	 *	@param		Client		$dbc	OSQL database connection
 	 *	@return		void
 	 */
-	public function __construct( \CeusMedia\Database\OSQL\Client $dbc ){
+	public function __construct( Client $dbc )
+	{
 		$this->dbc	= $dbc;
+	}
+
+	/**
+	 *	Static constructor.
+	 *	@access		public
+	 *	@param		Client		$dbc	OSQL database connection
+	 *	@return		void
+	 */
+	public static function create( Client $dbc )
+	{
+		return new static( $dbc );
 	}
 
 	/**
@@ -60,7 +73,8 @@ abstract class QueryAbstract{
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function execute(){
+	public function execute()
+	{
 		return $this->dbc->execute( $this );
 	}
 
@@ -71,20 +85,22 @@ abstract class QueryAbstract{
 	/**
 	 *
 	 *	@access		public
-	 *	@param		CMM_OSQL_Condition	$conditions		Condition object
+	 *	@param		Condition	$conditions		Condition object
 	 *	@return		void
 	 */
-	public function where( \CeusMedia\Database\OSQL\Condition $conditions ){
+	public function where( Condition $conditions )
+	{
 		return $this->andWhere( $conditions );
 	}
 
 	/**
 	 *
 	 *	@access		public
-	 *	@param		CMM_OSQL_Condition	$conditions		Condition object
+	 *	@param		Condition	$conditions		Condition object
 	 *	@return		void
 	 */
-	public function andWhere( \CeusMedia\Database\OSQL\Condition $conditions ){
+	public function andWhere( Condition $conditions )
+	{
 		$this->conditions[]	= $conditions;
 		return $this;
 	}
@@ -92,10 +108,11 @@ abstract class QueryAbstract{
 	/**
 	 *
 	 *	@access		public
-	 *	@param		CMM_OSQL_Condition	$conditions		Condition object
+	 *	@param		Condition	$conditions		Condition object
 	 *	@return		void
 	 */
-	public function orWhere( \CeusMedia\Database\OSQL\Condition $conditions ){
+	public function orWhere( Condition $conditions )
+	{
 		if( !$this->conditions )
 			throw new \Exception( 'No condition set yet' );
 		$last	= array_pop( $this->conditions );
@@ -108,17 +125,21 @@ abstract class QueryAbstract{
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function join( \CeusMedia\Database\OSQL\Table $table, $keyLeft, $keyRight ){
+	public function join( Table $table, $keyLeft, $keyRight )
+	{
 		array_push( $this->tables, $lastTable );
 		return $this;
 	}
 
 	/**
-	 *
+	 *	Sets limit.
 	 *	@access		public
-	 *	@return		void
+	 *	@throws		\InvalidArgumentException	if limit is not an integer
+	 *	@throws		\InvalidArgumentException	if limit is not greater than 0
+	 *	@return		self
 	 */
-	public function limit( $limit = NULL ){
+	public function limit( $limit = NULL )
+	{
 		if( !is_null( $limit ) ){
 			if( !is_int( $limit ) )
 				throw new \InvalidArgumentException( 'Must be integer or NULL' );
@@ -132,11 +153,14 @@ abstract class QueryAbstract{
 	}
 
 	/**
-	 *
+	 *	Sets
 	 *	@access		public
+	 *	@throws		\InvalidArgumentException	if limit is not an integer
+	 *	@throws		\InvalidArgumentException	if limit is not greater than 0
 	 *	@return		void
 	 */
-	public function offset( $offset = NULL ){
+	public function offset( $offset = NULL )
+	{
 		if( !is_null( $offset ) ){
 			if( !is_int( $offset ) )
 				throw new \InvalidArgumentException( 'Must be integer or NULL' );
@@ -155,7 +179,8 @@ abstract class QueryAbstract{
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		void
 	 */
-	protected function renderConditions( & $parameters ){
+	protected function renderConditions( & $parameters )
+	{
 		if( !$this->conditions )
 			return '';
 		$list	= array();
@@ -170,7 +195,8 @@ abstract class QueryAbstract{
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		void
 	 */
-	protected function renderLimit( & $parameters ){
+	protected function renderLimit( & $parameters )
+	{
 		if( !$this->limit )
 			return '';
 		$limit		= ' LIMIT :limit';
@@ -187,7 +213,8 @@ abstract class QueryAbstract{
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		void
 	 */
-	protected function renderOffset( & $parameters ){
+	protected function renderOffset( & $parameters )
+	{
 		if( !$this->offset )
 			return '';
 		$offset		= ' OFFSET :offset';

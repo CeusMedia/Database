@@ -2,7 +2,7 @@
 /**
  *	...
  *
- *	Copyright (c) 2010-2011 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL;
+
 /**
  *	...
  *	@category		Library
@@ -34,7 +35,8 @@ namespace CeusMedia\Database\OSQL;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Condition{
+class Condition
+{
 	protected $type			= NULL;
 	protected $fieldName	= NULL;
 	protected $operation	= '=';
@@ -44,13 +46,13 @@ class Condition{
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		CMM_OSQL_Client_Abstract	$dbc	OSQL database connection
 	 *	@param		string		$fieldName		Column name
 	 *	@param		mixed		$value			Value to match
 	 *	@param		string		$operation		Comparison operation
 	 *	@return		void
 	 */
-	public function __construct( $fieldName = NULL, $value = NULL, $operation = NULL ){
+	public function __construct( $fieldName = NULL, $value = NULL, $operation = NULL )
+	{
 		if( $fieldName )
 			$this->setFieldName( $fieldName );
 		if( $operation )
@@ -64,7 +66,8 @@ class Condition{
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getFieldName(){
+	public function getFieldName()
+	{
 		return $this->name;
 	}
 
@@ -73,7 +76,8 @@ class Condition{
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getOperation(){
+	public function getOperation()
+	{
 		return $this->operation;
 	}
 
@@ -82,16 +86,19 @@ class Condition{
 	 *	@access		public
 	 *	@return		mixed
 	 */
-	public function getValue(){
+	public function getValue()
+	{
 		return $this->value;
 	}
 
 	/**
 	 *	...
 	 *	@access		public
+	 *	@param		Condition		...
 	 *	@return		void
 	 */
-	public function join( \CeusMedia\Database\OSQL\Condition $condition ){
+	public function join( Condition $condition )
+	{
 		$this->joins[]	= $condition;
 	}
 
@@ -100,7 +107,8 @@ class Condition{
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render( & $parameters ){
+	public function render( & $parameters )
+	{
 		$counter	= 0;
 		do{
 			$key	= 'condition_'.str_replace( '.', '_', $this->name ).'_'.$counter;
@@ -126,7 +134,8 @@ class Condition{
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function setFieldName( $fieldName ){
+	public function setFieldName( $fieldName )
+	{
 		$this->name		= $fieldName;
 	}
 
@@ -137,7 +146,8 @@ class Condition{
 	 *	@param		string		$operation		Operator between column key and value.
 	 *	@return		void
 	 */
-	public function setOperation( $operation ){
+	public function setOperation( $operation )
+	{
 		$this->operation	= $operation;
 	}
 
@@ -146,7 +156,8 @@ class Condition{
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function setValue( $value ){
+	public function setValue( $value )
+	{
 		$this->value	= $value;
 	}
 }

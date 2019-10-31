@@ -2,7 +2,7 @@
 /**
  *	Builder for UPDATE statements.
  *
- *	Copyright (c) 2010-2011 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2019 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -25,6 +25,11 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL\Query;
+
+use CeusMedia\Database\OSQL\QueryAbstract;
+use CeusMedia\Database\OSQL\QueryInterface;
+use CeusMedia\Database\OSQL\Table;
+
 /**
  *	Builder for UPDATE statements.
  *	@category		Library
@@ -36,8 +41,8 @@ namespace CeusMedia\Database\OSQL\Query;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Update extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedia\Database\OSQL\QueryInterface{
-
+class Update extends QueryAbstract implements QueryInterface
+{
 	protected $conditions	= array();
 	protected $fields		= array();
 	protected $table		= NULL;
@@ -47,7 +52,8 @@ class Update extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup(){
+	protected function checkSetup()
+	{
 		if( !$this->table )
 			throw new \Exception( 'No table clause set' );
 	}
@@ -55,10 +61,11 @@ class Update extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	/**
 	 *	Sets table to update in and returns query object for chainability.
 	 *	@access		public
-	 *	@param		CMM_OSQL_Table	$table	Table to update in
-	 *	@return		CMM_OSQL_Query_Update
+	 *	@param		Table		$table	Table to update in
+	 *	@return		self
 	 */
-	public function in( \CeusMedia\Database\OSQL\Table $table ){
+	public function in( Table $table )
+	{
 		$this->table	= $table;
 		return $this;
 	}
@@ -68,7 +75,8 @@ class Update extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render(){
+	public function render()
+	{
 		$clock	= new \Alg_Time_Clock();
 		$this->checkSetup();
 		$parameters	= array();
@@ -88,7 +96,8 @@ class Update extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderFields( & $parameters ){
+	protected function renderFields( & $parameters )
+	{
 		if( !$this->fields )
 			return '';
 		$list	= array();
@@ -106,9 +115,10 @@ class Update extends \CeusMedia\Database\OSQL\QueryAbstract implements \CeusMedi
 	 *	@access		public
 	 *	@param		string		$name		Column key
 	 *	@param		mixed		$value		Value to set
-	 *	@return		CMM_OSQL_Query_Update
+	 *	@return		self
 	 */
-	public function set( $name, $value ){
+	public function set( $name, $value )
+	{
 		$this->fields[$name]	 = $value;
 		return $this;
 	}
