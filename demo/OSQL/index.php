@@ -11,8 +11,11 @@ use CeusMedia\Database\OSQL\Query\Select;
 $tableGallery	= new Table( 'galleries', 'g' );
 $tableImage		= new Table( 'gallery_images', 'gi' );
 
+$dbName		= 'test';
+$dbUsername	= '';
+$dbPassword	= '';
 
-$dbc	= new Connection( 'mysql:host=localhost;dbname=test' );
+$dbc	= new Connection( 'mysql:host=localhost;dbname=test', $dbUsername, $dbPassword );
 $client	= new Client( $dbc );
 $select	= Select::create( $client )
 	->get( array(
