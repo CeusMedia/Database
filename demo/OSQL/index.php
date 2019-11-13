@@ -1,5 +1,5 @@
 <?php
-require_once '../../vendor/autoload.php';
+require_once __DIR__.'/../../vendor/autoload.php';
 new UI_DevOutput;
 
 use CeusMedia\Database\OSQL\Condition;
@@ -12,8 +12,8 @@ $tableGallery	= new Table( 'galleries', 'g' );
 $tableImage		= new Table( 'gallery_images', 'gi' );
 
 $dbName		= 'test';
-$dbUsername	= '';
-$dbPassword	= '';
+$dbUsername	= 'kriss';
+$dbPassword	= 'k';
 
 $dbc	= new Connection( 'mysql:host=localhost;dbname=test', $dbUsername, $dbPassword );
 $client	= new Client( $dbc );
