@@ -48,7 +48,7 @@ class Table
 	 *	@param		string		$alias		Alias name
 	 *	@return		void
 	 */
-	public function __construct( $name = NULL, $alias = NULL )
+	public function __construct( ?string $name = NULL, ?string $alias = NULL )
 	{
 		if( $name )
 			$this->setName( $name );
@@ -61,7 +61,7 @@ class Table
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getAlias()
+	public function getAlias(): ?string
 	{
 		return $this->alias;
 	}
@@ -71,12 +71,12 @@ class Table
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getName()
+	public function getName(): ?string
 	{
 		return $this->name;
 	}
 
-	public function render()
+	public function render(): string
 	{
 		if( !$this->name )
 			throw new \Exception( 'No table name set' );
@@ -101,22 +101,24 @@ class Table
 	 *	Set alias name.
 	 *	@access		public
 	 *	@param		string		$alias		Alias name
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function setAlias( $alias )
+	public function setAlias( $alias ): self
 	{
 		$this->alias	= $alias;
+		return $this;
 	}
 
 	/**
 	 *	Set alias name.
 	 *	@access		public
 	 *	@param		string		$name		Table name
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function setName( $name )
+	public function setName( $name ): self
 	{
 		$this->name	= $name;
+		return $this;
 	}
 
 	/**
@@ -125,15 +127,16 @@ class Table
 	 *	@param		Table			$table		Another to join in
 	 *	@param		string			$keyLeft	Column key of current table for equi join
 	 *	@param		string			$keyRight	Column key of new table for equi join
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function join( Table $table, $keyLeft, $keyRight )
+	public function join( Table $table, string $keyLeft, string $keyRight ): self
 	{
 		$this->joins[]	= array(
 			'table'	=> $table,
 			'left'	=> $keyLeft,
 			'right'	=> $keyRight
 		);
+		return $this;
 	}
 }
 ?>

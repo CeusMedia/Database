@@ -57,7 +57,7 @@ class Insert extends QueryAbstract implements QueryInterface
 			throw new \Exception( 'No table clause set' );
 	}
 
-	public function into( Table $table )
+	public function into( Table $table ): self
 	{
 		$this->table	= $table;
 		return $this;
@@ -69,7 +69,7 @@ class Insert extends QueryAbstract implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderFields( & $parameters )
+	protected function renderFields( & $parameters ): string
 	{
 		if( !$this->fields )
 			return '';
@@ -92,7 +92,7 @@ class Insert extends QueryAbstract implements QueryInterface
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render()
+	public function render(): array
 	{
 		$this->checkSetup();
 		$parameters	= array();
@@ -110,7 +110,7 @@ class Insert extends QueryAbstract implements QueryInterface
 	 *	@access		public
 	 *	@return		self
 	 */
-	public function set( $name, $value )
+	public function set( string $name, $value ): self
 	{
 		$this->fields[$name]	 = $value;
 		return $this;

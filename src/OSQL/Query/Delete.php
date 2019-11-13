@@ -46,7 +46,7 @@ class Delete extends QueryAbstract implements QueryInterface
 	protected $conditions	= array();
 	protected $table		= NULL;
 
-	public function from( Table $table )
+	public function from( Table $table ): self
 	{
 		$this->table	= $table;
 		return $this;
@@ -68,7 +68,7 @@ class Delete extends QueryAbstract implements QueryInterface
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render()
+	public function render(): array
 	{
 		$clock	= new \Alg_Time_Clock();
 		$this->checkSetup();

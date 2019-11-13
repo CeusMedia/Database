@@ -51,10 +51,10 @@ class Select extends QueryAbstract implements QueryInterface
 	/**
 	 *	Adds fields to select and returns query object for chainability.
 	 *	@access		public
-	 *	@param		string		$fields		List of fields to select or one field name or asterisk
+	 *	@param		array|string	$fields		List of fields to select or one field name or asterisk
 	 *	@return		self
 	 */
-	public function get( $fields )
+	public function get( $fields ): self
 	{
 		if( is_string( $fields ) )
 			$fields	= array( $fields );
@@ -90,13 +90,13 @@ class Select extends QueryAbstract implements QueryInterface
 	 *	@param		Table	$table		Table to select in
 	 *	@return		self
 	 */
-	public function from( Table $table )
+	public function from( Table $table ): self
 	{
 		$this->tables[]	= $table;
 		return $this;
 	}
 
-	public function groupBy( $name )
+	public function groupBy( string $name ): self
 	{
 		$this->groupBy	= $name;
 		return $this;
@@ -114,9 +114,9 @@ class Select extends QueryAbstract implements QueryInterface
 	 *	@param		string		$keyLeft	Column key of current table for equi join
 	 *	@param		string		$rightLeft	Column key of new table for equi join
 	 *	@throws		\Exception	...
-	 *	@return		self
+	 *	@return		QueryInterface
 	 */
-	public function join( \CeusMedia\Database\OSQL\Table $table, $keyLeft, $keyRight )
+	public function join( Table $table, string $keyLeft, string $keyRight ): QueryInterface
 	{
 		if( !$this->tables )
 			throw new \Exception( 'No table to join set' );
@@ -131,7 +131,7 @@ class Select extends QueryAbstract implements QueryInterface
 	 *	@access		protected
 	 *	@return		string
 	 */
-	protected function renderFrom()
+	protected function renderFrom(): string
 	{
 		if( !$this->tables )
 			throw new \RuntimeException( 'No table set' );
@@ -144,9 +144,9 @@ class Select extends QueryAbstract implements QueryInterface
 	/**
 	 *	Returns rendered GROUP string.
 	 *	@access		protected
-	 *	@return		void
+	 *	@return		string
 	 */
-	protected function renderGrouping()
+	protected function renderGrouping(): string
 	{
 		if( !$this->groupBy )
 			return '';
@@ -158,9 +158,9 @@ class Select extends QueryAbstract implements QueryInterface
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render()
+	public function render(): array
 	{
-		$clock	= new \Alg_Time_Clock();
+		$clock		= new \Alg_Time_Clock();
 		$this->checkSetup();
 		$parameters	= array();
 		$fields		= is_array( $this->fields ) ? implode( ',', $this->fields ) : $this->fields;
@@ -174,4 +174,3 @@ class Select extends QueryAbstract implements QueryInterface
 		return array( $query, $parameters );
 	}
 }
-?>

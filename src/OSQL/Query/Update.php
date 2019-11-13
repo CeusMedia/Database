@@ -64,7 +64,7 @@ class Update extends QueryAbstract implements QueryInterface
 	 *	@param		Table		$table	Table to update in
 	 *	@return		self
 	 */
-	public function in( Table $table )
+	public function in( Table $table ): self
 	{
 		$this->table	= $table;
 		return $this;
@@ -75,7 +75,7 @@ class Update extends QueryAbstract implements QueryInterface
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render()
+	public function render(): array
 	{
 		$clock	= new \Alg_Time_Clock();
 		$this->checkSetup();
@@ -96,7 +96,7 @@ class Update extends QueryAbstract implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderFields( & $parameters )
+	protected function renderFields( & $parameters ): string
 	{
 		if( !$this->fields )
 			return '';
@@ -117,10 +117,9 @@ class Update extends QueryAbstract implements QueryInterface
 	 *	@param		mixed		$value		Value to set
 	 *	@return		self
 	 */
-	public function set( $name, $value )
+	public function set( $name, $value ): self
 	{
 		$this->fields[$name]	 = $value;
 		return $this;
 	}
 }
-?>

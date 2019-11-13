@@ -111,9 +111,10 @@ class Client
 		return $this->dbc->lastInsertId();
 	}
 
-	public function setFetchMode( $mode )
+	public function setFetchMode( $mode ): self
 	{
 		$this->fetchMode	= $mode;
+		return $this;
 	}
 }
 ?>

@@ -26,6 +26,8 @@
  */
 namespace CeusMedia\Database\OSQL;
 
+use CeusMedia\Database\OSQL\QueryInterface;
+
 /**
  *	Abstract query class.
  *	@category		Library
@@ -61,9 +63,9 @@ abstract class QueryAbstract
 	 *	Static constructor.
 	 *	@access		public
 	 *	@param		Client		$dbc	OSQL database connection
-	 *	@return		void
+	 *	@return		self
 	 */
-	public static function create( Client $dbc )
+	public static function create( Client $dbc ): self
 	{
 		return new static( $dbc );
 	}
@@ -80,15 +82,15 @@ abstract class QueryAbstract
 
 #	abstract protected function checkSetup();
 
-	abstract public function render();
+	abstract public function render(): array;
 
 	/**
 	 *
 	 *	@access		public
 	 *	@param		Condition	$conditions		Condition object
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function where( Condition $conditions )
+	public function where( Condition $conditions ): self
 	{
 		return $this->andWhere( $conditions );
 	}
@@ -97,9 +99,9 @@ abstract class QueryAbstract
 	 *
 	 *	@access		public
 	 *	@param		Condition	$conditions		Condition object
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function andWhere( Condition $conditions )
+	public function andWhere( Condition $conditions ): self
 	{
 		$this->conditions[]	= $conditions;
 		return $this;
@@ -109,9 +111,9 @@ abstract class QueryAbstract
 	 *
 	 *	@access		public
 	 *	@param		Condition	$conditions		Condition object
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function orWhere( Condition $conditions )
+	public function orWhere( Condition $conditions ): self
 	{
 		if( !$this->conditions )
 			throw new \Exception( 'No condition set yet' );
@@ -123,9 +125,9 @@ abstract class QueryAbstract
 	/**
 	 *
 	 *	@access		public
-	 *	@return		void
+	 *	@return		QueryInterface
 	 */
-	public function join( Table $table, $keyLeft, $keyRight )
+	public function join( Table $table, string $keyLeft, string $keyRight ): QueryInterface
 	{
 		array_push( $this->tables, $lastTable );
 		return $this;
@@ -138,7 +140,7 @@ abstract class QueryAbstract
 	 *	@throws		\InvalidArgumentException	if limit is not greater than 0
 	 *	@return		self
 	 */
-	public function limit( $limit = NULL )
+	public function limit( $limit = NULL ): self
 	{
 		if( !is_null( $limit ) ){
 			if( !is_int( $limit ) )
@@ -157,9 +159,9 @@ abstract class QueryAbstract
 	 *	@access		public
 	 *	@throws		\InvalidArgumentException	if limit is not an integer
 	 *	@throws		\InvalidArgumentException	if limit is not greater than 0
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function offset( $offset = NULL )
+	public function offset( $offset = NULL ): self
 	{
 		if( !is_null( $offset ) ){
 			if( !is_int( $offset ) )
@@ -173,13 +175,15 @@ abstract class QueryAbstract
 		return $this;
 	}
 
+	//  --  PROTECTED  --  //
+
 	/**
 	 *
 	 *	@access		protected
 	 *	@param		array		$parameters		Reference to parameters map
-	 *	@return		void
+	 *	@return		string
 	 */
-	protected function renderConditions( & $parameters )
+	protected function renderConditions( & $parameters ): string
 	{
 		if( !$this->conditions )
 			return '';
@@ -193,9 +197,9 @@ abstract class QueryAbstract
 	 *
 	 *	@access		protected
 	 *	@param		array		$parameters		Reference to parameters map
-	 *	@return		void
+	 *	@return		string
 	 */
-	protected function renderLimit( & $parameters )
+	protected function renderLimit( & $parameters ): string
 	{
 		if( !$this->limit )
 			return '';
@@ -211,9 +215,9 @@ abstract class QueryAbstract
 	 *
 	 *	@access		protected
 	 *	@param		array		$parameters		Reference to parameters map
-	 *	@return		void
+	 *	@return		string
 	 */
-	protected function renderOffset( & $parameters )
+	protected function renderOffset( & $parameters ): string
 	{
 		if( !$this->offset )
 			return '';

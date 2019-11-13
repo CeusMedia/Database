@@ -37,6 +37,6 @@ namespace CeusMedia\Database\OSQL;
  */
 Interface QueryInterface
 {
-	public function render();
+	public function render(): array;
 }
 ?>

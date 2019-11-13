@@ -66,7 +66,7 @@ class Condition
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getFieldName()
+	public function getFieldName(): ?string
 	{
 		return $this->name;
 	}
@@ -76,7 +76,7 @@ class Condition
 	 *	@access		public
 	 *	@return		string
 	 */
-	public function getOperation()
+	public function getOperation(): string
 	{
 		return $this->operation;
 	}
@@ -94,20 +94,22 @@ class Condition
 	/**
 	 *	...
 	 *	@access		public
-	 *	@param		Condition		...
-	 *	@return		void
+	 *	@param		Condition	$condition		...
+	 *	@return		self
 	 */
-	public function join( Condition $condition )
+	public function join( Condition $condition ): self
 	{
 		$this->joins[]	= $condition;
+		return $this;
 	}
 
 	/**
-	 *	Returns rendered SQL condition string and a map of parameters for parameter binding.
+	 *	Returns rendered SQL condition string and writes to a map of parameters for parameter binding.
 	 *	@access		public
-	 *	@return		array
+	 *	@param		array		$parameters		Reference to parameters map
+	 *	@return		string
 	 */
-	public function render( & $parameters )
+	public function render( & $parameters ): string
 	{
 		$counter	= 0;
 		do{
@@ -132,11 +134,13 @@ class Condition
 	/**
 	 *	Sets column name.
 	 *	@access		public
-	 *	@return		void
+	 *	@param		string		$fieldName		Column name
+	 *	@return		self
 	 */
-	public function setFieldName( $fieldName )
+	public function setFieldName( string $fieldName ): self
 	{
 		$this->name		= $fieldName;
+		return $this;
 	}
 
 	/**
@@ -144,21 +148,24 @@ class Condition
 	 *	Allowed: = | < | <= | > | >= | != | IS | IS NOT
 	 *	@access		public
 	 *	@param		string		$operation		Operator between column key and value.
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function setOperation( $operation )
+	public function setOperation( string $operation ): self
 	{
 		$this->operation	= $operation;
+		return $this;
 	}
 
 	/**
 	 *	Sets value to match.
 	 *	@access		public
-	 *	@return		void
+	 *	@param		mixed		$value			Value to match
+	 *	@return		self
 	 */
-	public function setValue( $value )
+	public function setValue( $value ): self
 	{
 		$this->value	= $value;
+		return $this;
 	}
 }
 ?>
