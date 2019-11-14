@@ -89,8 +89,10 @@ class Client
 
 		$clock->start();
 		$stmt	= $this->dbc->prepare( $parts[0] );
-		foreach( $parts[1] as $name => $parameter )
-			$stmt->bindParam( $name, $parameter['value'], $parameter['type'] );
+		foreach( $parts[1] as $name => $parameter ){
+			$type	= $this->getPdoTypeFromValue( $parameter['value'] );
+			$stmt->bindParam( $name, $parameter['value'], $type );
+		}
 		$query->timePrepare	= $clock->stop( 6, 0 );
 
 		$clock->start();
@@ -104,6 +106,21 @@ class Client
 		if( $query instanceof Query\Select )
 			return $stmt->fetchAll( $this->fetchMode );
 		return $result;
+	}
+
+	protected function getPdoTypeFromValue( $value )
+	{
+		$typeMap	= [
+			'boolean'	=> \PDO::PARAM_BOOL,
+			'integer'	=> \PDO::PARAM_INT,
+			'double'	=> \PDO::PARAM_BOOL,
+			'string'	=> \PDO::PARAM_STR,
+			'NULL'		=> \PDO::PARAM_NULL,
+		];
+		$type		= gettype( $value );
+		if( !array_key_exists( $type, $typeMap ) )
+			throw new \InvalidArgumentException( 'Value of type "'.$type.'" is not supported' );
+	 	return $typeMap[$type];
 	}
 
 	public function getLastInsertId()

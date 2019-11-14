@@ -41,7 +41,6 @@ class Condition
 	protected $fieldName	= NULL;
 	protected $operation	= '=';
 	protected $value		= NULL;
-	protected $joins		= array();
 
 	/**
 	 *	Constructor.
@@ -57,7 +56,7 @@ class Condition
 			$this->setFieldName( $fieldName );
 		if( $operation )
 			$this->setOperation( $operation );
-		if( $value )
+		if( $value !== NULL )
 			$this->setValue( $value );
 	}
 
@@ -92,18 +91,6 @@ class Condition
 	}
 
 	/**
-	 *	...
-	 *	@access		public
-	 *	@param		Condition	$condition		...
-	 *	@return		self
-	 */
-	public function join( Condition $condition ): self
-	{
-		$this->joins[]	= $condition;
-		return $this;
-	}
-
-	/**
 	 *	Returns rendered SQL condition string and writes to a map of parameters for parameter binding.
 	 *	@access		public
 	 *	@param		array		$parameters		Reference to parameters map
@@ -112,23 +99,34 @@ class Condition
 	public function render( & $parameters ): string
 	{
 		$counter	= 0;
+
 		do{
-			$key	= 'condition_'.str_replace( '.', '_', $this->name ).'_'.$counter;
+			$key	= 'c_'.preg_replace( '/[^a-z0-9]/i', '_', $this->name ).'_'.$counter;
 			$counter++;
 		}
 		while( isset( $parameters[$key] ) );
-		$parameters[$key]	= array(
-			'type'	=> $this->type,
-			'value'	=> $this->value
-		);
-		$condition	= $this->name.' '.$this->operation.' :'.$key;
 
-		if( !$this->joins )
-			return $condition;
-		$joins	= array( $condition );
-		foreach( $this->joins as $join )
-			$joins[]	= $join->render( $parameters );
-		return '( '.implode( ' OR ', $joins ).' )';
+		if( in_array( $this->type, ['array', 'object'] ) ){
+			$keyList	= [];
+			foreach( $this->value as $value ){
+				$keyList[]	= ':'.$key;
+				$parameters[$key]	= array(
+					'type'	=> gettype( $value ),
+					'value'	=> $value
+				);
+				$key	= 'c_'.preg_replace( '/[^a-z0-9]/i', '_', $this->name ).'_'.$counter;
+				$counter++;
+			}
+			$condition	= $this->name.' '.$this->operation.' ('.implode( ',', $keyList ).')';
+		}
+		else{
+			$parameters[$key]	= array(
+				'type'	=> $this->type,
+				'value'	=> $this->value
+			);
+			$condition	= $this->name.' '.$this->operation.' :'.$key;
+		}
+		return $condition;
 	}
 
 	/**
@@ -164,7 +162,11 @@ class Condition
 	 */
 	public function setValue( $value ): self
 	{
+		$type	= gettype( $value );
+		if( in_array( $type, ['object', 'resource', 'resource (closed)'] ) )
+			throw new \InvalidArgumentException( 'Value of type "'.$type.'" is not allowed' );
 		$this->value	= $value;
+		$this->type		= $type;
 		return $this;
 	}
 }

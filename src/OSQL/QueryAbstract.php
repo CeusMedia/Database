@@ -26,6 +26,8 @@
  */
 namespace CeusMedia\Database\OSQL;
 
+use CeusMedia\Database\OSQL;
+use CeusMedia\Database\OSQL\Condition\Group;
 use CeusMedia\Database\OSQL\QueryInterface;
 
 /**
@@ -87,39 +89,44 @@ abstract class QueryAbstract
 	/**
 	 *
 	 *	@access		public
-	 *	@param		Condition	$conditions		Condition object
+	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function where( Condition $conditions ): self
+	public function where( $condition ): self
 	{
-		return $this->andWhere( $conditions );
+		return $this->and( $condition );
 	}
 
 	/**
 	 *
 	 *	@access		public
-	 *	@param		Condition	$conditions		Condition object
+	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function andWhere( Condition $conditions ): self
+	public function and( $condition ): self
 	{
-		$this->conditions[]	= $conditions;
+		$this->conditions[]	= [
+			'operation'	=> Group::OPERATION_AND,
+			'condition'	=> $condition,
+		];
 		return $this;
 	}
 
 	/**
 	 *
 	 *	@access		public
-	 *	@param		Condition	$conditions		Condition object
+	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function orWhere( Condition $conditions ): self
-	{
+	 public function or( $condition ): self
+	 {
 		if( !$this->conditions )
 			throw new \Exception( 'No condition set yet' );
-		$last	= array_pop( $this->conditions );
-		$last->join( $conditions );
-		return $this->andWhere( $last );
+		$this->conditions[]	= [
+			'operation'	=> Group::OPERATION_OR,
+			'condition'	=> $condition,
+		];
+		return $this;
 	}
 
 	/**
@@ -188,9 +195,12 @@ abstract class QueryAbstract
 		if( !$this->conditions )
 			return '';
 		$list	= array();
-		foreach( $this->conditions as $condition )
-			$list[]	= $condition->render( $parameters );
-		return ' WHERE '.implode( ' AND ', $list );
+		foreach( $this->conditions as $condition ){
+			if( $list )
+				$list[]	= $condition['operation'];
+			$list[]	= $condition['condition']->render( $parameters );
+		}
+		return ' WHERE '.implode( ' ', $list );
 	}
 
 	/**

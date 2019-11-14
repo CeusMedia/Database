@@ -170,6 +170,7 @@ class Select extends QueryAbstract implements QueryInterface
 		$offset		= $this->renderOffset( $parameters );
 		$group		= $this->renderGrouping();
 		$query		= 'SELECT '.$fields.$from.$conditions.$limit.$offset.$group;
+		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE)/', PHP_EOL.'\\1', $query );
 		$this->timeRender	= $clock->stop( 6, 0 );
 		return array( $query, $parameters );
 	}
