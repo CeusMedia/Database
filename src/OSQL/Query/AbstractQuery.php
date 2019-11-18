@@ -24,11 +24,13 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-namespace CeusMedia\Database\OSQL;
+namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Database\OSQL;
+use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Condition\Group;
-use CeusMedia\Database\OSQL\QueryInterface;
+use CeusMedia\Database\OSQL\Query\QueryInterface;
+use CeusMedia\Database\OSQL\Table;
 
 /**
  *	Abstract query class.
@@ -39,16 +41,25 @@ use CeusMedia\Database\OSQL\QueryInterface;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-abstract class QueryAbstract
+abstract class AbstractQuery
 {
 	protected $conditions	= array();
+	protected $joins		= array();
 	protected $fields;
 	protected $limit;
 	protected $offset;
 	protected $query;
-	public $timeExecute	= NULL;
-	public $timePrepare	= NULL;
-	public $timeRender	= NULL;
+
+	public $timing			= array(
+		'render'	=> 0,
+		'prepare'	=> 0,
+		'execute'	=> 0,
+		'total'		=> 0,
+	);
+
+	const JOIN_TYPE_NATURAL	= 0;
+	const JOIN_TYPE_LEFT	= 1;
+	const JOIN_TYPE_RIGHT	= 2;
 
 	/**
 	 *	Constructor.
@@ -75,7 +86,8 @@ abstract class QueryAbstract
 	/**
 	 *
 	 *	@access		public
-	 *	@return		void
+	 *	@return		void		$query->timePrepare	= $clock->stop( 6, 0 );
+
 	 */
 	public function execute()
 	{
@@ -84,9 +96,10 @@ abstract class QueryAbstract
 
 #	abstract protected function checkSetup();
 
-	abstract public function render(): array;
+	abstract public function render(): object;
 
-	/**
+	/**		$query->timePrepare	= $clock->stop( 6, 0 );
+
 	 *
 	 *	@access		public
 	 *	@param		Condition|Group	$condition		Condition object
@@ -98,7 +111,8 @@ abstract class QueryAbstract
 	}
 
 	/**
-	 *
+	 *		$query->timePrepare	= $clock->stop( 6, 0 );
+
 	 *	@access		public
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
@@ -134,10 +148,27 @@ abstract class QueryAbstract
 	 *	@access		public
 	 *	@return		QueryInterface
 	 */
-	public function join( Table $table, string $keyLeft, string $keyRight ): QueryInterface
+	public function join( Table $table, string $keyLeft, string $keyRight, ?int $type = self::JOIN_TYPE_NATURAL ): QueryInterface
 	{
+		$this->joins[]	= (object) [
+			'table'		=> $table,
+			'left'		=> $keyLeft,
+			'right'		=> $keyRight,
+			'type'		=> $type,
+		];
+		return $this;
 		array_push( $this->tables, $lastTable );
 		return $this;
+	}
+
+	public function leftJoin( Table $table, string $keyLeft, string $keyRight ): QueryInterface
+	{
+		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_LEFT );
+	}
+
+	public function rightJoin( Table $table, string $keyLeft, string $keyRight ): QueryInterface
+	{
+		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_RIGHT );
 	}
 
 	/**
@@ -183,6 +214,30 @@ abstract class QueryAbstract
 	}
 
 	//  --  PROTECTED  --  //
+
+	/**
+	 *
+	 *	@access		protected
+	 *	@param		array		$parameters		Reference to parameters map
+	 *	@return		string
+	 */
+	protected function renderJoins(): string
+	{
+		if( !$this->joins )
+			return '';
+		$list	= array();
+		foreach( $this->joins as $join ){
+			$prefix	= '';
+			if( $join->type === static::JOIN_TYPE_LEFT )
+				$prefix	= 'LEFT ';
+			else if( $join->type === static::JOIN_TYPE_RIGHT )
+				$prefix	= 'RIGHT ';
+			$relation	= $join->left.' = '.$join->right;
+			$tableName	= $join->table->render();
+			$list[]	= ' '.$prefix.'JOIN '.$tableName.' ON ('.$relation.')';
+		}
+		return implode( ' ', $list );
+	}
 
 	/**
 	 *

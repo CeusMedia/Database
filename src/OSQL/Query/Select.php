@@ -26,8 +26,8 @@
  */
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Database\OSQL\QueryAbstract;
-use CeusMedia\Database\OSQL\QueryInterface;
+use CeusMedia\Database\OSQL\Query\AbstractQuery;
+use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
 
 /**
@@ -41,7 +41,7 @@ use CeusMedia\Database\OSQL\Table;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Select extends QueryAbstract implements QueryInterface
+class Select extends AbstractQuery implements QueryInterface
 {
 	protected $conditions	= array();
 	protected $fields		= '*';

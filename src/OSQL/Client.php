@@ -26,6 +26,8 @@
  */
 namespace CeusMedia\Database\OSQL;
 
+use CeusMedia\Database\OSQL\Query\QueryInterface;
+
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
  *	@category		Library
