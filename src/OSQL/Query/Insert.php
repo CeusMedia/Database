@@ -102,7 +102,10 @@ class Insert extends AbstractQuery implements QueryInterface
 		$limit		= $this->renderLimit( $parameters );
 		$offset		= $this->renderOffset( $parameters );
 		$query		= 'INSERT INTO '.$table.$fields.$conditions.$limit.$offset;
-		return array( $query, $parameters );
+		return (object) array(
+			'query'			=> $query,
+			'parameters'	=> $parameters,
+		);
 	}
 
 	/**

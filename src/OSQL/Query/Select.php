@@ -158,7 +158,7 @@ class Select extends AbstractQuery implements QueryInterface
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render(): array
+	public function render(): object
 	{
 		$clock		= new \Alg_Time_Clock();
 		$this->checkSetup();
@@ -173,5 +173,9 @@ class Select extends AbstractQuery implements QueryInterface
 		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE)/', PHP_EOL.'\\1', $query );
 		$this->timeRender	= $clock->stop( 6, 0 );
 		return array( $query, $parameters );
+		return (object) array(
+			'query'			=> $query,
+			'parameters'	=> $parameters,
+		);
 	}
 }

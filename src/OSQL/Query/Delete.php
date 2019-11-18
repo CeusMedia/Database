@@ -79,7 +79,10 @@ class Delete extends AbstractQuery implements QueryInterface
 		$offset		= $this->renderOffset( $parameters );
 		$query		= 'DELETE FROM '.$table.$conditions.$limit.$offset;
 		$this->timeRender	= $clock->stop( 6, 0 );
-		return array( $query, $parameters );
+		return (object) array(
+			'query'			=> $query,
+			'parameters'	=> $parameters,
+		);
 	}
 }
 ?>
