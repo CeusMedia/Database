@@ -45,6 +45,7 @@ class Select extends AbstractQuery implements QueryInterface
 {
 	protected $countRows	= FALSE;
 	protected $conditions	= array();
+	protected $orders		= array();
 	protected $fields		= '*';
 	protected $tables		= array();
 	protected $groupBy		= NULL;
@@ -118,27 +119,15 @@ class Select extends AbstractQuery implements QueryInterface
 		return $this;
 	}
 
-/*	public function having( $name, $value )
+	public function order( string $field, ?string $direction = 'ASC' ): self
 	{
-		$this->having	= array( $name, $value );
-	}
-*/
-	/**
-	 *	Join with another table and returns query object for chainability.
-	 *	@access		public
-	 *	@param		Table		$table		Another to join in
-	 *	@param		string		$keyLeft	Column key of current table for equi join
-	 *	@param		string		$rightLeft	Column key of new table for equi join
-	 *	@throws		\Exception	...
-	 *	@return		QueryInterface
-	 */
-	public function join( Table $table, string $keyLeft, string $keyRight ): QueryInterface
-	{
-		if( !$this->tables )
-			throw new \Exception( 'No table to join set' );
-		$lastTable	= array_pop( $this->tables );
-		$lastTable->join( $table, $keyLeft, $keyRight );
-		array_push( $this->tables, $lastTable );
+		$direction	= strtoupper( $direction );
+		if( !in_array( $direction, ['ASC', 'DESC'] ) )
+			throw new \InvalidArgumentException( 'Direction must be ASC or DESC' );
+		$this->orders[]	= (object) array(
+			'field'		=> $field,
+			'direction'	=> $direction,
+		);
 		return $this;
 	}
 
@@ -169,6 +158,17 @@ class Select extends AbstractQuery implements QueryInterface
 		return ' GROUP BY '.$this->groupBy;
 	}
 
+	protected function renderOrders(): string
+	{
+		if( !$this->orders )
+			return '';
+		$list	= [];
+		foreach( $this->orders as $order ){
+			$list[]	= $order->field.' '.$order->direction;
+		}
+		return ' ORDER BY '.implode( ', ', $list );
+	}
+
 	/**
 	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
 	 *	@access		public
@@ -187,6 +187,7 @@ class Select extends AbstractQuery implements QueryInterface
 		$group		= $this->renderGrouping();
 		$query		= 'SELECT '.$fields.$from.$conditions.$limit.$offset.$group;
 		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE)/', PHP_EOL.'\\1', $query );
+		$orders		= $this->renderOrders();
 		$options	= $this->renderOptions();
 		$this->timeRender	= $clock->stop( 6, 0 );
 		return array( $query, $parameters );
