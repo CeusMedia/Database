@@ -181,16 +181,15 @@ class Select extends AbstractQuery implements QueryInterface
 		$parameters	= array();
 		$fields		= is_array( $this->fields ) ? implode( ',', $this->fields ) : $this->fields;
 		$from		= $this->renderFrom();
+		$joins		= $this->renderJoins();
 		$conditions	= $this->renderConditions( $parameters );
 		$limit		= $this->renderLimit( $parameters );
 		$offset		= $this->renderOffset( $parameters );
 		$group		= $this->renderGrouping();
-		$query		= 'SELECT '.$fields.$from.$conditions.$limit.$offset.$group;
-		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE)/', PHP_EOL.'\\1', $query );
 		$orders		= $this->renderOrders();
 		$options	= $this->renderOptions();
-		$this->timeRender	= $clock->stop( 6, 0 );
-		return array( $query, $parameters );
+		$query		= 'SELECT '.$options.$fields.$from.$joins.$conditions.$group.$orders.$limit.$offset;
+		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE|ORDER|LIMIT|GROUP|HAVING)/', PHP_EOL.'\\1', $query );
 		return (object) array(
 			'query'			=> $query,
 			'parameters'	=> $parameters,
@@ -206,3 +205,36 @@ class Select extends AbstractQuery implements QueryInterface
 	}
 
 }
+
+/*
+Syntax
+---------------------
+
+MySQL:   https://dev.mysql.com/doc/refman/5.7/en/select.html
+MariaDB: https://mariadb.com/kb/en/library/select/
+
+SELECT
+    [ALL | DISTINCT | DISTINCTROW ]
+      [HIGH_PRIORITY]
+      [STRAIGHT_JOIN]
+      [SQL_SMALL_RESULT] [SQL_BIG_RESULT] [SQL_BUFFER_RESULT]
+      [SQL_CACHE | SQL_NO_CACHE] [SQL_CALC_FOUND_ROWS]
+    select_expr [, select_expr ...]
+    [FROM table_references
+      [PARTITION partition_list]
+    [WHERE where_condition]
+    [GROUP BY {col_name | expr | position}
+      [ASC | DESC], ... [WITH ROLLUP]]
+    [HAVING where_condition]
+    [ORDER BY {col_name | expr | position}
+      [ASC | DESC], ...]
+    [LIMIT {[offset,] row_count | row_count OFFSET offset}]
+    [PROCEDURE procedure_name(argument_list)]
+    [INTO OUTFILE 'file_name'
+        [CHARACTER SET charset_name]
+        export_options
+      | INTO DUMPFILE 'file_name'
+      | INTO var_name [, var_name]]
+    [FOR UPDATE | LOCK IN SHARE MODE]]
+
+*/
