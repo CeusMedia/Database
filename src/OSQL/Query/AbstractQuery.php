@@ -87,7 +87,6 @@ abstract class AbstractQuery
 	 *
 	 *	@access		public
 	 *	@return		void		$query->timePrepare	= $clock->stop( 6, 0 );
-
 	 */
 	public function execute()
 	{
@@ -148,7 +147,7 @@ abstract class AbstractQuery
 	 *	@access		public
 	 *	@return		QueryInterface
 	 */
-	public function join( Table $table, string $keyLeft, string $keyRight, ?int $type = self::JOIN_TYPE_NATURAL ): QueryInterface
+	public function join( Table $table, string $keyLeft, ?string $keyRight = NULL, ?int $type = self::JOIN_TYPE_NATURAL ): QueryInterface
 	{
 		$this->joins[]	= (object) [
 			'table'		=> $table,
@@ -161,12 +160,12 @@ abstract class AbstractQuery
 		return $this;
 	}
 
-	public function leftJoin( Table $table, string $keyLeft, string $keyRight ): QueryInterface
+	public function leftJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): QueryInterface
 	{
 		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_LEFT );
 	}
 
-	public function rightJoin( Table $table, string $keyLeft, string $keyRight ): QueryInterface
+	public function rightJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): QueryInterface
 	{
 		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_RIGHT );
 	}
@@ -232,9 +231,11 @@ abstract class AbstractQuery
 				$prefix	= 'LEFT ';
 			else if( $join->type === static::JOIN_TYPE_RIGHT )
 				$prefix	= 'RIGHT ';
-			$relation	= $join->left.' = '.$join->right;
+			$specification	= ' USING ('.$join->left.')';
+			if( $join->right )
+				$specification	= ' ON '.$join->left.' = '.$join->right;
 			$tableName	= $join->table->render();
-			$list[]	= ' '.$prefix.'JOIN '.$tableName.' ON ('.$relation.')';
+			$list[]	= ' '.$prefix.'JOIN '.$tableName.$specification;
 		}
 		return implode( ' ', $list );
 	}
