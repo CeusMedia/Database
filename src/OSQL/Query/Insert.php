@@ -46,6 +46,8 @@ class Insert extends AbstractQuery implements QueryInterface
 	protected $fields;
 	protected $table		= NULL;
 
+	public $lastInsertId;
+
 	/**
 	 *	...
 	 *	@access		protected

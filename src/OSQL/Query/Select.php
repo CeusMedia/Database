@@ -43,10 +43,26 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Select extends AbstractQuery implements QueryInterface
 {
+	protected $countRows	= FALSE;
 	protected $conditions	= array();
 	protected $fields		= '*';
 	protected $tables		= array();
 	protected $groupBy		= NULL;
+
+	public $foundRows		= 0;
+	public $finalQuery;
+
+	/**
+	 *	Enable/disable counting of all rows ignoring limits.
+	 *	The result can be read later by in query member "foundRows".
+	 *	@access		public
+	 *	@param		bool		Flag: enable or disable counting
+	 */
+	public function countRows( ?bool $count = TRUE ): self
+	{
+		$this->countRows	= $count;
+		return $this;
+	}
 
 	/**
 	 *	Adds fields to select and returns query object for chainability.
@@ -171,6 +187,7 @@ class Select extends AbstractQuery implements QueryInterface
 		$group		= $this->renderGrouping();
 		$query		= 'SELECT '.$fields.$from.$conditions.$limit.$offset.$group;
 		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE)/', PHP_EOL.'\\1', $query );
+		$options	= $this->renderOptions();
 		$this->timeRender	= $clock->stop( 6, 0 );
 		return array( $query, $parameters );
 		return (object) array(
@@ -178,4 +195,13 @@ class Select extends AbstractQuery implements QueryInterface
 			'parameters'	=> $parameters,
 		);
 	}
+
+	protected function renderOptions()
+	{
+		$options	= [];
+		if( $this->countRows )
+			$options[]	= 'SQL_CALC_FOUND_ROWS';
+		return $options ? join( $options ).' ' : '';
+	}
+
 }

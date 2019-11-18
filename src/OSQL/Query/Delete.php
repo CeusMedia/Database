@@ -46,6 +46,8 @@ class Delete extends AbstractQuery implements QueryInterface
 	protected $conditions	= array();
 	protected $table		= NULL;
 
+	public $affectedRows;
+
 	public function from( Table $table ): self
 	{
 		$this->table	= $table;

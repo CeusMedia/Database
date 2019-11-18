@@ -47,6 +47,8 @@ class Update extends AbstractQuery implements QueryInterface
 	protected $fields		= array();
 	protected $table		= NULL;
 
+	public $affectedRows;
+
 	/**
 	 *	...
 	 *	@access		protected

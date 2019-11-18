@@ -85,17 +85,18 @@ class Client
 	 */
 	public function execute( QueryInterface $query )
 	{
-		$clock	= new \Alg_Time_Clock();
-		$parts	= $query->render();
-		$query->timeRender	= $clock->stop( 6, 0 );
+		$clock		= new \Alg_Time_Clock();
+		$queryParts	= $query->render();
+		$query->timing['render']	= $clock->stop( 0, 6 );
+		$query->finalQuery			= $queryParts->query;
 
 		$clock->start();
-		$stmt	= $this->dbc->prepare( $parts[0] );
-		foreach( $parts[1] as $name => $parameter ){
+		$stmt	= $this->dbc->prepare( $queryParts->query );
+		foreach( $queryParts->parameters as $name => $parameter ){
 			$type	= $this->getPdoTypeFromValue( $parameter['value'] );
 			$stmt->bindParam( $name, $parameter['value'], $type );
 		}
-		$query->timePrepare	= $clock->stop( 6, 0 );
+		$query->timing['prepare']	= $clock->stop( 0, 6 );
 
 		$clock->start();
 		$result	= $stmt->execute();
@@ -103,10 +104,26 @@ class Client
 			$info	= $stmt->errorInfo();
 			throw new \Exception( $info[2], $info[1] );
 		}
-		$query->timeExecute	= $clock->stop( 6, 0 );
+		$query->timing['execute']	= $clock->stop( 0, 6 );
+		$query->timing['total']		= array_sum( $query->timing );
 
-		if( $query instanceof Query\Select )
-			return $stmt->fetchAll( $this->fetchMode );
+		if( strpos( $queryParts->query, 'SQL_CALC_FOUND_ROWS' ) ){
+			$query->foundRows	= current( $this->dbc->query( 'SELECT FOUND_ROWS()' )->fetch() );
+		}
+
+		if( $query instanceof Query\Select ){
+			$query->result	= $stmt->fetchAll( $this->fetchMode );
+			return $query->result;
+		}
+		else if( $query instanceof Query\Insert ){
+			$query->rowCount		= $stmt->rowCount();
+			$query->lastInsertId	= $this->dbc->lastInsertId();
+			return $query->lastInsertId;
+		}
+		else if( $query instanceof Query\Update || $query instanceof Query\Delete ){
+			$query->rowCount	= $stmt->rowCount();
+			return $query->rowCount;
+		}
 		return $result;
 	}
 
