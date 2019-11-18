@@ -71,11 +71,15 @@ if( 1 ){
 
 $query	= $select->render();
 remark( 'Query:' );
-remark( $query[0] );
+remark( $query->query );
 remark( 'Parameters:' );
-print_m( $query[1] );
+print_m( $query->parameters );
 remark( 'Result:' );
 print_m( $select->execute() );
+remark( 'Rows:' );
+print_m( $select->foundRows );
+remark( 'Timing:' );
+print_m( $select->timing );
 
 /*
 $states = [FALSE, TRUE];
