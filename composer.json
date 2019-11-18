@@ -18,8 +18,7 @@
   "minimum-stability": "dev",
   "require": {
     "php": "^5.3 | ^7",
-    "ceus-media/common": "^0.8",
-    "ceus-media/cache": "^0"
+    "ceus-media/common": "^0.8"
   },
   "require-dev": {
     "ceus-media/doc-creator": "^0.9"
