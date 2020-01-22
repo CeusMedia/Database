@@ -1,5 +1,6 @@
 {
   "name": "ceus-media/database",
+  "description": "PHP database access",
   "license": [
     "GPL-3.0-or-later"
   ],
@@ -13,11 +14,11 @@
   ],
   "support": {
     "email": "office@ceusmedia.de",
-    "jabber": "ceus-media@jabber.org"
+    "jabber": "cwuerker@ceusmedia.de"
   },
   "minimum-stability": "dev",
   "require": {
-    "php": "^5.3 | ^7",
+    "php": "~7.2",
     "ceus-media/common": "^0.8"
   },
   "require-dev": {
