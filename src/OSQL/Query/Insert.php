@@ -94,7 +94,7 @@ class Insert extends AbstractQuery implements QueryInterface
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function render(): array
+	public function render(): object
 	{
 		$this->checkSetup();
 		$parameters	= array();

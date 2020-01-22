@@ -68,11 +68,11 @@ class Delete extends AbstractQuery implements QueryInterface
 	/**
 	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		object
 	 */
-	public function render(): array
+	public function render(): object
 	{
-		$clock	= new \Alg_Time_Clock();
+		$clock		= new \Alg_Time_Clock();
 		$this->checkSetup();
 		$parameters	= array();
 		$table		= $this->table->render();
