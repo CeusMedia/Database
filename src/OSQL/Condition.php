@@ -37,9 +37,19 @@ namespace CeusMedia\Database\OSQL;
  */
 class Condition
 {
+	const OP_EQ		= '=';
+	const OP_GT		= '>';
+	const OP_GTE	= '>=';
+	const OP_LT		= '<';
+	const OP_LTE	= '<=';
+	const OP_NEQ	= '!=';
+	const OP_IS		= 'IS';
+	const OP_ISN	= 'IS NOT';
+	const OP_LIKE	= 'LIKE';
+
 	protected $type			= NULL;
 	protected $fieldName	= NULL;
-	protected $operation	= '=';
+	protected $operation	= self::OP_EQ;
 	protected $value		= NULL;
 
 	/**
