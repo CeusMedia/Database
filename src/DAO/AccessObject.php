@@ -92,4 +92,3 @@ class AccessObject
 		return $this->table->updateById( $this->table->getPrimaryKey(), $fields );
 	}
 }
-?>

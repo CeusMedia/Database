@@ -39,4 +39,3 @@ Interface QueryInterface
 {
 	public function render(): object;
 }
-?>

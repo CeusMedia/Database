@@ -281,4 +281,3 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		@unlink( $logFile );
 	}
 }
-?>

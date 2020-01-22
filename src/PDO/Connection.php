@@ -270,4 +270,3 @@ class Connection extends \PDO
 		return $this;
 	}
 }
-?>

@@ -87,4 +87,3 @@ class Delete extends AbstractQuery implements QueryInterface
 		);
 	}
 }
-?>

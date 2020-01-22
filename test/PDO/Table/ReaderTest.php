@@ -1119,4 +1119,3 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->assertEquals( $expected, $actual );
 	}
 }
-?>

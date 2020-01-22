@@ -295,4 +295,3 @@ abstract class AbstractQuery
 		return $offset;
 	}
 }
-?>

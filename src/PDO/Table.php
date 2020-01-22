@@ -682,4 +682,3 @@ abstract class Table
 		$this->table->truncate();
 	}
 }
-?>

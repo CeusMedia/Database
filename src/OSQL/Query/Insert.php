@@ -121,4 +121,3 @@ class Insert extends AbstractQuery implements QueryInterface
 		return $this;
 	}
 }
-?>

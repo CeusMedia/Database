@@ -139,4 +139,3 @@ class Table
 		return $this;
 	}
 }
-?>

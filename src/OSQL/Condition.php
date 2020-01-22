@@ -170,4 +170,3 @@ class Condition
 		return $this;
 	}
 }
-?>

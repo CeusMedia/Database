@@ -18,5 +18,3 @@ CeusMedia_Database_Test_Case::$pathLib	= dirname( __DIR__  ).'/';
 CeusMedia_Database_Test_Case::$config	= $__config;
 error_reporting( E_ALL );
 //error_reporting( error_reporting() || ~E_USER_DEPRECATED );
-
-?>

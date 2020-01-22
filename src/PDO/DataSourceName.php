@@ -314,4 +314,3 @@ class DataSourceName
 		return implode( $delimiter, $list );
 	}
 }
-?>

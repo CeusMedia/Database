@@ -44,4 +44,3 @@ class Connection extends PdoConnection
 		return new Query\Select( $fields );
 	}
 }
-?>

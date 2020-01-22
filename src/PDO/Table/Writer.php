@@ -188,4 +188,3 @@ class Writer extends Reader
 		return $this;
 	}
 }
-?>

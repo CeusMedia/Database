@@ -208,4 +208,3 @@ abstract class Table
 		return TRUE;
 	}
 }
-?>
