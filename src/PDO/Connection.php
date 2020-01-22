@@ -36,7 +36,8 @@ namespace CeusMedia\Database\PDO;
  *	@link			https://github.com/CeusMedia/Database
  *	@todo			Code Documentation
  */
-class Connection extends \PDO{
+class Connection extends \PDO
+{
 	protected $driver				= NULL;
 	public $numberExecutes			= 0;
 	public $numberStatements		= 0;
@@ -60,8 +61,8 @@ class Connection extends \PDO{
 	 *	@return		void
 	 *	@see		http://php.net/manual/en/pdo.drivers.php
 	 */
-	public function __construct( $dsn, $username = NULL, $password = NULL, $driverOptions = array() ){
-		$a		= 1;
+	public function __construct( $dsn, $username = NULL, $password = NULL, $driverOptions = array() )
+	{
 		$options	= $driverOptions + self::$defaultOptions;										//  extend given options by default options
 		parent::__construct( $dsn, $username, $password, $options );
 		$this->driver	= $this->getAttribute( \PDO::ATTR_DRIVER_NAME );							//  note name of used driver
@@ -76,13 +77,14 @@ class Connection extends \PDO{
 	/**
 	 *	Starts a Transaction.
 	 *	@access		public
-	 *	@return		bool
+	 *	@return		self
 	 */
-	public function beginTransaction(){
+	public function beginTransaction(): self
+	{
 		$this->openTransactions++;																	//  increase Transaction Counter
 		if( $this->openTransactions == 1)															//  no Transaction is open
 			parent::beginTransaction();																//  begin Transaction
-		return TRUE;
+		return $this;
 	}
 
 	/**
@@ -90,7 +92,8 @@ class Connection extends \PDO{
 	 *	@access		public
 	 *	@return		bool
 	 */
-	public function commit(){
+	public function commit(): bool
+	{
 		if( !$this->openTransactions )												//  there has been an inner RollBack or no Transaction was opened
 			return FALSE;															//  ignore Commit
 		if( $this->openTransactions == 1){											//  commit of an outer Transaction
@@ -110,9 +113,10 @@ class Connection extends \PDO{
 	 *	Executes a Statement and returns Number of affected Rows.
 	 *	@access		public
 	 *	@param		string		$statement			SQL Statement to execute
-	 *	@return		int
+	 *	@return		integer
 	 */
-	public function exec( $statement ){
+	public function exec( $statement ): int
+	{
 		$this->logStatement( $statement );
 		try{
 			$this->numberExecutes++;
@@ -129,11 +133,13 @@ class Connection extends \PDO{
 	 *	@access		public
 	 *	@return		string|NULL		Database Driver (dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
 	 */
-	public function getDriver(){
+	public function getDriver()
+	{
 		return $this->driver;
 	}
 
-	public function getOpenTransactions(){
+	public function getOpenTransactions(): int
+	{
 		return $this->openTransactions;
 	}
 
@@ -144,7 +150,8 @@ class Connection extends \PDO{
 	 *	@param		string		$prefix		Table prefix to filter by (optional).
 	 *	@return		array
 	 */
-	public function getTables( $prefix = NULL ){
+	public function getTables( $prefix = NULL ): array
+	{
 		$query		= "SHOW TABLES" . ( $prefix ? " LIKE '".$prefix."%'" : "" );
 		return parent::query( $query )->fetchAll( PDO::FETCH_COLUMN );
 	}
@@ -156,7 +163,8 @@ class Connection extends \PDO{
 	 *	@param		string			$statement		SQL Statement which originated PDO Exception
 	 *	@return		void
 	 */
-	protected function logError( \Exception $exception, $statement ){
+	protected function logError( \Exception $exception, $statement )
+	{
 		if( !$this->logFileErrors )
 			return;
 //			throw $exception;
@@ -186,7 +194,8 @@ class Connection extends \PDO{
 	 *	@param		string		$statement		SQL Statement
 	 *	@return		void
 	 */
-	protected function logStatement( $statement ){
+	protected function logStatement( $statement )
+	{
 		if( !$this->logFileStatements )
 			return;
 		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
@@ -194,13 +203,15 @@ class Connection extends \PDO{
 		error_log( $message, 3, $this->logFileStatements);
 	}
 
-	public function prepare( $statement, $driverOptions = array() ){
+	public function prepare( $statement, $driverOptions = array() )
+	{
 		$this->numberStatements++;
 		$this->logStatement( $statement );
 		return parent::prepare( $statement, $driverOptions );
 	}
 
-	public function query( $statement, $fetchMode = \PDO::FETCH_ASSOC ){
+	public function query( $statement, $fetchMode = \PDO::FETCH_ASSOC )
+	{
 		$this->logStatement( $statement );
 		$this->lastQuery	= $statement;
 		$this->numberStatements++;
@@ -215,9 +226,10 @@ class Connection extends \PDO{
 	/**
 	 *	Rolls back a Transaction.
 	 *	@access		public
-	 *	@return		bool
+	 *	@return		boolean
 	 */
-	public function rollBack(){
+	public function rollBack(): bool
+	{
 		if( !$this->openTransactions )												//  there has been an inner RollBack or no Transaction was opened
 			return FALSE;															//  ignore Commit
 		if( $this->openTransactions == 1 ){											//  only 1 Transaction open
@@ -234,24 +246,28 @@ class Connection extends \PDO{
 	 *	Sets File Name of Error Log.
 	 *	@access		public
 	 *	@param		string		$fileName		File Name of Statement Error File
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function setErrorLogFile( $fileName ){
+	public function setErrorLogFile( $fileName ): self
+	{
 		$this->logFileErrors	= $fileName;
 		if( $fileName && !file_exists( dirname( $fileName ) ) )
 			mkDir( dirname( $fileName ), 0700, TRUE );
+		return $this;
 	}
 
 	/**
 	 *	Sets File Name of Statement Log.
 	 *	@access		public
 	 *	@param		string		$fileName		File Name of Statement Log File
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function setStatementLogFile( $fileName ){
+	public function setStatementLogFile( $fileName ): self
+	{
 		$this->logFileStatements	= $fileName;
 		if( $fileName && !file_exists( dirname( $fileName ) ) )
 			mkDir( dirname( $fileName ), 0700, TRUE );
+		return $this;
 	}
 }
 ?>

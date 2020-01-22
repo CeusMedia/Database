@@ -313,6 +313,11 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 			'label'	=> "updateTest1-changed"
 		);
 
+		$assertion	= 0;
+		$wrongData	= array( 'invalid_column' => 'not_important' );
+		$creation	= $this->writer->updateByConditions( $wrongData, $conditions );
+		$this->assertEquals( $assertion, $creation );
+
 		$assertion	= 1;
 		$creation	= $this->writer->updateByConditions( $data, $conditions );
 		$this->assertEquals( $assertion, $creation );
@@ -370,7 +375,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$creation	= $this->writer->count();
 		$this->assertEquals( $assertion, $creation );
 
-		$assertion	= 0;
+		$assertion	= $this->writer;
 		$creation	= $this->writer->truncate();
 		$this->assertEquals( $assertion, $creation );
 

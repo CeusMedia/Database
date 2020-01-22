@@ -35,14 +35,15 @@ namespace CeusMedia\Database\PDO\Table;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Writer extends Reader{
-
+class Writer extends Reader
+{
 	/**
 	 *	Deletes focused Rows in this Table and returns number of affected Rows.
 	 *	@access		public
-	 *	@return		int
+	 *	@return		integer
 	 */
-	public function delete(){
+	public function delete(): int
+	{
 		$this->validateFocus();
 		$conditions	= $this->getConditionQuery( array() );
 		$query	= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
@@ -55,10 +56,11 @@ class Writer extends Reader{
 	/**
 	 *	Deletes data by given conditions.
 	 *	@access		public
-	 *	@param		array	$where		associative Array of Condition Strings
-	 *	@return		bool
+	 *	@param		array		$where		associative Array of Condition Strings
+	 *	@return		boolean
 	 */
-	public function deleteByConditions( $where = array() ){
+	public function deleteByConditions( $where = array() ): bool
+	{
 		$conditions	= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );						//  render WHERE conditions, uncursored, without functions
 		$query	= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
 		$result	= $this->dbc->exec( $query );
@@ -70,10 +72,11 @@ class Writer extends Reader{
 	 *	Inserts data into this table and returns ID.
 	 *	@access		public
 	 *	@param		array		$data			associative array of data to store
-	 *	@param		bool		$stripTags		Flag: strip HTML Tags from values
-	 *	@return		int			ID of inserted row
+	 *	@param		boolean		$stripTags		Flag: strip HTML Tags from values
+	 *	@return		integer		ID of inserted row
 	 */
-	public function insert( $data = array(), $stripTags = TRUE ){
+	public function insert( $data = array(), $stripTags = TRUE ): int
+	{
 		$columns	= array();
 		$values		= array();
 		foreach( $this->columns as $column ){														//  iterate Columns
@@ -106,10 +109,11 @@ class Writer extends Reader{
 	 *	Updating data of focused primary key in this table.
 	 *	@access		public
 	 *	@param		array		$data			Map of data to store
-	 *	@param		bool		$stripTags		Flag: strip HTML tags from values
-	 *	@return		bool
+	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
+	 *	@return		boolean
 	 */
-	public function update( $data = array(), $stripTags = TRUE ){
+	public function update( $data = array(), $stripTags = TRUE ): bool
+	{
 		if( !( is_array( $data ) && $data ) )
 			throw new \InvalidArgumentException( 'Data for update must be an array and have atleast 1 pair' );
 		$this->validateFocus();
@@ -139,10 +143,11 @@ class Writer extends Reader{
 	 *	@access		public
 	 *	@param		array		$data			Array of data to store
 	 *	@param		array		$conditions		Array of condition pairs
-	 *	@param		bool		$stripTags		Flag: strip HTML tags from values
-	 *	@return		bool
+	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
+	 *	@return		integer
 	 */
-	public function updateByConditions( $data = array(), $conditions = array(), $stripTags = FALSE ){
+	public function updateByConditions( $data = array(), $conditions = array(), $stripTags = FALSE ): int
+	{
 		if( !( is_array( $data ) && $data ) )
 			throw new \InvalidArgumentException( 'Data for update must be an array and have atleast 1 pair' );
 		if( !( is_array( $conditions ) && $conditions ) )
@@ -160,24 +165,27 @@ class Writer extends Reader{
 				$updates[] = '`'.$column.'`='.$data[$column];
 			}
 		}
-		if( sizeof( $updates ) ){
+		if( count( $updates ) ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$conditions;
 			$result		= $this->dbc->exec( $query );
 			return $result;
 		}
+		return 0;
 	}
 
 	/**
 	 *	Removes all data and resets incremental counter.
 	 *	Note: This method does not return the number of removed rows.
 	 *	@access		public
-	 *	@return		void
+	 *	@return		self
 	 *	@see		http://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
-	public function truncate(){
+	public function truncate()
+	{
 		$query	= 'TRUNCATE '.$this->getTableName();
-		return $this->dbc->exec( $query );
+		$this->dbc->exec( $query );
+		return $this;
 	}
 }
 ?>

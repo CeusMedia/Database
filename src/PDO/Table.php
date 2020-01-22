@@ -39,8 +39,8 @@ use CeusMedia\Database\PDO\Table\Writer as TableWriter;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-abstract class Table{
-
+abstract class Table
+{
 	/**	@var	Connection				$dbc			PDO database connection object */
 	protected $dbc;
 	/**	@var	string					$name			Name of Database Table without Prefix */
@@ -55,7 +55,7 @@ abstract class Table{
 	protected $table;
 	/**	@var	string					$prefix			Database Table Prefix */
 	protected $prefix;
-	/**	@var	ADT_List_Dictionary		$cache			Model data cache */
+	/**	@var	\ADT_List_Dictionary	$cache			Model data cache */
 	protected $cache;
 	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
 	protected $fetchMode				= \PDO::FETCH_OBJ;
@@ -70,18 +70,21 @@ abstract class Table{
 	 *	@param		integer			$id			ID to focus on
 	 *	@return		void
 	 */
-	public function __construct( Connection $dbc, $prefix = NULL, $id = NULL ){
+	public function __construct( Connection $dbc, $prefix = NULL, $id = NULL )
+	{
 		$this->checkTableSetup();
 		$this->setDatabase( $dbc );
 	}
 
-	private function checkTableSetup(){
+	private function checkTableSetup(): self
+	{
 		if( !$this->name )
 			throw new \RuntimeException( 'No table name set' );
 		if( !$this->columns )
 			throw new \RuntimeException( 'No table columns set' );
 		if( !$this->columns )
 			throw new \RuntimeException( 'No table columns set' );
+		return $this;
 	}
 
 	/**
@@ -91,7 +94,8 @@ abstract class Table{
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer
 	 */
-	public function add( $data, $stripTags = TRUE ){
+	public function add( $data, $stripTags = TRUE ): int
+	{
 		$id	= $this->table->insert( $data, $stripTags );
 		$this->cache->set( $this->cacheKey.$id, $this->get( $id ) );
 		return $id;
@@ -111,7 +115,8 @@ abstract class Table{
 	 *	@throws		\RangeException					in strict mode if field is empty but mandatory
 	 *	@throws		\DomainException				in strict mode if field is not a table column
 	 */
-	protected function checkField( $field, $mandatory = FALSE, $strict = TRUE ){
+	protected function checkField( $field, $mandatory = FALSE, $strict = TRUE )
+	{
 		if( !is_string( $field ) ){
 			if( !$strict )
 				return FALSE;
@@ -150,7 +155,8 @@ abstract class Table{
 	 *	@throws		\RangeException					in strict mode if field is empty but mandatory
 	 *	@throws		\DomainException				in strict mode if field is not an index
 	 */
-	protected function checkIndices( $indices, $mandatory = FALSE, $strict = TRUE, $withPrimaryKey = FALSE ){
+	protected function checkIndices( $indices, $mandatory = FALSE, $strict = TRUE, $withPrimaryKey = FALSE )
+	{
 		if( !is_array( $indices ) ){
 			if( !$strict )
 				return FALSE;
@@ -183,7 +189,8 @@ abstract class Table{
 	 *	@param		array			$conditions		Map of conditions
 	 *	@return		integer			Number of entries
 	 */
-	public function count( $conditions = array() ){
+	public function count( $conditions = array() ): int
+	{
 		return $this->table->count( $conditions );
 	}
 
@@ -194,7 +201,8 @@ abstract class Table{
 	 *	@param		string			$value			Value of Index
 	 *	@return		integer			Number of entries within this index
 	 */
-	public function countByIndex( $key, $value ){
+	public function countByIndex( $key, $value ): int
+	{
 		$conditions	= array( $key => $value );
 		return $this->table->count( $conditions );
 	}
@@ -205,7 +213,8 @@ abstract class Table{
 	 *	@param		array			$indices		Map of index conditions
 	 *	@return		integer			Number of entries within this index
 	 */
-	public function countByIndices( $indices ){
+	public function countByIndices( $indices ): int
+	{
 		return $this->count( $indices );
 	}
 
@@ -216,7 +225,8 @@ abstract class Table{
 	 *	@param		array			$conditions		Map of conditions
 	 *	@return		integer			Number of entries
 	 */
-	public function countFast( $conditions ){
+	public function countFast( $conditions ): int
+	{
 		return $this->table->countFast( $conditions );
 	}
 
@@ -228,7 +238,8 @@ abstract class Table{
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
 	 */
-	public function edit( $id, $data, $stripTags = TRUE ){
+	public function edit( $id, $data, $stripTags = TRUE ): int
+	{
 		$this->table->focusPrimary( $id );
 		$result	= 0;
 		if( count( $this->table->get( FALSE ) ) )
@@ -246,7 +257,8 @@ abstract class Table{
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
 	 */
-	public function editByIndices( $indices, $data, $stripTags = TRUE ){
+	public function editByIndices( $indices, $data, $stripTags = TRUE ): int
+	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		return $this->table->updateByConditions( $data, $indices, $stripTags );
 	}
@@ -258,7 +270,8 @@ abstract class Table{
 	 *	@param		string			$field			Single Field to return
 	 *	@return		mixed
 	 */
-	public function get( $id, $field = '' ){
+	public function get( $id, $field = '' )
+	{
 		$field	= $this->checkField( $field, FALSE, TRUE );
 		$data	= $this->cache->get( $this->cacheKey.$id );
 		if( !$data ){
@@ -282,9 +295,10 @@ abstract class Table{
 	 *	@param		array			$groupings		List of columns to group by
 	 *	@param		array			$havings		List of conditions to apply after grouping
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
-	 *	@return		array
+	 *	@return		mixed
 	 */
-	public function getAll( $conditions = array(), $orders = array(), $limits = array(), $fields = array(), $groupings = array(), $havings = array(), $strict = FALSE ){
+	public function getAll( $conditions = array(), $orders = array(), $limits = array(), $fields = array(), $groupings = array(), $havings = array(), $strict = FALSE )
+	{
 		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $havings );
 		if( $fields )
 			foreach( $data as $nr => $set )
@@ -303,7 +317,8 @@ abstract class Table{
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex( $key, $value, $orders = array(), $limits = array(), $fields = array(), $strict = FALSE ){
+	public function getAllByIndex( $key, $value, $orders = array(), $limits = array(), $fields = array(), $strict = FALSE )
+	{
 		if( !in_array( $key, $this->table->getIndices() ) )
 			throw new \DomainException( 'Requested column "'.$key.'" is not an index' );
 		$conditions	= array( $key => $value );
@@ -321,7 +336,8 @@ abstract class Table{
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndices( $indices = array(), $orders = array(), $limits = array(), $fields = array(), $strict = FALSE ){
+	public function getAllByIndices( $indices = array(), $orders = array(), $limits = array(), $fields = array(), $strict = FALSE )
+	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
@@ -345,7 +361,8 @@ abstract class Table{
 	 *	@todo		change argument order: move fields to end
 	 *	@throws		\InvalidArgumentException			If given fields list is neither a list nor a string
 	 */
-	public function getByIndex( $key, $value, $orders = array(), $fields = array(), $strict = FALSE ){
+	public function getByIndex( $key, $value, $orders = array(), $fields = array(), $strict = FALSE )
+	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
 		if( !is_array( $fields ) )
@@ -369,7 +386,8 @@ abstract class Table{
 	 *	@throws		\InvalidArgumentException			If given fields list is neither a list nor a string
 	 *	@todo  		change default value of argument 'strict' to TRUE
 	 */
-	public function getByIndices( $indices, $orders = array(), $fields = array(), $strict = FALSE ){
+	public function getByIndices( $indices, $orders = array(), $fields = array(), $strict = FALSE )
+	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
 		if( !is_array( $fields ) )
@@ -389,7 +407,8 @@ abstract class Table{
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getColumns(){
+	public function getColumns(): array
+	{
 		return $this->table->getColumns();
 	}
 
@@ -405,7 +424,8 @@ abstract class Table{
 	 *	@throws		\DomainException				If requested field is not a table column
 	 *	@throws		\RangeException					If requested field is not within result fields
 	 */
-	protected function getFieldsFromResult( $result, $fields = array(), $strict = TRUE ){
+	protected function getFieldsFromResult( $result, $fields = array(), $strict = TRUE )
+	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
 		if( !is_array( $fields ) )
@@ -462,11 +482,13 @@ abstract class Table{
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getIndices(){
+	public function getIndices(): array
+	{
 		return $this->table->getIndices();
 	}
 
-	public function getLastQuery(){
+	public function getLastQuery()
+	{
 		return $this->table->getLastQuery();
 	}
 
@@ -476,7 +498,8 @@ abstract class Table{
 	 *	@param		boolean			$prefixed		Flag: return table name with prefix
 	 *	@return		string			Table name with or without prefix
 	 */
-	public function getName( $prefixed = TRUE ){
+	public function getName( $prefixed = TRUE ): string
+	{
 		if( $prefixed )
 			return $this->prefix.$this->name;
 		return $this->name;
@@ -487,7 +510,8 @@ abstract class Table{
 	 *	@access		public
 	 *	@return		string			Primary key column name
 	 */
-	public function getPrimaryKey(){
+	public function getPrimaryKey(): string
+	{
 		return $this->table->getPrimaryKey();
 	}
 
@@ -496,7 +520,8 @@ abstract class Table{
 	 *	@param		integer			$id				ID to focus on
 	 *	@return		boolean
 	 */
-	public function has( $id ){
+	public function has( $id ): bool
+	{
 		if( $this->cache->has( $this->cacheKey.$id ) )
 			return TRUE;
 		return (bool) $this->get( $id );
@@ -509,7 +534,8 @@ abstract class Table{
 	 *	@param		string			$value			Value of Index
 	 *	@return		boolean
 	 */
-	public function hasByIndex( $key, $value ){
+	public function hasByIndex( $key, $value ): bool
+	{
 		return (bool) $this->getByIndex( $key, $value );
 	}
 
@@ -519,7 +545,8 @@ abstract class Table{
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@return		boolean
 	 */
-	public function hasByIndices( $indices ){
+	public function hasByIndices( $indices ): bool
+	{
 		return (bool) $this->getByIndices( $indices );
 	}
 
@@ -529,7 +556,8 @@ abstract class Table{
 	 *	@param		integer			$id				ID to focus on
 	 *	@return		boolean
 	 */
-	public function remove( $id ){
+	public function remove( $id ):bool
+	{
 		$this->table->focusPrimary( $id );
 		$result	= FALSE;
 		if( count( $this->table->get( FALSE ) ) ){
@@ -546,9 +574,10 @@ abstract class Table{
 	 *	@access		public
 	 *	@param		string			$key			Key of Index
 	 *	@param		string			$value			Value of Index
-	 *	@return		boolean
+	 *	@return		integer
 	 */
-	public function removeByIndex( $key, $value ){
+	public function removeByIndex( $key, $value ): int
+	{
 		$this->table->focusIndex( $key, $value );
 		$number	= 0;
 		$rows	= $this->table->get( FALSE );
@@ -565,7 +594,6 @@ abstract class Table{
 				}
 				$this->cache->remove( $this->cacheKey.$id );
 			}
-			$result	= TRUE;
 		}
 		$this->table->defocus();
 		return $number;
@@ -577,7 +605,8 @@ abstract class Table{
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@return		integer			Number of removed entries
 	 */
-	public function removeByIndices( $indices ){
+	public function removeByIndices( $indices ): int
+	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
@@ -602,8 +631,10 @@ abstract class Table{
 		return $number;
 	}
 
-	public function setCache( \CeusMedia\Cache\AdapterInterface $cache ){
+	public function setCache( \CeusMedia\Cache\AdapterInterface $cache ): self
+	{
 		$this->cache	= $cache;
+		return $this;
 	}
 
 	/**
@@ -612,9 +643,10 @@ abstract class Table{
 	 *	@param		\CeusMedia\Database\PDO\Connection	$dbc		PDO database connection object
 	 *	@param		string				$prefix		Table name prefix
 	 *	@param		integer				$id			ID to focus on
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function setDatabase( \CeusMedia\Database\PDO\Connection $dbc, $prefix = NULL, $id = NULL ){
+	public function setDatabase( \CeusMedia\Database\PDO\Connection $dbc, $prefix = NULL, $id = NULL ): self
+	{
 		$this->dbc		= $dbc;
 		$this->prefix	= (string) $prefix;
 		$this->table	= new \CeusMedia\Database\PDO\Table\Writer(
@@ -629,10 +661,13 @@ abstract class Table{
 		$this->table->setIndices( $this->indices );
 		$this->cache	= \Alg_Object_Factory::createObject( self::$cacheClass );
 		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
+		return $this;
 	}
 
-	public function setUndoStorage( $storage ){
+	public function setUndoStorage( $storage ): self
+	{
 		$this->table->setUndoStorage( $storage );
+		return $this;
 	}
 
 	/**
@@ -642,7 +677,8 @@ abstract class Table{
 	 *	@return		void
 	 *	@see		http://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
-	public function truncate(){
+	public function truncate()
+	{
 		$this->table->truncate();
 	}
 }

@@ -99,7 +99,7 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@return		void
 	 */
 	public function testBeginTransaction(){
-		$assertion	= TRUE;
+		$assertion	= $this->connection;
 		$creation	= $this->connection->beginTransaction();
 		$this->assertEquals( $assertion, $creation );
 
@@ -236,7 +236,6 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		$assertion	= TRUE;
 		$creation	= $this->connection->rollBack();
 		$this->assertEquals( $assertion, $creation );
-
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
 

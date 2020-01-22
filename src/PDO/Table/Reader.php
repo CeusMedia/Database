@@ -34,7 +34,8 @@ namespace CeusMedia\Database\PDO\Table;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Reader{
+class Reader
+{
 	/**	@var	BaseConnection	$dbc				Database connection resource object */
 	protected $dbc;
 	/**	@var	array			$columns			List of table columns */
@@ -65,7 +66,8 @@ class Reader{
 	 *	@param		int			$focus			Focused primary key on start up
 	 *	@return		void
 	 */
-	public function __construct( $dbc, $tableName, $columns, $primaryKey, $focus = NULL ){
+	public function __construct( $dbc, $tableName, $columns, $primaryKey, $focus = NULL )
+	{
 		$this->setDbConnection( $dbc );
 		$this->setTableName( $tableName );
 		$this->setColumns( $columns );
@@ -82,7 +84,7 @@ class Reader{
 	 *	@param		array		$conditions		Map of columns and values to filter by
 	 *	@return		integer
 	 */
-	public function count( $conditions = array() )
+	public function count( $conditions = array() ): int
 	{
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $conditions ? ' WHERE '.$conditions : '';
@@ -98,7 +100,8 @@ class Reader{
 	 *	@param		array		$conditions		Map of columns and values to filter by
 	 *	@return		integer
 	 */
-	public function countFast( $conditions = array() ){
+	public function countFast( $conditions = array() ): int
+	{
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $conditions ? ' WHERE '.$conditions : '';
 		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
@@ -111,11 +114,11 @@ class Reader{
 	 *	@param		bool		$primaryOnly		Flag: delete focus on primary key only
 	 *	@return		bool
 	 */
-	public function defocus( $primaryOnly = FALSE ){
+	public function defocus( $primaryOnly = FALSE )
+	{
 		if( !$this->focusedIndices )
 			return FALSE;
-		if( $primaryOnly )
-		{
+		if( $primaryOnly ){
 			if( !array_key_exists( $this->primaryKey, $this->focusedIndices ) )
 				return FALSE;
 			unset( $this->focusedIndices[$this->primaryKey] );
@@ -136,7 +139,8 @@ class Reader{
 	 *	@param		array		$havings		List of conditions to apply after grouping
 	 *	@return		array		List of fetched table rows
 	 */
-	public function find( $columns = array(), $conditions = array(), $orders = array(), $limits = array(), $groupings = array(), $havings = array() ){
+	public function find( $columns = array(), $conditions = array(), $orders = array(), $limits = array(), $groupings = array(), $havings = array() ): array
+	{
 		$this->validateColumns( $columns );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );					//  render WHERE clause if needed, uncursored, allow functions
 		$conditions = $conditions ? ' WHERE '.$conditions : '';
@@ -157,7 +161,8 @@ class Reader{
 	/**
 	 *	@throws		\DomainException			if column is not an index
 	 */
-	public function findWhereIn( $columns, $column, $values, $orders = array(), $limits = array() ){
+	public function findWhereIn( $columns, $column, $values, $orders = array(), $limits = array() ): array
+	{
 		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
 			$columns	= array();																	//  otherwise use empty array
 		$this->validateColumns( $columns );
@@ -181,7 +186,8 @@ class Reader{
 	/**
 	 *	@throws		\RangeException			if column is not an index
 	 */
-	public function findWhereInAnd( $columns, $column, $values, $conditions = array(), $orders = array(), $limits = array() ){
+	public function findWhereInAnd( $columns, $column, $values, $conditions = array(), $orders = array(), $limits = array() ): array
+	{
 		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
 			$columns	= array();																	//  otherwise use empty array
 		$this->validateColumns( $columns );
@@ -210,13 +216,15 @@ class Reader{
 	 *	@access		public
 	 *	@param		string		$column			Index column name
 	 *	@param		int			$value			Index to focus on
-	 *	@return		void
+	 *	@return		SessionHandlerInterface
 	 *	@throws		\DomainException			if given column is not a defined column
 	 */
-	public function focusIndex( $column, $value ){
+	public function focusIndex( $column, $value ): self
+	{
 		if( !in_array( $column, $this->indices ) && $column != $this->primaryKey )				//  check column name
 			throw new \DomainException( 'Column "'.$column.'" is neither an index nor primary key and cannot be focused' );
 		$this->focusedIndices[$column] = $value;													//  set Focus
+		return $this;
 	}
 
 	/**
@@ -224,12 +232,14 @@ class Reader{
 	 *	@access		public
 	 *	@param		int			$id				Primary key ID to focus on
 	 *	@param		bool		$clearIndices	Flag: clear all previously focuses indices
-	 *	@return		void
+	 *	@return		self
 	 */
-	public function focusPrimary( $id, $clearIndices = TRUE ){
+	public function focusPrimary( $id, $clearIndices = TRUE ): self
+	{
 		if( $clearIndices )
 			$this->focusedIndices	= array();
 		$this->focusedIndices[$this->primaryKey] = $id;
+		return $this;
 	}
 
 	/**
@@ -242,7 +252,8 @@ class Reader{
 	 *	@return		array
 	 *	@todo		implement using given fields
 	 */
-	public function get( $first = TRUE, $orders = array(), $limits = array(), $fields = array() ){
+	public function get( $first = TRUE, $orders = array(), $limits = array(), $fields = array() )
+	{
 		$this->validateFocus();
 		$data = array();
 		$conditions	= $this->getConditionQuery( array(), TRUE, TRUE, FALSE );						//  render WHERE clause if needed, cursored, without functions
@@ -265,9 +276,221 @@ class Reader{
 	 *	@access		public
 	 *	@return		array
 	 */
-	public function getColumns(){
+	public function getColumns(): array
+	{
 		return $this->columns;
 	}
+
+	/**
+	 *	Returns reference the database connection.
+	 *	@access		public
+	 *	@return		object
+	 */
+	public function getDBConnection()
+	{
+		return $this->dbc;
+	}
+
+	/**
+	 *	Returns set fetch mode.
+	 *	@access		public
+	 *	@return		integer		$fetchMode		Currently set fetch mode
+	 */
+	protected function getFetchMode(): int
+	{
+		return $this->fetchMode;
+	}
+
+	/**
+	 *	Returns current primary focus or index focuses.
+	 *	@access		public
+	 *	@return		array
+	 */
+	public function getFocus(): array
+	{
+		return $this->focusedIndices;
+	}
+
+	/**
+	 *	Returns all Indices of this table.
+	 *	By default only indices meant to be foreign keys are returned.
+	 *	Setting paramter "withPrimaryKey" to TRUE will include primary key as well.
+	 *	@access		public
+	 *	@param		boolean		$withPrimaryKey			Flag: include primary key (default: FALSE)
+	 *	@return		array								List of table indices
+	 */
+	public function getIndices( $withPrimaryKey = FALSE ): array
+	{
+		$indices	= $this->indices;
+		if( $this->primaryKey && $withPrimaryKey )
+			array_shift( $indices, $this->primaryKey );
+		return $indices;
+	}
+
+	/**
+	 *	...
+	 *	@access		public
+	 *	@return		array
+	 */
+	public function getLastQuery(): array
+	{
+		return $this->dbc->lastQuery;
+	}
+
+
+	/**
+	 *	Returns the name of the primary key column.
+	 *	@access		public
+	 *	@return		string
+	 */
+	public function getPrimaryKey(): string
+	{
+		return $this->primaryKey;
+	}
+
+	/**
+	 *	Returns the name of the table.
+	 *	@access		public
+	 *	@return		string
+	 */
+	public function getTableName(): string
+	{
+		return $this->tableName;
+	}
+
+	/**
+	 *	Indicates wheter the focus on a index (including primary key) is set.
+	 *	@access		public
+	 *	@return		boolean
+	 */
+	public function isFocused( $index = NULL ): bool
+	{
+		if( !count( $this->focusedIndices ) )
+			return FALSE;
+		if( $index && !array_key_exists( $index, $this->focusedIndices ) )
+			return FALSE;
+		return TRUE;
+	}
+
+	/**
+	 *	Setting all columns of the table.
+	 *	@access		public
+	 *	@param		array		$columns	List of table columns
+	 *	@return		self
+	 *	@throws		\InvalidArgumentException		If given fields list is not a list
+	 *	@throws		\RangeException					If given fields list is empty
+	 */
+	public function setColumns( $columns ): self
+	{
+		if( !is_array( $columns ) )
+			throw new \InvalidArgumentException( 'Columns must be an array' );
+		if( !( is_array( $columns ) && count( $columns ) ) )
+			throw new \RangeException( 'Column array must not be empty' );
+		$this->columns = $columns;
+		return $this;
+	}
+
+	/**
+	 *	Setting a reference to a database connection.
+	 *	@access		public
+	 *	@param		\PDO		$dbc		Database connection resource object
+	 *	@return		self
+	 *	@throws		\InvalidArgumentException	if given resource is not an object
+	 *	@throws		\RuntimeException			if given resource object is not instance of PDO
+	 */
+	public function setDbConnection( $dbc ): self
+	{
+		if( !is_object( $dbc ) )
+			throw new \InvalidArgumentException( 'Database connection resource must be an object' );
+		if( !is_a( $dbc, 'PDO' ) )
+			throw new \RuntimeException( 'Database connection resource must be a direct or inherited PDO object' );
+		$this->dbc = $dbc;
+		return $this;
+	}
+
+	/**
+	 *	Sets fetch mode.
+	 *	Mode is a mandatory integer representing a PDO fetch mode.
+	 *	@access		public
+	 *	@param		int			$mode			PDO fetch mode
+	 *	@see		http://www.php.net/manual/en/pdo.constants.php
+	 *	@return		self
+	 */
+	public function setFetchMode( $mode ): self
+	{
+		$this->fetchMode	= $mode;
+		return $this;
+	}
+
+	/**
+	 *	Setting all indices of this table.
+	 *	@access		public
+	 *	@param		array		$indices		List of table indices
+	 *	@return		self
+	 *	@throws		\DomainException			if column in index list is not a column
+	 *	@throws		\DomainException			if column in index list is already known as primary key
+	 */
+	public function setIndices( $indices ): self
+	{
+		foreach( $indices as $index )
+		{
+			if( !in_array( $index, $this->columns ) )
+				throw new \DomainException( 'Column "'.$index.'" is not existing in table "'.$this->tableName.'" and cannot be an index' );
+			if( $index === $this->primaryKey )
+				throw new \DomainException( 'Column "'.$index.'" is already primary key and cannot be an index' );
+		}
+		$this->indices	= $indices;
+		array_unique( $this->indices );
+		return $this;
+	}
+
+	/**
+	 *	Setting the name of the primary key.
+	 *	@access		public
+	 *	@param		string		$column		Pimary key column of this table
+	 *	@throws		\RangeException			If given column is empty
+	 *	@throws		\DomainException		If given column is not a defined column
+	 *	@return		self
+	 */
+	public function setPrimaryKey( $column ): self
+	{
+		if( !strlen( trim( $column ) ) )
+			throw new \RangeException( 'Primary key column cannot be empty' );
+		if( !in_array( $column, $this->columns ) )
+			throw new \DomainException( 'Column "'.$column.'" is not existing and can not be primary key' );
+		$this->primaryKey = $column;
+		return $this;
+	}
+
+	/**
+	 *	Setting the name of the table.
+	 *	@access		public
+	 *	@param		string		$tableName		Name of this table
+	 *	@return		void
+	 *	@throws		\RangeException				If given table name is empty
+	 *	@return		self
+	 */
+	public function setTableName( $tableName ): self
+	{
+		if( !strlen( trim( $tableName ) ) )
+			throw new \RangeException( 'Table name cannot be empty' );
+		$this->tableName = $tableName;
+		return $this;
+	}
+
+	/**
+	 *	Setting the name of the table.
+	 *	@access		public
+	 *	@param		string		$tableName		Name of this table
+	 *	@return		self
+	 */
+	public function setUndoStorage( $storage ): self
+	{
+		$this->undoStorage = $storage;
+		return $this;
+	}
+
+	//  --  PROTECTED  --  //
 
 	/**
 	 *	Returns a list of comma separated and masked columns.
@@ -275,7 +498,8 @@ class Reader{
 	 *	@param		array		$columns		List of columns to mask and enumerate
 	 *	@return		string
 	 */
-	protected function getColumnEnumeration( $columns ){
+	protected function getColumnEnumeration( $columns ): string
+	{
 		$list	= array();
 		foreach( $columns as $column )
 			$list[]	= $column === '*' ? $column : '`'.$column.'`';
@@ -290,7 +514,8 @@ class Reader{
 	 *	@param		bool		$useIndices		Flag: use focused indices
 	 *	@return		string
 	 */
-	protected function getConditionQuery( $conditions, $usePrimary = TRUE, $useIndices = TRUE, $allowFunctions = FALSE ){
+	protected function getConditionQuery( $conditions, $usePrimary = TRUE, $useIndices = TRUE, $allowFunctions = FALSE ): string
+	{
 		$columnConditions = array();
 		foreach( $this->columns as $column ){														//  iterate all columns
 			if( isset( $conditions[$column] ) ){														//  if condition given
@@ -338,69 +563,20 @@ class Reader{
 	}
 
 	/**
-	 *	Returns reference the database connection.
-	 *	@access		public
-	 *	@return		object
-	 */
-	public function getDBConnection(){
-		return $this->dbc;
-	}
-
-	/**
-	 *	Returns set fetch mode.
-	 *	@access		public
-	 *	@return		int			$fetchMode		Currently set fetch mode
-	 */
-	protected function getFetchMode(){
-		return $this->fetchMode;
-	}
-
-	/**
-	 *	Returns current primary focus or index focuses.
-	 *	@access		public
-	 *	@return		array
-	 */
-	public function getFocus(){
-		return $this->focusedIndices;
-	}
-
-	/**
-	 *	Returns all Indices of this table.
-	 *	By default only indices meant to be foreign keys are returned.
-	 *	Setting paramter "withPrimaryKey" to TRUE will include primary key as well.
-	 *	@access		public
-	 *	@param		boolean		$withPrimaryKey			Flag: include primary key (default: FALSE)
-	 *	@return		array								List of table indices
-	 */
-	public function getIndices( $withPrimaryKey = FALSE ){
-		$indices	= $this->indices;
-		if( $this->primaryKey && $withPrimaryKey )
-			array_shift( $indices, $this->primaryKey );
-		return $indices;
-	}
-
-	/**
-	 *	Returns all Indices of this Table.
-	 *	@access		public
-	 *	@return		array
-	 */
-	public function getLastQuery(){
-		return $this->dbc->lastQuery;
-	}
-
-	/**
 	 *	Builds and returns ORDER BY Statement Component.
 	 *	@access		protected
-	 *	@param		array		$limits			Array of Offset and Limit
+	 *	@param		array		$limits			List of Offset and Limit
 	 *	@return		string
 	 */
-	protected function getLimitCondition( $limits = array() ){
+	protected function getLimitCondition( $limits = array() ): string
+	{
 		if( !is_array( $limits ) )
-			return;
+			throw new \InvalidArgumentException( 'Given limits must be list of offset and limit' );
 		$limit		= !isset( $limits[1] ) ? 0 : abs( $limits[1] );
 		$offset		= !isset( $limits[0] ) ? 0 : abs( $limits[0] );
 		if( $limit )
 			return ' LIMIT '.$limit.' OFFSET '.$offset;
+		return '';
 	}
 
 	/**
@@ -409,7 +585,8 @@ class Reader{
 	 *	@param		array		$orders			Associative Array with Orders
 	 *	@return		string
 	 */
-	protected function getOrderCondition( $orders = array() ){
+	protected function getOrderCondition( $orders = array() ): string
+	{
 		$order	= '';
 		if( is_array( $orders ) && count( $orders ) )
 		{
@@ -421,38 +598,8 @@ class Reader{
 		return $order;
 	}
 
-	/**
-	 *	Returns the name of the primary key column.
-	 *	@access		public
-	 *	@return		string
-	 */
-	public function getPrimaryKey(){
-		return $this->primaryKey;
-	}
-
-	/**
-	 *	Returns the name of the table.
-	 *	@access		public
-	 *	@return		string
-	 */
-	public function getTableName(){
-		return $this->tableName;
-	}
-
-	/**
-	 *	Indicates wheter the focus on a index (including primary key) is set.
-	 *	@access		public
-	 *	@return		string
-	 */
-	public function isFocused( $index = NULL ){
-		if( !count( $this->focusedIndices ) )
-			return FALSE;
-		if( $index && !array_key_exists( $index, $this->focusedIndices ) )
-			return FALSE;
-		return TRUE;
-	}
-
-	protected function realizeConditionQueryPart( $column, $value, $maskColumn = TRUE ){
+	protected function realizeConditionQueryPart( $column, $value, $maskColumn = TRUE )
+	{
 		$patternBetween		= '/^(><|!><)( ?)([0-9]+)( ?)&( ?)([0-9]+)$/';
 		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)([0-9]+)$/';
 		$patternOperators	= '/^(<=|>=|<|>|!=)( ?)(.+)$/';
@@ -508,7 +655,8 @@ class Reader{
 	 *	@param		string		$value		String to be secured
 	 *	@return		string
 	 */
-	protected function secureValue( $value ){
+	protected function secureValue( $value )
+	{
 #		if( !ini_get( 'magic_quotes_gpc' ) )
 #			$value = addslashes( $value );
 #		$value	= htmlentities( $value );
@@ -519,125 +667,6 @@ class Reader{
 	}
 
 	/**
-	 *	Setting all columns of the table.
-	 *	@access		public
-	 *	@param		array		$columns	List of table columns
-	 *	@return		void
-	 *	@throws		\InvalidArgumentException		If given fields list is not a list
-	 *	@throws		\RangeException					If given fields list is empty
-	 */
-	public function setColumns( $columns ){
-		if( !is_array( $columns ) )
-			throw new \InvalidArgumentException( 'Columns must be an array' );
-		if( !( is_array( $columns ) && count( $columns ) ) )
-			throw new \RangeException( 'Column array must not be empty' );
-		$this->columns = $columns;
-	}
-
-	/**
-	 *	Setting a reference to a database connection.
-	 *	@access		public
-	 *	@param		\PDO		$dbc		Database connection resource object
-	 *	@return		void
-	 *	@throws		\InvalidArgumentException	if given resource is not an object
-	 *	@throws		\RuntimeException			if given resource object is not instance of PDO
-	 */
-	public function setDbConnection( $dbc ){
-		if( !is_object( $dbc ) )
-			throw new \InvalidArgumentException( 'Database connection resource must be an object' );
-		if( !is_a( $dbc, 'PDO' ) )
-			throw new \RuntimeException( 'Database connection resource must be a direct or inherited PDO object' );
-		$this->dbc = $dbc;
-	}
-
-	/**
-	 *	Sets fetch mode.
-	 *	Mode is a mandatory integer representing a PDO fetch mode.
-	 *	@access		public
-	 *	@param		int			$mode			PDO fetch mode
-	 *	@see		http://www.php.net/manual/en/pdo.constants.php
-	 *	@return		void
-	 */
-	public function setFetchMode( $mode )
-	{
-		$this->fetchMode	= $mode;
-	}
-
-	/**
-	 *	Setting all indices of this table.
-	 *	@access		public
-	 *	@param		array		$indices		List of table indices
-	 *	@return		bool
-	 *	@throws		\DomainException			if column in index list is not a column
-	 *	@throws		\DomainException			if column in index list is already known as primary key
-	 */
-	public function setIndices( $indices )
-	{
-		foreach( $indices as $index )
-		{
-			if( !in_array( $index, $this->columns ) )
-				throw new \DomainException( 'Column "'.$index.'" is not existing in table "'.$this->tableName.'" and cannot be an index' );
-			if( $index === $this->primaryKey )
-				throw new \DomainException( 'Column "'.$index.'" is already primary key and cannot be an index' );
-		}
-		$this->indices	= $indices;
-		array_unique( $this->indices );
-	}
-
-	/**
-	 *	Setting the name of the primary key.
-	 *	@access		public
-	 *	@param		string		$column		Pimary key column of this table
-	 *	@throws		\RangeException			If given column is empty
-	 *	@throws		\DomainException		If given column is not a defined column
-	 *	@return		void
-	 */
-	public function setPrimaryKey( $column )
-	{
-		if( !strlen( trim( $column ) ) )
-			throw new \RangeException( 'Primary key column cannot be empty' );
-		if( !in_array( $column, $this->columns ) )
-			throw new \DomainException( 'Column "'.$column.'" is not existing and can not be primary key' );
-		$this->primaryKey = $column;
-	}
-
-	/**
-	 *	Setting the name of the table.
-	 *	@access		public
-	 *	@param		string		$tableName		Name of this table
-	 *	@return		void
-	 *	@throws		\RangeException				If given table name is empty
-	 */
-	public function setTableName( $tableName )
-	{
-		if( !strlen( trim( $tableName ) ) )
-			throw new \RangeException( 'Table name cannot be empty' );
-		$this->tableName = $tableName;
-	}
-
-	/**
-	 *	Setting the name of the table.
-	 *	@access		public
-	 *	@param		string		$tableName		Name of this table
-	 *	@return		void
-	 */
-	public function setUndoStorage( $storage )
-	{
-		$this->undoStorage = $storage;
-	}
-
-	/**
-	 *	Checks if a focus is set for following operation and throws an exception if not.
-	 *	@access		protected
-	 *	@throws		\RuntimeException
-	 *	@return		void
-	 */
-	protected function validateFocus(){
-		if( !$this->isFocused() )
-			throw new \RuntimeException( 'No Primary Key or Index focused for Table "'.$this->tableName.'"' );
-	}
-
-	/**
 	 *	Checks columns names for querying methods (find,get), sets wildcard if empty or throws an exception if inacceptable.
 	 *	@access		protected
 	 *	@param		mixed		$columns			String or array of column names to validate
@@ -645,7 +674,7 @@ class Reader{
 	 *	@throws		\InvalidArgumentException		if columns is neither a list of columns nor *
 	 *	@throws		\DomainException				if column is neither a defined column nor *
 	 */
-	protected function validateColumns( &$columns )
+	protected function validateColumns( &$columns ): void
 	{
 		if( is_string( $columns ) && $columns )
 			$columns	= array( $columns );
@@ -660,5 +689,16 @@ class Reader{
 			if( $column != '*' && !in_array( $column, $this->columns ) )
 				throw new \DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 	}
+
+	/**
+	 *	Checks if a focus is set for following operation and throws an exception if not.
+	 *	@access		protected
+	 *	@throws		\RuntimeException
+	 *	@return		void
+	 */
+	protected function validateFocus(): void
+	{
+		if( !$this->isFocused() )
+			throw new \RuntimeException( 'No Primary Key or Index focused for Table "'.$this->tableName.'"' );
+	}
 }
-?>
