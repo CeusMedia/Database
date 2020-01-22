@@ -24,7 +24,8 @@ dev-doc-coverage: composer-install-dev
 	@phpunit --coverage-html doc/Coverage
 
 dev-test-units: composer-install-dev
-	@phpunit --log-json doc/Test/logfile.json --log-tap doc/Test/logfile.tap --testdox-html doc/Test/testdox.html --testdox-text doc/Test/testdox.txt
+#	@phpunit --log-json doc/Test/logfile.json --log-tap doc/Test/logfile.tap --testdox-html doc/Test/testdox.html --testdox-text doc/Test/testdox.txt
+	@./vendor/bin/phpunit
 
 dev-test-syntax:
 	@find src -type f -print0 | xargs -0 -n1 xargs php -l
