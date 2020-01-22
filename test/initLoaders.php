@@ -4,11 +4,16 @@ if( !file_exists( dirname( __DIR__ ).'/vendor/autoload.php' ) )
 
 $pathTest	= __DIR__.'/';
 
-$loaderTest	= new \Loader();										//  get new Loader Instance
-$loaderTest->setExtensions( 'php' );								//  set allowed Extension
-$loaderTest->setPath( $pathTest );									//  set fixed Library Path
-$loaderTest->setPrefix( 'CeusMedia_Database_Test_' );				//  set prefix class prefix
-$loaderTest->registerAutoloader();									//  apply this autoloader
+//  get new Loader Instance
+$loaderTest	= new \Loader();
+//  set allowed Extension
+$loaderTest->setExtensions( 'php' );
+//  set fixed Library Path
+$loaderTest->setPath( $pathTest );
+//  set prefix class prefix
+$loaderTest->setPrefix( 'CeusMedia_Database_Test_' );
+//  apply this autoloader
+$loaderTest->registerAutoloader();
 
 $__config	= parse_ini_file( $pathTest.'/test.ini', TRUE );
 //new UI_DevOutput;

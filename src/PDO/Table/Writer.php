@@ -61,7 +61,8 @@ class Writer extends Reader
 	 */
 	public function deleteByConditions( $where = array() ): bool
 	{
-		$conditions	= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );						//  render WHERE conditions, uncursored, without functions
+		//  render WHERE conditions, uncursored, without functions
+		$conditions	= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );
 		$query	= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
 		$result	= $this->dbc->exec( $query );
 		$this->defocus();
@@ -79,8 +80,10 @@ class Writer extends Reader
 	{
 		$columns	= array();
 		$values		= array();
-		foreach( $this->columns as $column ){														//  iterate Columns
-			if( !isset( $data[$column] ) )															//  no Data given for Column
+		//  iterate Columns
+		foreach( $this->columns as $column ){
+			//  no Data given for Column
+			if( !isset( $data[$column] ) )
 				continue;
 			$value = $data[$column];
 			if( $stripTags )
@@ -88,17 +91,24 @@ class Writer extends Reader
 			$columns[$column]	= $column;
 			$values[$column]	= $this->secureValue( $value );
 		}
-		if( $this->isFocused() ){																	//  add focused indices to data
-			foreach( $this->focusedIndices as $index => $value ){									//  iterate focused indices
-				if( isset( $columns[$index] ) )														//  Column is already set
+		//  add focused indices to data
+		if( $this->isFocused() ){
+			//  iterate focused indices
+			foreach( $this->focusedIndices as $index => $value ){
+				//  Column is already set
+				if( isset( $columns[$index] ) )
 					continue;
-				if( $index == $this->primaryKey )													//  skip primary key
+				//  skip primary key
+				if( $index == $this->primaryKey )
 					continue;
-				$columns[$index]	= $index;														//  add key
-				$values[$index]		= $this->secureValue( $value );									//  add value
+				//  add key
+				$columns[$index]	= $index;
+				//  add value
+				$values[$index]		= $this->secureValue( $value );
 			}
 		}
-		$columns	= $this->getColumnEnumeration( $columns );										//  get enumeration of masked column names
+		//  get enumeration of masked column names
+		$columns	= $this->getColumnEnumeration( $columns );
 		$values		= implode( ', ', array_values( $values ) );
 		$query		= 'INSERT INTO '.$this->getTableName().' ('.$columns.') VALUES ('.$values.')';
 		$this->dbc->exec( $query );
@@ -154,7 +164,8 @@ class Writer extends Reader
 			throw new \InvalidArgumentException( 'Conditions for update must be an array and have atleast 1 pair' );
 
 		$updates	= array();
-		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, FALSE );					//  render WHERE conditions, uncursored, without functions
+		//  render WHERE conditions, uncursored, without functions
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, FALSE );
 		foreach( $this->columns as $column ){
 			if( isset( $data[$column] ) ){
 				if( $stripTags )

@@ -356,7 +356,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testFindWithFocus1(){
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
-		$this->reader->focusIndex( 'topic', 'start' );							//  will be ignored
+		//  will be ignored
+		$this->reader->focusIndex( 'topic', 'start' );
 		$result		= $this->reader->find( array( 'id' ) );
 
 		$expected	= 2;
@@ -379,7 +380,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testFindWithFocus2(){
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
-		$this->reader->focusPrimary( 1 );										//  will be ignored
+		//  will be ignored
+		$this->reader->focusPrimary( 1 );
 		$result		= $this->reader->find( array( 'id' ) );
 
 		$expected	= 2;
@@ -403,8 +405,10 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFindWithFocus3(){
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$this->reader->focusIndex( 'topic', 'test' );							//  will be ignored
-		$this->reader->focusPrimary( 1, FALSE );								//  will be ignored
+		//  will be ignored
+		$this->reader->focusIndex( 'topic', 'test' );
+		//  will be ignored
+		$this->reader->focusPrimary( 1, FALSE );
 		$result		= $this->reader->find( array( 'id' ) );
 
 		$expected	= 2;
@@ -528,7 +532,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFindWhereInAndWithFocus(){
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 
-		$this->reader->focusIndex( 'topic', 'test' );								//  will be ignored
+		//  will be ignored
+		$this->reader->focusIndex( 'topic', 'test' );
 		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
 
 		$expected	= 1;

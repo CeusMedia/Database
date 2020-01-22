@@ -86,7 +86,8 @@ class Reader
 	 */
 	public function count( $conditions = array() ): int
 	{
-		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
+		//  render WHERE clause if needed, foreign cursored, allow functions
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
 		$conditions	= $conditions ? ' WHERE '.$conditions : '';
 		$query	= 'SELECT COUNT(`%s`) as count FROM %s%s';
 		$query	= sprintf( $query, $this->primaryKey, $this->getTableName(), $conditions );
@@ -102,7 +103,8 @@ class Reader
 	 */
 	public function countFast( $conditions = array() ): int
 	{
-		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );					//  render WHERE clause if needed, foreign cursored, allow functions
+		//  render WHERE clause if needed, foreign cursored, allow functions
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
 		$conditions	= $conditions ? ' WHERE '.$conditions : '';
 		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
 		return (int) $this->dbc->query( $query )->fetch( \PDO::FETCH_OBJ )->rows;
@@ -142,16 +144,24 @@ class Reader
 	public function find( $columns = array(), $conditions = array(), $orders = array(), $limits = array(), $groupings = array(), $havings = array() ): array
 	{
 		$this->validateColumns( $columns );
-		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );					//  render WHERE clause if needed, uncursored, allow functions
+		//  render WHERE clause if needed, uncursored, allow functions
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );
 		$conditions = $conditions ? ' WHERE '.$conditions : '';
-		$orders		= $this->getOrderCondition( $orders );											//  render ORDER BY clause if needed
-		$limits		= $this->getLimitCondition( $limits );											//  render LIMIT BY clause if needed
-		$groupings	= !empty( $groupings ) ? ' GROUP BY '.join( ', ', $groupings ) : '';			//  render GROUP BY clause if needed
-		$havings 	= !empty( $havings ) ? ' HAVING '.join( ' AND ', $havings ) : '';				//  render HAVING clause if needed
-		$columns	= $this->getColumnEnumeration( $columns );										//  get enumeration of masked column names
-		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName();							//  render base query
+		//  render ORDER BY clause if needed
+		$orders		= $this->getOrderCondition( $orders );
+		//  render LIMIT BY clause if needed
+		$limits		= $this->getLimitCondition( $limits );
+		//  render GROUP BY clause if needed
+		$groupings	= !empty( $groupings ) ? ' GROUP BY '.join( ', ', $groupings ) : '';
+		//  render HAVING clause if needed
+		$havings 	= !empty( $havings ) ? ' HAVING '.join( ' AND ', $havings ) : '';
+		//  get enumeration of masked column names
+		$columns	= $this->getColumnEnumeration( $columns );
+		//  render base query
+		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName();
 
-		$query		= $query.$conditions.$groupings.$havings.$orders.$limits;						//  append rendered conditions, orders, limits, groupings and havings
+		//  append rendered conditions, orders, limits, groupings and havings
+		$query		= $query.$conditions.$groupings.$havings.$orders.$limits;
 		$resultSet	= $this->dbc->query( $query );
 		if( $resultSet )
 			return $resultSet->fetchAll( $this->getFetchMode() );
@@ -163,8 +173,10 @@ class Reader
 	 */
 	public function findWhereIn( $columns, $column, $values, $orders = array(), $limits = array() ): array
 	{
-		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
-			$columns	= array();																	//  otherwise use empty array
+		//  columns attribute needs to of string or array
+		if( !is_string( $columns ) && !is_array( $columns ) )
+			//  otherwise use empty array
+			$columns	= array();
 		$this->validateColumns( $columns );
 
 		if( $column != $this->getPrimaryKey() && !in_array( $column, $this->getIndices() ) )
@@ -175,7 +187,8 @@ class Reader
 		for( $i=0; $i<count( $values ); $i++ )
 			$values[$i]	= $this->secureValue( $values[$i] );
 
-		$columns	= $this->getColumnEnumeration( $columns );										//  get enumeration of masked column names
+		//  get enumeration of masked column names
+		$columns	= $this->getColumnEnumeration( $columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$column.' IN ('.implode( ', ', $values ).') '.$orders.$limits;
 		$resultSet	= $this->dbc->query( $query );
 		if( $resultSet )
@@ -188,14 +201,17 @@ class Reader
 	 */
 	public function findWhereInAnd( $columns, $column, $values, $conditions = array(), $orders = array(), $limits = array() ): array
 	{
-		if( !is_string( $columns ) && !is_array( $columns ) )										//  columns attribute needs to of string or array
-			$columns	= array();																	//  otherwise use empty array
+		//  columns attribute needs to of string or array
+		if( !is_string( $columns ) && !is_array( $columns ) )
+			//  otherwise use empty array
+			$columns	= array();
 		$this->validateColumns( $columns );
 
 		if( $column != $this->getPrimaryKey() && !in_array( $column, $this->getIndices() ) )
 			throw new \RangeException( 'Field of WHERE IN-statement must be an index' );
 
-		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );					//  render WHERE clause if needed, uncursored, allow functions
+		//  render WHERE clause if needed, uncursored, allow functions
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
 		for( $i=0; $i<count( $values ); $i++ )
@@ -203,7 +219,8 @@ class Reader
 
 		if( $conditions )
 			$conditions	.= ' AND ';
-		$columns	= $this->getColumnEnumeration( $columns );										//  get enumeration of masked column names
+		//  get enumeration of masked column names
+		$columns	= $this->getColumnEnumeration( $columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$column.' IN ('.implode( ', ', $values ).') '.$orders.$limits;
 		$resultSet	= $this->dbc->query( $query );
 		if( $resultSet )
@@ -221,9 +238,11 @@ class Reader
 	 */
 	public function focusIndex( $column, $value ): self
 	{
-		if( !in_array( $column, $this->indices ) && $column != $this->primaryKey )				//  check column name
+		//  check column name
+		if( !in_array( $column, $this->indices ) && $column != $this->primaryKey )
 			throw new \DomainException( 'Column "'.$column.'" is neither an index nor primary key and cannot be focused' );
-		$this->focusedIndices[$column] = $value;													//  set Focus
+		//  set Focus
+		$this->focusedIndices[$column] = $value;
 		return $this;
 	}
 
@@ -256,10 +275,12 @@ class Reader
 	{
 		$this->validateFocus();
 		$data = array();
-		$conditions	= $this->getConditionQuery( array(), TRUE, TRUE, FALSE );						//  render WHERE clause if needed, cursored, without functions
+		//  render WHERE clause if needed, cursored, without functions
+		$conditions	= $this->getConditionQuery( array(), TRUE, TRUE, FALSE );
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
-		$columns	= $this->getColumnEnumeration( $this->columns );								//  get enumeration of masked column names
+		//  get enumeration of masked column names
+		$columns	= $this->getColumnEnumeration( $this->columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$orders.$limits;
 
 		$resultSet	= $this->dbc->query( $query );
@@ -517,31 +538,46 @@ class Reader
 	protected function getConditionQuery( $conditions, $usePrimary = TRUE, $useIndices = TRUE, $allowFunctions = FALSE ): string
 	{
 		$columnConditions = array();
-		foreach( $this->columns as $column ){														//  iterate all columns
-			if( isset( $conditions[$column] ) ){														//  if condition given
-				$columnConditions[$column] = $conditions[$column];									//  note condition pair
+		//  iterate all columns
+		foreach( $this->columns as $column ){
+			//  if condition given
+			if( isset( $conditions[$column] ) ){
+				//  note condition pair
+				$columnConditions[$column] = $conditions[$column];
 				unset( $conditions[$column] );
 			}
 		}
 		$functionConditions = array();
-		foreach( $conditions as $key => $value )													//  iterate remaining conditions
-			if( preg_match( "/^[a-z]+\(.+\)$/i", $key ) )											//  column key is a aggregate function
+		//  iterate remaining conditions
+		foreach( $conditions as $key => $value )
+			//  column key is a aggregate function
+			if( preg_match( "/^[a-z]+\(.+\)$/i", $key ) )
 				$functionConditions[$key]	= $value;
 
-		if( $usePrimary && $this->isFocused( $this->primaryKey ) ){									//  if using primary key & is focused primary
-			if( !array_key_exists( $this->primaryKey, $columnConditions ) )							//  if primary key is not already in conditions
-				$columnConditions = $this->getFocus();												//  note primary key pair
+		//  if using primary key & is focused primary
+		if( $usePrimary && $this->isFocused( $this->primaryKey ) ){
+			//  if primary key is not already in conditions
+			if( !array_key_exists( $this->primaryKey, $columnConditions ) )
+				//  note primary key pair
+				$columnConditions = $this->getFocus();
 		}
-		if( $useIndices && count( $this->focusedIndices ) ){											//  if using indices
-			foreach( $this->focusedIndices as $index => $value )									//  iterate focused indices
-				if( $index != $this->primaryKey )													//  skip primary key
-					if( !array_key_exists( $index, $columnConditions ) )							//  if index column is not already in conditions
-						$columnConditions[$index] = $value;											//  note index pair
+		//  if using indices
+		if( $useIndices && count( $this->focusedIndices ) ){
+			//  iterate focused indices
+			foreach( $this->focusedIndices as $index => $value )
+				//  skip primary key
+				if( $index != $this->primaryKey )
+					//  if index column is not already in conditions
+					if( !array_key_exists( $index, $columnConditions ) )
+						//  note index pair
+						$columnConditions[$index] = $value;
 		}
 
-		$conditions = array();																		//  restart with fresh conditions array
+		//  restart with fresh conditions array
+		$conditions = array();
 
-		foreach( $columnConditions as $column => $value ){											//  iterate noted column conditions
+		//  iterate noted column conditions
+		foreach( $columnConditions as $column => $value ){
 			if( is_array( $value ) ){
 				foreach( $value as $nr => $part )
 					$value[$nr]	= $this->realizeConditionQueryPart( $column, $part );
@@ -554,12 +590,16 @@ class Reader
 		}
 
 		/*  --  THIS IS NEW, UNDER DEVELOPMENT, UNSECURE AND UNSTABLE  --  */
-		if( $allowFunctions )																		//  function are allowed
-			foreach( $functionConditions as $function => $value ){									//  iterate noted functions
-				$conditions[]	= $this->realizeConditionQueryPart( $function, $value, FALSE );		//  extend conditions
+		//  function are allowed
+		if( $allowFunctions )
+			//  iterate noted functions
+			foreach( $functionConditions as $function => $value ){
+				//  extend conditions
+				$conditions[]	= $this->realizeConditionQueryPart( $function, $value, FALSE );
 			}
 
-		return implode( ' AND ', $conditions );														//  return AND combined conditions
+		//  return AND combined conditions
+		return implode( ' AND ', $conditions );
 	}
 
 	/**

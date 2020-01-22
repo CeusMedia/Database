@@ -131,7 +131,8 @@ class DataSourceName
 				return $prefix.$this->renderDsnForPgsql();
 			case 'sqlite':
 				return $prefix.$this->renderDsnForSqlite();
-			default:																				//  cubrid, dblib, mssql, mysql, sybase
+			//  cubrid, dblib, mssql, mysql, sybase
+			default:
 				return $prefix.$this->renderDsnForDefault();
 		}
 	}

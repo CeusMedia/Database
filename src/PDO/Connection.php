@@ -41,11 +41,14 @@ class Connection extends \PDO
 	protected $driver				= NULL;
 	public $numberExecutes			= 0;
 	public $numberStatements		= 0;
-	public $logFileErrors			= NULL;															//  eg. logs/db/pdo/error.log
-	public $logFileStatements		= NULL;															//  eg. logs/db/pdo/query.log
+	//  eg. logs/db/pdo/error.log
+	public $logFileErrors			= NULL;
+	//  eg. logs/db/pdo/query.log
+	public $logFileStatements		= NULL;
 	protected $openTransactions		= 0;
 	public $lastQuery				= NULL;
-	protected $innerTransactionFail	= FALSE;														//  Flag: inner (nested) Transaction has failed
+	//  Flag: inner (nested) Transaction has failed
+	protected $innerTransactionFail	= FALSE;
 	public static $errorTemplate	= "{time}: PDO:{pdoCode} SQL:{sqlCode} {sqlError} ({statement})\n";
 	public static $defaultOptions	= array(
 		\PDO::ATTR_ERRMODE	=> \PDO::ERRMODE_EXCEPTION,
@@ -63,9 +66,11 @@ class Connection extends \PDO
 	 */
 	public function __construct( $dsn, $username = NULL, $password = NULL, $driverOptions = array() )
 	{
-		$options	= $driverOptions + self::$defaultOptions;										//  extend given options by default options
+		//  extend given options by default options
+		$options	= $driverOptions + self::$defaultOptions;
 		parent::__construct( $dsn, $username, $password, $options );
-		$this->driver	= $this->getAttribute( \PDO::ATTR_DRIVER_NAME );							//  note name of used driver
+		//  note name of used driver
+		$this->driver	= $this->getAttribute( \PDO::ATTR_DRIVER_NAME );
 	}
 
 /*	for PHP 5.3.6+
@@ -81,9 +86,12 @@ class Connection extends \PDO
 	 */
 	public function beginTransaction(): self
 	{
-		$this->openTransactions++;																	//  increase Transaction Counter
-		if( $this->openTransactions == 1)															//  no Transaction is open
-			parent::beginTransaction();																//  begin Transaction
+		//  increase Transaction Counter
+		$this->openTransactions++;
+		//  no Transaction is open
+		if( $this->openTransactions == 1)
+			//  begin Transaction
+			parent::beginTransaction();
 		return $this;
 	}
 
@@ -94,18 +102,27 @@ class Connection extends \PDO
 	 */
 	public function commit(): bool
 	{
-		if( !$this->openTransactions )												//  there has been an inner RollBack or no Transaction was opened
-			return FALSE;															//  ignore Commit
-		if( $this->openTransactions == 1){											//  commit of an outer Transaction
-			if( $this->innerTransactionFail ){										//  remember about failed inner Transaction
-				$this->rollBack();													//  rollback outer Transaction instead of committing
+		//  there has been an inner RollBack or no Transaction was opened
+		if( !$this->openTransactions )
+			//  ignore Commit
+			return FALSE;
+		//  commit of an outer Transaction
+		if( $this->openTransactions == 1){
+			//  remember about failed inner Transaction
+			if( $this->innerTransactionFail ){
+				//  rollback outer Transaction instead of committing
+				$this->rollBack();
 //				throw new RuntimeException( 'Commit failed due to a nested transaction failed' );
-				return FALSE;														//  indicated that the Transaction has failed
+				//  indicated that the Transaction has failed
+				return FALSE;
 			}
-			else																	//  no failed inner Transaction
-				parent::commit();													//  commit Transaction
+			//  no failed inner Transaction
+			else
+				//  commit Transaction
+				parent::commit();
 		}
-		$this->openTransactions--;													//  decrease Transaction Counter
+		//  decrease Transaction Counter
+		$this->openTransactions--;
 		return TRUE;
 	}
 
@@ -124,7 +141,8 @@ class Connection extends \PDO
 			return parent::exec( $statement );
 		}
 		catch( \PDOException $e ){
-			$this->logError( $e, $statement );										//  logs Error and throws SQL Exception
+			//  logs Error and throws SQL Exception
+			$this->logError( $e, $statement );
 		}
 	}
 
@@ -219,7 +237,8 @@ class Connection extends \PDO
 			return parent::query( $statement, $fetchMode );
 		}
 		catch( \PDOException $e ){
-			$this->logError( $e, $statement );										//  logs Error and throws SQL Exception
+			//  logs Error and throws SQL Exception
+			$this->logError( $e, $statement );
 		}
 	}
 
@@ -230,15 +249,22 @@ class Connection extends \PDO
 	 */
 	public function rollBack(): bool
 	{
-		if( !$this->openTransactions )												//  there has been an inner RollBack or no Transaction was opened
-			return FALSE;															//  ignore Commit
-		if( $this->openTransactions == 1 ){											//  only 1 Transaction open
-			parent::rollBack();														//  roll back Transaction
-			$this->innerTransactionFail	= FALSE;									//  forget about failed inner Transactions
+		//  there has been an inner RollBack or no Transaction was opened
+		if( !$this->openTransactions )
+			//  ignore Commit
+			return FALSE;
+		//  only 1 Transaction open
+		if( $this->openTransactions == 1 ){
+			//  roll back Transaction
+			parent::rollBack();
+			//  forget about failed inner Transactions
+			$this->innerTransactionFail	= FALSE;
 		}
 		else
-			$this->innerTransactionFail	= TRUE;										//  note about failed inner Transactions
-		$this->openTransactions--;													//  decrease Transaction Counter
+			//  note about failed inner Transactions
+			$this->innerTransactionFail	= TRUE;
+		//  decrease Transaction Counter
+		$this->openTransactions--;
 		return TRUE;
 	}
 
