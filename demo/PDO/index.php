@@ -4,17 +4,29 @@ require_once $pathLib.'vendor/autoload.php';
 require_once $pathLib.'test/PDO/TransactionTable.php';
 new UI_DevOutput;
 
-$config	= parse_ini_file( $pathLib.'test/test.ini', TRUE );
-extract( $config['unitTest-Database'] );
+use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\DataSourceName;
+
+( file_exists( $pathLib.'demo/demo.ini' ) ) or die( 'Missing demo ini file (demo/demo.ini)'.PHP_EOL );
+
+$config		= parse_ini_file( $pathLib.'demo/demo.ini', TRUE );
+$dbConfig	= (object) $config['demo'];
+
+$command	= "mysql -u%s -p%s %s < %sdemo/demo_transactions.sql";
+$command	= sprintf( $command, $dbConfig->username, $dbConfig->password, $dbConfig->database, $pathLib );
+passthru( $command );
+
+$dsn		= DataSourceName::renderStatic(
+	$dbConfig->driver,
+	$dbConfig->database,
+	$dbConfig->host,
+	$dbConfig->port,
+	$dbConfig->username,
+	$dbConfig->password
+);
 
 try{
-	$dsn	= new \CeusMedia\Database\PDO\DataSourceName( 'mysql', $database );
-	$dbc	= new \CeusMedia\Database\PDO\Connection( $dsn, $username, $password );
-
-	$command	= "mysql -u%s -p%s %s < %stest/PDO/createTable.sql";
-	$command	= sprintf( $command, $username, $password, $database, $pathLib );
-	passthru( $command );
-
+	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
 	$model	= new CeusMedia_Database_Test_PDO_TransactionTable( $dbc );
 	$rows	= array();
 	$heads	= array();

@@ -2,3 +2,4 @@
 /composer.lock
 /doc/
 /.phpunit.result.cache
+/demo/demo.ini

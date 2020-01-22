@@ -1,17 +1,39 @@
 <?php
-$pathLib	= dirname( dirname( dirname( __DIR__ ) ) ).'/';
+$pathLib	= dirname( dirname( __DIR__ ) ).'/';
 require_once $pathLib.'vendor/autoload.php';
 require_once $pathLib.'test/PDO/TransactionTable.php';
+new UI_DevOutput();
+$cliColor	= new CLI_Color();
 
-$config		= parse_ini_file( $pathLib.'test/test.ini', TRUE );
-extract( $config['unitTest-Database'] );
+use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\DataSourceName;
 
-$dsn		= new \CeusMedia\Database\PDO\DataSourceName( 'mysql', $database );
-$dbc		= new \CeusMedia\Database\PDO\Connection( $dsn, $username, $password );
+( file_exists( $pathLib.'demo/demo.ini' ) ) or die( 'Missing demo ini file (demo/demo.ini)'.PHP_EOL );
 
-$command	= "mysql -u%s -p%s %s < %stest/PDO/createTable.sql";
-$command	= sprintf( $command, $username, $password, $database, $pathLib );
+$config		= parse_ini_file( $pathLib.'demo/demo.ini', TRUE );
+$dbConfig	= (object) $config['demo'];
+
+$command	= "mysql -u%s -p%s %s < %sdemo/demo_transactions.sql";
+$command	= sprintf( $command, $dbConfig->username, $dbConfig->password, $dbConfig->database, $pathLib );
 passthru( $command );
 
-$model		= new CeusMedia_Database_Test_PDO_TransactionTable( $dbc );
-print_r( $model->getAll() );
+$dsn		= DataSourceName::renderStatic(
+	$dbConfig->driver,
+	$dbConfig->database,
+	$dbConfig->host,
+	$dbConfig->port,
+	$dbConfig->username,
+	$dbConfig->password
+);
+
+try{
+	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
+	$model	= new CeusMedia_Database_Test_PDO_TransactionTable( $dbc );
+	print_r( $model->getAll() );
+}
+catch( Exception $e ){
+	CLI::out( $cliColor->asError( 'Error: '.$e->getMessage() ) );
+	CLI::out( 'Trace: ');
+	CLI::out( $e->getTraceAsString() );
+	CLI::out( '' );
+}
