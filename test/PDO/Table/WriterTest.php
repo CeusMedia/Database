@@ -123,39 +123,39 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 
-		$assertion	= 4;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 4;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->focusPrimary( 4 );
-		$assertion	= 1;
-		$creation	= $this->writer->delete();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $this->writer->delete();
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->defocus();
-		$assertion	= 3;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 3;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 2;
-		$creation	= count( $this->writer->find( array(), array( 'label' => 'deleteTest' ) ) );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= count( $this->writer->find( array(), array( 'label' => 'deleteTest' ) ) );
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->focusIndex( 'label', 'deleteTest' );
-		$assertion	= 2;
-		$creation	= $this->writer->delete();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->writer->delete();
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->defocus();
-		$assertion	= 1;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->defocus();
 		$this->writer->focusPrimary( 999999 );
-		$assertion	= 0;
-		$creation	= $this->writer->delete();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 0;
+		$actual		= $this->writer->delete();
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -178,17 +178,17 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 
-		$assertion	= 4;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 4;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 3;
-		$creation	= $this->writer->deleteByConditions( array( 'label' => 'deleteTest' ) );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 3;
+		$actual		= $this->writer->deleteByConditions( array( 'label' => 'deleteTest' ) );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 1;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -202,33 +202,33 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 			'label'	=> 'insertTest',
 		);
 
-		$assertion	= 2;
-		$creation	= $this->writer->insert( $data );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->writer->insert( $data );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 2;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->focusPrimary( 2 );
-		$assertion	= $data;
-		$creation	= array_slice( $this->writer->get( TRUE ), 1, 2 );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= $data;
+		$actual		= array_slice( $this->writer->get( TRUE ), 1, 2 );
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->focusIndex( 'topic', 'insert' );
-		$assertion	= 3;
-		$creation	= $this->writer->insert( array( 'label' => 'insertTest2' ) );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 3;
+		$actual		= $this->writer->insert( array( 'label' => 'insertTest2' ) );
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->defocus();
-		$assertion	= 3;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 3;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
 		$results	= $this->writer->find( array( 'label' ) );
-		$assertion	= array( 'label' => 'insertTest2' );
-		$creation	= array_pop( $results );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= array( 'label' => 'insertTest2' );
+		$actual		= array_pop( $results );
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -244,13 +244,13 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$data		= array(
 			'label'	=> "updateTest1-changed"
 		);
-		$assertion	= 1;
-		$creation	= $this->writer->update( $data );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $this->writer->update( $data );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= array( 'label' => "updateTest1-changed" );
-		$creation	= $this->writer->find( array( 'label' ), array( 'id' => 2 ) );
-		$this->assertEquals( $assertion, array_pop( $creation ) );
+		$expected	= array( 'label' => "updateTest1-changed" );
+		$actual		= $this->writer->find( array( 'label' ), array( 'id' => 2 ) );
+		$this->assertEquals( $expected, end( $actual ) );
 	}
 
 	/**
@@ -266,14 +266,14 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$data		= array(
 			'label'	=> "changed"
 		);
-		$assertion	= 2;
-		$creation	= $this->writer->update( $data );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->writer->update( $data );
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->focusIndex( 'label', 'changed' );
-		$assertion	= 2;
-		$creation	= count( $this->writer->get( FALSE ) );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= count( $this->writer->get( FALSE ) );
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -313,18 +313,18 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 			'label'	=> "updateTest1-changed"
 		);
 
-		$assertion	= 0;
+		$expected	= 0;
 		$wrongData	= array( 'invalid_column' => 'not_important' );
-		$creation	= $this->writer->updateByConditions( $wrongData, $conditions );
-		$this->assertEquals( $assertion, $creation );
+		$actual		= $this->writer->updateByConditions( $wrongData, $conditions );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 1;
-		$creation	= $this->writer->updateByConditions( $data, $conditions );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $this->writer->updateByConditions( $data, $conditions );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= array( 'label' => "updateTest1-changed" );
-		$creation	= $this->writer->find( array( 'label' ), array( 'id' => 2 ) );
-		$this->assertEquals( $assertion, array_pop( $creation ) );
+		$expected	= array( 'label' => "updateTest1-changed" );
+		$actual		= $this->writer->find( array( 'label' ), array( 'id' => 2 ) );
+		$this->assertEquals( $expected, end( $actual ) );
 
 		$conditions	= array(
 			'topic' => "update"
@@ -333,14 +333,14 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 			'label'	=> "changed"
 		);
 
-		$assertion	= 2;
-		$creation	= $this->writer->updateByConditions( $data, $conditions );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->writer->updateByConditions( $data, $conditions );
+		$this->assertEquals( $expected, $actual );
 
 		$this->writer->focusIndex( 'label', 'changed' );
-		$assertion	= 2;
-		$creation	= count( $this->writer->get( FALSE ) );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= count( $this->writer->get( FALSE ) );
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -371,17 +371,17 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	public function testTruncate(){
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'truncateTest');" );
 
-		$assertion	= 2;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= $this->writer;
-		$creation	= $this->writer->truncate();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= $this->writer;
+		$actual		= $this->writer->truncate();
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 0;
-		$creation	= $this->writer->count();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 0;
+		$actual		= $this->writer->count();
+		$this->assertEquals( $expected, $actual );
 	}
 }
 ?>

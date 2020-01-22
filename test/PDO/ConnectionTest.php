@@ -99,18 +99,18 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@return		void
 	 */
 	public function testBeginTransaction(){
-		$assertion	= $this->connection;
-		$creation	= $this->connection->beginTransaction();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= $this->connection;
+		$actual		= $this->connection->beginTransaction();
+		$this->assertEquals( $expected, $actual );
 
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
 		$this->connection->rollBack();
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
 
-		$assertion	= 1;
-		$creation	= $result->rowCount();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $result->rowCount();
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -122,15 +122,15 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		$this->connection->beginTransaction();
 
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
-		$assertion	= TRUE;
-		$creation	= $this->connection->commit();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= $this->connection->commit();
+		$this->assertEquals( $expected, $actual );
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
 
-		$assertion	= 2;
-		$creation	= $result->rowCount();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $result->rowCount();
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -142,21 +142,21 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		for( $i=0; $i<10; $i++ )
 			$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', '".microtime()."');" );
 
-		$assertion	= 11;
-		$creation	= $this->connection->exec( "UPDATE transactions SET topic='exec' WHERE topic!='exec'" );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 11;
+		$actual		= $this->connection->exec( "UPDATE transactions SET topic='exec' WHERE topic!='exec'" );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 0;
-		$creation	= $this->connection->exec( "UPDATE transactions SET topic='exec' WHERE topic!='exec'" );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 0;
+		$actual		= $this->connection->exec( "UPDATE transactions SET topic='exec' WHERE topic!='exec'" );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 11;
-		$creation	= $this->connection->exec( "DELETE FROM transactions WHERE topic='exec'" );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 11;
+		$actual		= $this->connection->exec( "DELETE FROM transactions WHERE topic='exec'" );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 0;
-		$creation	= $this->connection->exec( "DELETE FROM transactions WHERE topic='exec'" );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 0;
+		$actual		= $this->connection->exec( "DELETE FROM transactions WHERE topic='exec'" );
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -167,27 +167,27 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	public function testPrepare(){
 		$statement	= $this->connection->prepare( "SELECT * FROM transactions" );
 
-		$assertion	= TRUE;
-		$creation	= is_object( $statement );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= is_object( $statement );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= TRUE;
-		$creation	= is_a( $statement, 'PDOStatement' );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= is_a( $statement, 'PDOStatement' );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= TRUE;
-		$creation	= file_exists( $this->queryLog );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= file_exists( $this->queryLog );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 1;
-		$creation	= $this->connection->numberStatements;
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $this->connection->numberStatements;
+		$this->assertEquals( $expected, $actual );
 
 		$statement	= $this->connection->prepare( "SELECT * FROM transactions" );
 
-		$assertion	= 2;
-		$creation	= $this->connection->numberStatements;
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->connection->numberStatements;
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -196,32 +196,32 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@return		void
 	 */
 	public function testQuery(){
-		$assertion	= FALSE;
-		$creation	= NULL;
+		$expected	= FALSE;
+		$actual		= NULL;
 		try
 		{
-			$creation	= $this->connection->query( "SELECT none FROM nowhere" );
+			$actual		= $this->connection->query( "SELECT none FROM nowhere" );
 		}
 		catch( Exception $e ){}
-		$this->assertEquals( $assertion, $creation );
+		$this->assertEquals( $expected, $actual );
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
 
-		$assertion	= TRUE;
-		$creation	= is_object( $result );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= is_object( $result );
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 1;
-		$creation	= $result->rowCount();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $result->rowCount();
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 4;
-		$creation	= $result->columnCount();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 4;
+		$actual		= $result->columnCount();
+		$this->assertEquals( $expected, $actual );
 
-		$assertion	= 2;
-		$creation	= $this->connection->numberStatements;
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 2;
+		$actual		= $this->connection->numberStatements;
+		$this->assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -233,15 +233,15 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		$this->connection->beginTransaction();
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
 
-		$assertion	= TRUE;
-		$creation	= $this->connection->rollBack();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= $this->connection->rollBack();
+		$this->assertEquals( $expected, $actual );
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
 
-		$assertion	= 1;
-		$creation	= $result->rowCount();
-		$this->assertEquals( $assertion, $creation );
+		$expected	= 1;
+		$actual		= $result->rowCount();
+		$this->assertEquals( $expected, $actual );
 	}
 
 
@@ -257,9 +257,9 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 			$this->connection->query( "SELECT none FROM nowhere" );
 		}catch( Exception_SQL $e ){}
 
-		$assertion	= TRUE;
-		$creation	= file_exists( $logFile );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= file_exists( $logFile );
+		$this->assertEquals( $expected, $actual );
 		@unlink( $logFile );
 	}
 
@@ -275,9 +275,9 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 			$this->connection->query( "SELECT none FROM nowhere" );
 		}catch( Exception_SQL $e ){}
 
-		$assertion	= TRUE;
-		$creation	= file_exists( $logFile );
-		$this->assertEquals( $assertion, $creation );
+		$expected	= TRUE;
+		$actual		= file_exists( $logFile );
+		$this->assertEquals( $expected, $actual );
 		@unlink( $logFile );
 	}
 }

@@ -322,15 +322,15 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$indices	= array( 'topic' => 'start' );
 		$result		= $this->table->getByIndices( $indices );
 		unset( $result->timestamp );
-		$assertion	= (object) array( 'id' => 2, 'topic' => 'start', 'label' => 'label1' );
-		$this->assertEquals( $assertion, $result );
+		$expected	= (object) array( 'id' => 2, 'topic' => 'start', 'label' => 'label1' );
+		$this->assertEquals( $expected, $result );
 
 		$indices	= array( 'topic' => 'start' );
 		$orders		= array( 'label' => 'DESC' );
 		$result		= $this->table->getByIndices( $indices, $orders );
 		unset( $result->timestamp );
-		$assertion	= (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' );
-		$this->assertEquals( $assertion, $result );
+		$expected	= (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' );
+		$this->assertEquals( $expected, $result );
 
 		$orders		= array( 'label' => 'DESC' );
 		$fields		= array( 'label' );
@@ -340,8 +340,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$orders		= array( 'label' => 'DESC' );
 		$fields		= array( 'label', 'topic' );
 		$result		= $this->table->getByIndices( $indices, $orders, $fields );
-		$assertion	= (object) array( 'label' => 'label2', 'topic' => 'start' );
-		$this->assertEquals( $assertion, $result );
+		$expected	= (object) array( 'label' => 'label2', 'topic' => 'start' );
+		$this->assertEquals( $expected, $result );
 	}
 
 	public function testGetByIndicesException1(){
@@ -350,13 +350,13 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$indices	= array( 'label' => 'label2' );
 		$result		= $this->table->getByIndices( $indices );
 		unset( $result->timestamp );
-		$assertion	= (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' );
-		$this->assertEquals( $assertion, $result );
+		$expected	= (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' );
+		$this->assertEquals( $expected, $result );
 	}
 
 	public function testGetColumns(){
-		$assertion	= array( 'id', 'topic', 'label', 'timestamp' );
-		$this->assertEquals( $assertion, $this->table->getColumns() );
+		$expected	= array( 'id', 'topic', 'label', 'timestamp' );
+		$this->assertEquals( $expected, $this->table->getColumns() );
 	}
 
 	public function testGetIndices(){
