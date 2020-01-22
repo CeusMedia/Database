@@ -14,6 +14,9 @@ $__config	= parse_ini_file( $pathTest.'/test.ini', TRUE );
 //new UI_DevOutput;
 //print_m( $__config );die;
 
-CeusMedia_Database_Test_Case::$config = $__config;
+CeusMedia_Database_Test_Case::$pathLib	= dirname( __DIR__  ).'/';
+CeusMedia_Database_Test_Case::$config	= $__config;
+error_reporting( E_ALL );
+//error_reporting( error_reporting() || ~E_USER_DEPRECATED );
 
 ?>

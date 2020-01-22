@@ -21,7 +21,8 @@
     "ceus-media/common": "^0.8"
   },
   "require-dev": {
-    "ceus-media/doc-creator": "^0.9"
+    "ceus-media/doc-creator": "^0.9",
+    "phpunit/phpunit": "^9.0@dev"
   },
   "autoload": {
     "psr-4": {

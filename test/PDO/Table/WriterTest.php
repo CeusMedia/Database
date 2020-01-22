@@ -27,6 +27,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function __construct(){
+		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
 		$this->username	= self::$config['unitTest-Database']['username'];
@@ -58,7 +59,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function setUp(){
+	public function setUp(): void
+	{
 		if( !extension_loaded( 'pdo_mysql' ) )
 			$this->markTestSkipped( "PDO driver for MySQL not supported" );
 
@@ -97,7 +99,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function tearDown(){
+	public function tearDown(): void
+	{
 		@unlink( $this->errorLog );
 		@unlink( $this->queryLog );
 		if( extension_loaded( 'mysql' ) ){
@@ -161,7 +164,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testDeleteException1(){
-		$this->setExpectedException( 'RuntimeException' );
+		$this->expectException( 'RuntimeException' );
 		$this->writer->delete();
 	}
 
@@ -279,7 +282,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testUpdateException1(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->updateByConditions( array() );
 	}
 
@@ -289,7 +292,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testUpdateException2(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->focusPrimary( 9999 );
 		$this->writer->update( array( 'label' => 'not_relevant' ));
 	}
@@ -341,7 +344,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testUpdateByConditionsException1(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->updateByConditions( array(), array( 'label' => 'not_relevant' ) );
 	}
 
@@ -351,7 +354,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testUpdateByConditionsException2(){
-		$this->setExpectedException( 'InvalidArgumentException' );
+		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->updateByConditions( array( 'label' => 'not_relevant' ), array() );
 	}
 

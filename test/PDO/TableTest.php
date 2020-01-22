@@ -27,6 +27,7 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	 *	@return		void
 	 */
 	public function __construct(){
+		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
 		$this->username	= self::$config['unitTest-Database']['username'];
@@ -45,7 +46,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function setUp(){
+	public function setUp(): void
+	{
 		if( !extension_loaded( 'pdo_mysql' ) )
 			$this->markTestSkipped( "PDO driver for MySQL not supported" );
 
@@ -84,7 +86,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function tearDown(){
+	public function tearDown(): void
+	{
 		@unlink( $this->errorLog );
 		@unlink( $this->queryLog );
 		if( extension_loaded( 'mysql' ) ){
@@ -305,7 +308,7 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	}
 
 	public function testGetByIndexException1(){
-		$this->setExpectedException( 'DomainException' );
+		$this->expectException( 'DomainException' );
 		$result		= $this->table->getByIndex( 'label', 'label2' );
 		unset( $result->timestamp );
 		$this->assertEquals( $result, (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' ) );
@@ -339,7 +342,7 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	}
 
 	public function testGetByIndicesException1(){
-		$this->setExpectedException( 'DomainException' );
+		$this->expectException( 'DomainException' );
 
 		$indices	= array( 'label' => 'label2' );
 		$result		= $this->table->getByIndices( $indices );

@@ -26,6 +26,7 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@return		void
 	 */
 	public function __construct(){
+		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
 		$this->username	= self::$config['unitTest-Database']['username'];
@@ -41,7 +42,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function setUp(){
+	public function setUp(): void
+	{
 		if( !extension_loaded( 'pdo_mysql' ) )
 			$this->markTestSkipped( "PDO driver for MySQL not supported" );
 		$dsn 		= "mysql:host=".$this->host.";dbname=".$this->database;
@@ -77,7 +79,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function tearDown(){
+	public function tearDown(): void
+	{
 		@unlink( $this->errorLog );
 		@unlink( $this->queryLog );
 		if( extension_loaded( 'mysql' ) ){

@@ -1,4 +1,4 @@
-<phpunit bootstrap="vendor/autoload.php" colors="true">
+<phpunit bootstrap="test/initLoaders.php" colors="true">
   <testsuites>
     <testsuite name="CeusMedia/Database">
       <directory>test</directory>
@@ -15,7 +15,7 @@
     <log type="coverage-php" target="doc/Test/coverage.php.serialized"/>
     <log type="json" target="doc/Test/logfile.json"/>
     <log type="tap" target="doc/Test/logfile.tap"/>
-    <log type="junit" target="doc/Test/logfile.xml" logIncompleteSkipped="false"/>
+    <log type="junit" target="doc/Test/logfile.xml"/>
     <log type="testdox-html" target="doc/Test/testdox.html"/>
     <log type="testdox-text" target="doc/Test/testdox.txt"/>
   </logging>
