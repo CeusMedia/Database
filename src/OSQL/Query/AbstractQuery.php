@@ -84,9 +84,9 @@ abstract class AbstractQuery
 	}
 
 	/**
-	 *
+	 *	Sends query to assigned client for execution and returns response.
 	 *	@access		public
-	 *	@return		void		$query->timePrepare	= $clock->stop( 6, 0 );
+	 *	@return		mixed
 	 */
 	public function execute()
 	{
@@ -97,8 +97,7 @@ abstract class AbstractQuery
 
 	abstract public function render(): object;
 
-	/**		$query->timePrepare	= $clock->stop( 6, 0 );
-
+	/**
 	 *
 	 *	@access		public
 	 *	@param		Condition|Group	$condition		Condition object
@@ -110,8 +109,7 @@ abstract class AbstractQuery
 	}
 
 	/**
-	 *		$query->timePrepare	= $clock->stop( 6, 0 );
-
+	 *
 	 *	@access		public
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self

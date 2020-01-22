@@ -88,7 +88,8 @@ class Client
 		$clock		= new \Alg_Time_Clock();
 		$queryParts	= $query->render();
 		$query->timing['render']	= $clock->stop( 0, 6 );
-		$query->finalQuery			= $queryParts->query;
+		$query->statement			= $queryParts->query;
+		$query->parameters			= $queryParts->parameters;
 
 		$clock->start();
 		$stmt	= $this->dbc->prepare( $queryParts->query );
