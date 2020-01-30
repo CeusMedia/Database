@@ -156,6 +156,21 @@ class Connection extends \PDO
 		return $this->driver;
 	}
 
+	/**
+	 *	Static constructor, establishs Database Connection using a DSN. Set Error Handling to use Exceptions.
+	 *	@access		public
+	 *	@param		string		$dsn			Data Source Name
+	 *	@param		string		$username		Name of Database User
+	 *	@param		string		$password		Password of Database User
+	 *	@param		array		$driverOptions	Array of Driver Options
+	 *	@return		self
+	 *	@see		http://php.net/manual/en/pdo.drivers.php
+	 */
+	public static function getInstance( $dsn, $username = NULL, $password = NULL, $driverOptions = array() )
+	{
+		return new static( $dsn, $username, $password, $driverOptions );
+	}
+
 	public function getOpenTransactions(): int
 	{
 		return $this->openTransactions;

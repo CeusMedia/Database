@@ -115,6 +115,17 @@ class DataSourceName
 		return $this->driver;
 	}
 
+	/**
+	 *	Static constructor.
+	 *	@access		public
+	 *	@param		string		$driver			Database Driver (cubrid,dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
+	 *	@param		string		$database		Database Name
+	 *	@return		self
+	 */
+	public static function getInstance( $driver, $database = NULL ){
+		return new static( $driver, $database );
+	}
+
 	public function render(): string
 	{
 		$prefix	= $this->driver.':';
