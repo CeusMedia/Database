@@ -313,6 +313,32 @@ class Reader
 	}
 
 	/**
+	 *	Returns a list of distinct column values.
+	 *	@access		public
+	 *	@param		string		$column			Column to get distinct values for
+	 *	@param		array		$conditions		Map of condition pairs additional to focuses indices
+	 *	@param		array		$orders			Map of order relations
+	 *	@param		array		$limits			Array of limit conditions
+	 *	@return		array		List of distinct column values
+	 */
+	public function getDistinctColumnValues( $column, $conditions = array(), $orders = array(), $limits = array() )
+	{
+		$this->validateColumns( $columns );
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, FALSE );
+		$conditions	= $conditions ? ' WHERE '.$conditions : '';
+		$orders		= $this->getOrderCondition( $orders );
+		$limits		= $this->getLimitCondition( $limits );
+		$query		= 'SELECT DISTINCT('.$column.') FROM '.$this->getTableName().$conditions.$orders.$limits;
+		$list		= array();
+		$resultSet	= $this->dbc->query( $query );
+		if( $resultSet ){
+			foreach( $resultSet->fetchAll( \PDO::FETCH_NUM ) as $row )
+				$list[]	= $row[0];
+		}
+		return $list;
+	}
+
+	/**
 	 *	Returns set fetch mode.
 	 *	@access		public
 	 *	@return		integer		$fetchMode		Currently set fetch mode
@@ -653,7 +679,8 @@ class Reader
 			$operation	= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
 			$value		= $this->secureValue( $matches[3][0] ).' AND '.$this->secureValue( $matches[6][0] );
 			if( !strlen( $matches[2][0] ) || !strlen( $matches[4][0] ) || !strlen( $matches[5][0] ) )
-				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
+				throw new \Exception( 'Missing whitespace between operator and value' );
+//				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
 		}
 		else if( preg_match( $patternBitwise, $value, $result ) ){
 			$matches	= array();
@@ -661,7 +688,8 @@ class Reader
 			$operation	= ' '.$matches[1][0].' ';
 			$value		= $this->secureValue( $matches[3][0] );
 			if( !strlen( $matches[2][0] ) )
-				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
+				throw new \Exception( 'Missing whitespace between operator and value' );
+//				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
 		else if( preg_match( $patternOperators, $value, $result ) ){
 			$matches	= array();
@@ -669,7 +697,8 @@ class Reader
 			$operation	= ' '.$matches[1][0].' ';
 			$value		= $this->secureValue( $matches[3][0] );
 			if( !strlen( $matches[2][0] ) )
-				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
+				throw new \Exception( 'Missing whitespace between operator and value' );
+//				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
 		else{
 			if( strtolower( $value ) == 'is null' || strtolower( $value ) == 'is not null'){
