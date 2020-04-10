@@ -19,7 +19,7 @@
   "minimum-stability": "dev",
   "require": {
     "php": "~7.2",
-    "ceus-media/common": "^0.8"
+    "ceus-media/common": "*"
   },
   "require-dev": {
     "ceus-media/doc-creator": "dev-master",
