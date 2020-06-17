@@ -300,9 +300,11 @@ abstract class Table
 	public function getAll( $conditions = array(), $orders = array(), $limits = array(), $fields = array(), $groupings = array(), $havings = array(), $strict = FALSE )
 	{
 		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $havings );
-		if( $fields )
-			foreach( $data as $nr => $set )
+		if( count( $fields ) ){
+			foreach( $data as $nr => $set ){
 				$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
+			}
+		}
 		return $data;
 	}
 
@@ -439,11 +441,23 @@ abstract class Table
 		}
 		if( !count( $fields ) )
 			return $result;
-		foreach( $fields as $field )
-			if( !in_array( $field, $this->columns ) )
+
+		foreach( $fields as $nr => $field )
+			if( $field === '*' )
+				array_splice( $fields, $nr, 1, $this->columns );
+
+		foreach( $fields as $nr => $field ){
+			if( preg_match_all( '/^(.+) AS (.+)$/i', $field, $matches ) ){
+				if( in_array( $matches[2][0], $this->columns ) )
+					throw new \DomainException( 'Field "'.$field.'" is not possible sind '.$matches[2][0].' is a column' );
+				$fields[$nr]	= $matches[2][0];
+			}
+			else if( !in_array( $field, $this->columns ) )
 				throw new \DomainException( 'Field "'.$field.'" is not an existing column' );
+		}
 
 		if( count( $fields ) === 1 ){
+			$field	= $fields[0];
 			switch( $this->fetchMode ){
 				case \PDO::FETCH_CLASS:
 				case \PDO::FETCH_OBJ:
@@ -456,6 +470,7 @@ abstract class Table
 					return $result[$field];
 			}
 		}
+
 		switch( $this->fetchMode ){
 			case \PDO::FETCH_CLASS:
 			case \PDO::FETCH_OBJ:
@@ -469,7 +484,7 @@ abstract class Table
 			default:
 				$list	= array();
 				foreach( $fields as $field ){
-					if( !isset( $result[$field] ) )
+					if( $field !== '*' && !isset( $result[$field] ) )
 						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
 					$list[$field]	= $result[$field];
 				}

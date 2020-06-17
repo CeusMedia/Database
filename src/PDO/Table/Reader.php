@@ -549,7 +549,7 @@ class Reader
 	{
 		$list	= array();
 		foreach( $columns as $column )
-			$list[]	= $column === '*' ? $column : '`'.$column.'`';
+			$list[]	= in_array( $column, $this->columns ) ? '`'.$column.'`' : $column;
 		return implode( ', ', $list );
 	}
 
@@ -754,9 +754,13 @@ class Reader
 
 		if( !is_array( $columns ) )
 			throw new \InvalidArgumentException( 'Column keys must be an array of column names, a column name string or "*"' );
-		foreach( $columns as $column )
-			if( $column != '*' && !in_array( $column, $this->columns ) )
-				throw new \DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
+		foreach( $columns as $column ){
+			if( $column === '*' || in_array( $column, $this->columns ) )
+				continue;
+			if( preg_match( '/ AS /i', $column ) )
+				continue;
+			throw new \DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
+		}
 	}
 
 	/**
