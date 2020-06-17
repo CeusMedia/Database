@@ -78,12 +78,10 @@ class Select extends AbstractQuery implements QueryInterface
 		if( !is_array( $fields ) )
 			throw new \InvalidArgumentException( 'Must be array or string' );
 		foreach( $fields as $field ){
-			if( trim( $field ) === '*' ){
+			if( trim( $field ) === '*' )
 				$this->fields	= '*';
-				break;
-			}
 			else if( $this->fields	== '*' )
-				$this->fields	= array( trim( $field ) );
+				$this->fields	= array( '*', trim( $field ) );
 			else
 				$this->fields[]	= trim( $field );
 		}
@@ -179,7 +177,7 @@ class Select extends AbstractQuery implements QueryInterface
 		$clock		= new \Alg_Time_Clock();
 		$this->checkSetup();
 		$parameters	= array();
-		$fields		= is_array( $this->fields ) ? implode( ',', $this->fields ) : $this->fields;
+		$fields		= is_array( $this->fields ) ? implode( ', ', $this->fields ) : $this->fields;
 		$from		= $this->renderFrom();
 		$joins		= $this->renderJoins();
 		$conditions	= $this->renderConditions( $parameters );

@@ -10,12 +10,6 @@
 SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
 
 --
--- Datenbank: `test`
---
-
--- --------------------------------------------------------
-
---
 -- Tabellenstruktur für Tabelle `transactions`
 --
 
