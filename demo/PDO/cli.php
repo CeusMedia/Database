@@ -33,6 +33,7 @@ try{
 }
 catch( Exception $e ){
 	CLI::out( $cliColor->asError( 'Error: '.$e->getMessage() ) );
+	CLI::out( 'Location: '.$e->getFile().' at line '.$e->getLine() );
 	CLI::out( 'Trace: ');
 	CLI::out( $e->getTraceAsString() );
 	CLI::out( '' );
