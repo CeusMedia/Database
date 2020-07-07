@@ -1,3 +1,13 @@
+## Version 0.4.1
+- General:
+	- Relax needed version of CeusMedia/Common.
+	- Improve error handling in CLI demo.
+- PDO
+	- Support functions and operations as fields.
+	- Allow functions as operations as result fields.
+	- Extend table reader by method to list distinct column values.
+	- Add static constructors.
+
 ## Version 0.4.0
 - General:
 	- Remove cache from composer file.
@@ -34,7 +44,7 @@
 	- Update  browser demo.
 	- Add  CLI demo.
 - DAO
- 	- Update code syntax.
+	- Update code syntax.
 
 ## Version 0.3.3
 - General:

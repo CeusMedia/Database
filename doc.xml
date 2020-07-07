@@ -33,7 +33,7 @@
 	<builder format="HTML" theme="Default-SilverFire">
 		<path type="target">doc/API/</path>
 		<path type="documents">doc/API/</path>
-		<title version="0.3.3">Database</title>
+		<title version="0.4.1">Database</title>
 		<author email="christian.wuerker@ceusmedia.de">Christian Würker</author>
 		<company url="http://ceusmedia.de/">CeuS Media</company>
 		<logo href="https://github.com/CeusMedia/Database" title="CeusMedia/Database @ GitHub">logo/icon-database-black.png</logo>
