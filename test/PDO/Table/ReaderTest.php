@@ -6,6 +6,9 @@
  *	@since			02.07.2008
  *	@version		0.1
  */
+
+use CeusMedia\Database\PDO\Connection;
+
 require_once 'test/initLoaders.php';
 /**
  *	TestUnit of PDO Table Reader.
@@ -991,52 +994,22 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@return		void
 	 */
 	public function testSetColumnsException1(){
-		$this->expectException( 'InvalidArgumentException' );
-		$this->reader->setColumns( "string" );
-	}
-
-	/**
-	 *	Tests Exception of Method 'setColumns'.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function testSetColumnsException2(){
 		$this->expectException( 'RangeException' );
 		$this->reader->setColumns( array() );
 	}
 
 	/**
-	 *	Tests Method 'setDBConnection'.
+	 *	Tests Method 'setDbConnection'.
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetDBConnection(){
-		$dbc		= new PDO( $this->dsn, $this->username, $this->password );
+	public function testSetDbConnection(){
+		$dbc		= new Connection( $this->dsn, $this->username, $this->password );
 		$this->reader->setDBConnection( $dbc );
 
 		$expected	= $dbc;
 		$actual		= $this->reader->getDBConnection();
 		$this->assertEquals( $expected, $actual );
-	}
-
-	/**
-	 *	Tests Exception of Method 'setDBConnection'.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function testSetDBConnection1(){
-		$this->expectException( 'InvalidArgumentException' );
-		$this->reader->setDBConnection( "string" );
-	}
-
-	/**
-	 *	Tests Exception of Method 'setDBConnection'.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function testSetDBConnection2(){
-		$this->expectException( 'RuntimeException' );
-		$this->reader->setDBConnection( new stdClass() );
 	}
 
 	/**

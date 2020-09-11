@@ -99,9 +99,9 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@return		void
 	 */
 	public function testBeginTransaction(){
-		$expected	= $this->connection;
+//		$expected	= $this->connection;
 		$actual		= $this->connection->beginTransaction();
-		$this->assertEquals( $expected, $actual );
+		$this->assertEquals( TRUE, $actual );
 
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
 		$this->connection->rollBack();

@@ -25,6 +25,12 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO;
+
+use Exception_SQL;
+use PDO;
+use PDOException;
+use PDOStatement;
+
 /**
  *	Enhanced PDO Connection.
  *	@category		Library
@@ -36,41 +42,50 @@ namespace CeusMedia\Database\PDO;
  *	@link			https://github.com/CeusMedia/Database
  *	@todo			Code Documentation
  */
-class Connection extends \PDO
+class Connection extends PDO
 {
 	protected $driver				= NULL;
+
 	public $numberExecutes			= 0;
+
 	public $numberStatements		= 0;
+
 	//  eg. logs/db/pdo/error.log
 	public $logFileErrors			= NULL;
+
 	//  eg. logs/db/pdo/query.log
 	public $logFileStatements		= NULL;
+
 	protected $openTransactions		= 0;
+
 	public $lastQuery				= NULL;
+
 	//  Flag: inner (nested) Transaction has failed
 	protected $innerTransactionFail	= FALSE;
+
 	public static $errorTemplate	= "{time}: PDO:{pdoCode} SQL:{sqlCode} {sqlError} ({statement})\n";
+
 	public static $defaultOptions	= array(
-		\PDO::ATTR_ERRMODE	=> \PDO::ERRMODE_EXCEPTION,
+		PDO::ATTR_ERRMODE   => PDO::ERRMODE_EXCEPTION,
 	);
 
 	/**
-	 *	Constructor, establishs Database Connection using a DSN. Set Error Handling to use Exceptions.
+	 *	Constructor, establishes Database Connection using a DSN. Set Error Handling to use Exceptions.
 	 *	@access		public
 	 *	@param		string		$dsn			Data Source Name
-	 *	@param		string		$username		Name of Database User
-	 *	@param		string		$password		Password of Database User
+	 *	@param		?string		$username		Name of Database User
+	 *	@param		?string		$password		Password of Database User
 	 *	@param		array		$driverOptions	Array of Driver Options
 	 *	@return		void
 	 *	@see		http://php.net/manual/en/pdo.drivers.php
 	 */
-	public function __construct( $dsn, $username = NULL, $password = NULL, $driverOptions = array() )
+	public function __construct( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = array() )
 	{
 		//  extend given options by default options
 		$options	= $driverOptions + self::$defaultOptions;
 		parent::__construct( $dsn, $username, $password, $options );
 		//  note name of used driver
-		$this->driver	= $this->getAttribute( \PDO::ATTR_DRIVER_NAME );
+		$this->driver	= $this->getAttribute( PDO::ATTR_DRIVER_NAME );
 	}
 
 /*	for PHP 5.3.6+
@@ -82,17 +97,17 @@ class Connection extends \PDO
 	/**
 	 *	Starts a Transaction.
 	 *	@access		public
-	 *	@return		self
+	 *	@return		bool
 	 */
-	public function beginTransaction(): self
+	public function beginTransaction(): bool
 	{
 		//  increase Transaction Counter
 		$this->openTransactions++;
 		//  no Transaction is open
-		if( $this->openTransactions == 1)
+		if( $this->openTransactions == 1 )
 			//  begin Transaction
 			parent::beginTransaction();
-		return $this;
+		return TRUE;
 	}
 
 	/**
@@ -107,7 +122,7 @@ class Connection extends \PDO
 			//  ignore Commit
 			return FALSE;
 		//  commit of an outer Transaction
-		if( $this->openTransactions == 1){
+		if( $this->openTransactions == 1 ){
 			//  remember about failed inner Transaction
 			if( $this->innerTransactionFail ){
 				//  rollback outer Transaction instead of committing
@@ -129,21 +144,23 @@ class Connection extends \PDO
 	/**
 	 *	Executes a Statement and returns Number of affected Rows.
 	 *	@access		public
-	 *	@param		string		$statement			SQL Statement to execute
+	 *	@param		mixed		$statement			SQL Statement to execute
 	 *	@return		integer
 	 */
-	public function exec( $statement ): int
+	public function exec( $statement )
 	{
+        $affectedRows   = 0;
 		$this->logStatement( $statement );
 		try{
 			$this->numberExecutes++;
 			$this->numberStatements++;
-			return parent::exec( $statement );
+			$affectedRows = parent::exec( $statement );
 		}
-		catch( \PDOException $e ){
+		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $statement );
 		}
+		return $affectedRows;
 	}
 
 	/**
@@ -151,24 +168,24 @@ class Connection extends \PDO
 	 *	@access		public
 	 *	@return		string|NULL		Database Driver (dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
 	 */
-	public function getDriver()
+	public function getDriver(): ?string
 	{
 		return $this->driver;
 	}
 
 	/**
-	 *	Static constructor, establishs Database Connection using a DSN. Set Error Handling to use Exceptions.
+	 *	Static constructor, establishes Database Connection using a DSN. Set Error Handling to use Exceptions.
 	 *	@access		public
 	 *	@param		string		$dsn			Data Source Name
-	 *	@param		string		$username		Name of Database User
-	 *	@param		string		$password		Password of Database User
+	 *	@param		?string		$username		Name of Database User
+	 *	@param		?string		$password		Password of Database User
 	 *	@param		array		$driverOptions	Array of Driver Options
 	 *	@return		self
 	 *	@see		http://php.net/manual/en/pdo.drivers.php
 	 */
-	public static function getInstance( $dsn, $username = NULL, $password = NULL, $driverOptions = array() )
+	public static function getInstance( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = array() ): self
 	{
-		return new static( $dsn, $username, $password, $driverOptions );
+		return new self( $dsn, $username, $password, $driverOptions );
 	}
 
 	public function getOpenTransactions(): int
@@ -180,23 +197,23 @@ class Connection extends \PDO
 	 *	Returns list of tables in database.
 	 *	With given prefix the returned list will be filtered.
 	 *	@access		public
-	 *	@param		string		$prefix		Table prefix to filter by (optional).
+	 *	@param		?string		$prefix		Table prefix to filter by (optional).
 	 *	@return		array
 	 */
-	public function getTables( $prefix = NULL ): array
+	public function getTables( ?string $prefix = NULL ): array
 	{
-		$query		= "SHOW TABLES" . ( $prefix ? " LIKE '".$prefix."%'" : "" );
+		$query	= "SHOW TABLES" . ( !is_null( $prefix ) ? " LIKE '".$prefix."%'" : "" );
 		return parent::query( $query )->fetchAll( PDO::FETCH_COLUMN );
 	}
 
 	/**
 	 *	Notes Information from PDO Exception in Error Log File and throw SQL Exception.
 	 *	@access		protected
-	 *	@param		PDOException	$e				PDO Exception thrown by invalid SQL Statement
+	 *	@param		PDOException	$exception		PDO Exception thrown by invalid SQL Statement
 	 *	@param		string			$statement		SQL Statement which originated PDO Exception
 	 *	@return		void
 	 */
-	protected function logError( \Exception $exception, $statement )
+	protected function logError( PDOException $exception, string $statement )
 	{
 		if( !$this->logFileErrors )
 			return;
@@ -210,7 +227,7 @@ class Connection extends \PDO
 		$statement	= preg_replace( "@  +@", " ", $statement );
 
 		$note	= self::$errorTemplate;
-		$note	= str_replace( "{time}", time(), $note );
+		$note	= str_replace( "{time}", (string) time(), $note );
 		$note	= str_replace( "{sqlError}", $sqlError, $note );
 		$note	= str_replace( "{sqlCode}", $sqlCode, $note );
 		$note	= str_replace( "{pdoCode}", $pdoCode, $note );
@@ -218,7 +235,7 @@ class Connection extends \PDO
 		$note	= str_replace( "{statement}", $statement, $note );
 
 		error_log( $note, 3, $this->logFileErrors );
-		throw new \Exception_SQL( $sqlError, $sqlCode, $pdoCode );
+		throw new Exception_SQL( $sqlError, $sqlCode, $pdoCode );
 	}
 
 	/**
@@ -227,23 +244,23 @@ class Connection extends \PDO
 	 *	@param		string		$statement		SQL Statement
 	 *	@return		void
 	 */
-	protected function logStatement( $statement )
+	protected function logStatement( string $statement )
 	{
 		if( !$this->logFileStatements )
 			return;
 		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
-		$message	= time()." ".getEnv( 'REMOTE_ADDR' )." ".$statement."\n";
+		$message	= time()." ".getenv( 'REMOTE_ADDR' )." ".$statement."\n";
 		error_log( $message, 3, $this->logFileStatements);
 	}
 
-	public function prepare( $statement, $driverOptions = array() )
+	public function prepare( $statement, $driverOptions = array() ): PDOStatement
 	{
 		$this->numberStatements++;
 		$this->logStatement( $statement );
 		return parent::prepare( $statement, $driverOptions );
 	}
 
-	public function query( $statement, $fetchMode = \PDO::FETCH_ASSOC )
+	public function query( string $statement, int $fetchMode = PDO::FETCH_ASSOC )
 	{
 		$this->logStatement( $statement );
 		$this->lastQuery	= $statement;
@@ -251,10 +268,11 @@ class Connection extends \PDO
 		try{
 			return parent::query( $statement, $fetchMode );
 		}
-		catch( \PDOException $e ){
+		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $statement );
 		}
+		return FALSE;
 	}
 
 	/**
@@ -289,11 +307,11 @@ class Connection extends \PDO
 	 *	@param		string		$fileName		File Name of Statement Error File
 	 *	@return		self
 	 */
-	public function setErrorLogFile( $fileName ): self
+	public function setErrorLogFile( string $fileName ): self
 	{
 		$this->logFileErrors	= $fileName;
-		if( $fileName && !file_exists( dirname( $fileName ) ) )
-			mkDir( dirname( $fileName ), 0700, TRUE );
+		if( strlen( trim( $fileName ) ) > 0 && !file_exists( dirname( $fileName ) ) )
+			mkdir( dirname( $fileName ), 0700, TRUE );
 		return $this;
 	}
 
@@ -303,11 +321,11 @@ class Connection extends \PDO
 	 *	@param		string		$fileName		File Name of Statement Log File
 	 *	@return		self
 	 */
-	public function setStatementLogFile( $fileName ): self
+	public function setStatementLogFile( string $fileName ): self
 	{
 		$this->logFileStatements	= $fileName;
-		if( $fileName && !file_exists( dirname( $fileName ) ) )
-			mkDir( dirname( $fileName ), 0700, TRUE );
+		if( strlen( trim( $fileName ) ) > 0 && !file_exists( dirname( $fileName ) ) )
+			mkdir( dirname( $fileName ), 0700, TRUE );
 		return $this;
 	}
 }

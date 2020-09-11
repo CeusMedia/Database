@@ -25,6 +25,11 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO;
+
+use Exception;
+use PDO;
+use RuntimeException;
+
 /**
  *	Builder for Data Source Name Strings.
  *	@category		Library
@@ -36,20 +41,26 @@ namespace CeusMedia\Database\PDO;
  */
 class DataSourceName
 {
-	/**	@var		string		$driver			Database Driver */
+	/**	@var		?string		$driver			Database Driver */
 	protected $driver;
-	/**	@var		string		$database		Database Name */
+
+	/**	@var		?string		$database		Database Name */
 	protected $database;
-	/**	@var		string		$username		Database Username */
+
+	/**	@var		?string		$username		Database Username */
 	protected $username	;
-	/**	@var		string		$password		Database Password */
+
+	/**	@var		?string		$password		Database Password */
 	protected $password;
-	/**	@var		string		$host			Host Name or URI*/
+
+	/**	@var		?string		$host			Host Name or URI*/
 	protected $host;
-	/**	@var		int			$port			Host Port */
+
+	/**	@var		?int		$port			Host Port */
 	protected $port;
 
-	protected $drivers	= array(
+    /**	@var		array		$drivers		List of possible PDO drivers */
+	protected $drivers      	= array(
 		'cubrid',
 		'dblib',
 		'firebird',
@@ -67,21 +78,22 @@ class DataSourceName
 	 *	Constructor.
 	 *	@access		public
 	 *	@param		string		$driver			Database Driver (cubrid,dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
-	 *	@param		string		$database		Database Name
+	 *	@param		?string		$database		Database Name
 	 *	@return		void
 	 */
-	public function __construct( $driver, $database = NULL )
+	public function __construct( string $driver, string $database = NULL )
 	{
 		$this->checkDriverSupport( $driver );
 		$this->driver	= strtolower( $driver );
-		if( $database )
+		if( strlen( trim( $database ) ) > 0 )
 			$this->setDatabase( $database );
 	}
 
 	/**
 	 *	Converts DSN Object into a String.
 	 *	@access		public
-	 *	@return		string
+     *	@return		string
+     *	@throws		Exception
 	 */
 	public function __toString()
 	{
@@ -96,12 +108,12 @@ class DataSourceName
 	 *	@throws		RuntimeException			if PDO Driver is not supported
 	 *	@throws		RuntimeException			if PDO Driver is not loaded
 	 */
-	protected function checkDriverSupport( $driver ): self
+	protected function checkDriverSupport( string $driver ): self
 	{
-		if( !in_array( $driver, $this->drivers ) )
-			throw new \RuntimeException( 'PDO driver "'.$driver.'" is not supported' );
-		if( !in_array( $driver, \PDO::getAvailableDrivers() ) )
-			throw new \RuntimeException( 'PDO driver "'.$driver.'" is not loaded' );
+		if( !in_array( $driver, $this->drivers, TRUE ) )
+			throw new RuntimeException( 'PDO driver "'.$driver.'" is not supported' );
+		if( !in_array( $driver, PDO::getAvailableDrivers(), TRUE ) )
+			throw new RuntimeException( 'PDO driver "'.$driver.'" is not loaded' );
 		return $this;
 	}
 
@@ -119,13 +131,19 @@ class DataSourceName
 	 *	Static constructor.
 	 *	@access		public
 	 *	@param		string		$driver			Database Driver (cubrid,dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
-	 *	@param		string		$database		Database Name
+	 *	@param		?string		$database		Database Name
 	 *	@return		self
 	 */
-	public static function getInstance( $driver, $database = NULL ){
-		return new static( $driver, $database );
+	public static function getInstance( string $driver, ?string $database = NULL ): self
+    {
+		return new self( $driver, $database );
 	}
 
+    /**
+     *  ...
+     *  @return     string
+     *  @throws     Exception
+     */
 	public function render(): string
 	{
 		$prefix	= $this->driver.':';
@@ -154,13 +172,14 @@ class DataSourceName
 	 *	@static
 	 *	@param		string		$driver			Database Driver (cubrid|dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
 	 *	@param		string		$database		Database Name
-	 *	@param		string		$host			Host Name or URI
-	 *	@param		integer		$port			Host Port
-	 *	@param		string		$username		Username
-	 *	@param		string		$password		Password
+	 *	@param		?string		$host			Host Name or URI
+	 *	@param		?integer	$port			Host Port
+	 *	@param		?string		$username		Username
+	 *	@param		?string		$password		Password
 	 *	@return		string
+     *  @throws		Exception
 	 */
-	public static function renderStatic( $driver, $database, $host = NULL, $port = NULL, $username = NULL, $password = NULL ): string
+	public static function renderStatic( string $driver, string $database, ?string $host = NULL, ?int $port = NULL, ?string $username = NULL, ?string $password = NULL ): string
 	{
 		$dsn	= new self( $driver, $database );
 		$dsn->setHost( $host );
@@ -176,7 +195,7 @@ class DataSourceName
 	 *	@param		string		$database		Database Name
 	 *	@return		self
 	 */
-	public function setDatabase( $database ): self
+	public function setDatabase( string $database ): self
 	{
 		$this->database	= $database;
 		return $this;
@@ -188,7 +207,7 @@ class DataSourceName
 	 *	@param		string		$host 			Host Name or URI
 	 *	@return		self
 	 */
-	public function setHost( $host ): self
+	public function setHost( string $host ): self
 	{
 		$this->host	= $host;
 		return $this;
@@ -200,7 +219,7 @@ class DataSourceName
 	 *	@param		string		$password		Password
 	 *	@return		self
 	 */
-	public function setPassword( $password ): self
+	public function setPassword( string $password ): self
 	{
 		$this->password	= $password;
 		return $this;
@@ -212,7 +231,7 @@ class DataSourceName
 	 *	@param		integer		$port			Host Port
 	 *	@return		self
 	 */
-	public function setPort( $port ): self
+	public function setPort( int $port ): self
 	{
 		$this->port	= $port;
 		return $this;
@@ -224,7 +243,7 @@ class DataSourceName
 	 *	@param		string		$username		Username
 	 *	@return		self
 	 */
-	public function setUsername( $username ): self
+	public function setUsername( string $username ): self
 	{
 		$this->username	= $username;
 		return $this;
@@ -234,7 +253,7 @@ class DataSourceName
 
 	protected function renderDsnForDefault()
 	{
-		$port	= !empty( $this->port ) ? $this->port : NULL;
+		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
 		$map	= array(
 			'host'		=> $this->host,
 			'port'		=> $port,
@@ -245,8 +264,8 @@ class DataSourceName
 
 	protected function renderDsnForFirebird()
 	{
-		$host	= !empty( $this->host ) ? $this->host : NULL;
-		$port	= !empty( $this->port ) ? $this->port : NULL;
+		$host	= !is_null( $this->host ) ? $this->host : NULL;
+		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
 		$map	= array(
 			'DataSource'	=> $host,
 			'Port'			=> $port,
@@ -259,15 +278,11 @@ class DataSourceName
 
 	protected function renderDsnForInformix()
 	{
-		$delim	= '; ';
-		$host	= !empty( $this->host ) ? $this->host : NULL;
-		$port	= !empty( $this->port ) ? $this->port : NULL;
-		$map	= array(
-			'host'		=> $host,
-			'service'	=> $port,
-			'database'	=> $this->database
-		);
-		return $this->renderDsnParts( $map, $delim );
+		return $this->renderDsnParts( array(
+            'host'		=> !is_null( $this->host ) ? $this->host : NULL,
+            'service'	=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+            'database'	=> $this->database
+        ), '; ' );
 	}
 
 	/**
@@ -276,33 +291,30 @@ class DataSourceName
 	protected function renderDsnForOci()
 	{
 		$dbname	= $this->database;
-		$port	= $this->port ? ':'.$this->port : '';
-		if( $this->host )
+		$port	= !is_null( $this->port ) && $this->port > 0 ? ':'.$this->port : '';
+		if( !is_null( $this->host ) )
 			$dbname	= '//'.$this->host.$port.'/'.$this->database;
 		return 'dbname='.$dbname;
 	}
 
 	/**
-	 *	@todo	implement
+	 *	@todo		implement
+     *  @throws		Exception
 	 */
 	protected function renderDsnForOdbc()
 	{
-		throw new \Exception( 'Not yet implemented' );
+		throw new Exception( 'Not yet implemented' );
 	}
 
 	protected function renderDsnForPgsql()
 	{
-		$delim	= ' ';
-		$host	= !empty( $this->host ) ? $this->host : NULL;
-		$port	= !empty( $this->port ) ? $this->port : NULL;
-		$map	= array(
-			'host'		=> $host,
-			'port'		=> $port,
-			'dbname'	=> $this->database,
-			'user'		=> $this->username,
-			'password'	=> $this->password
-		);
-		return $this->renderDsnParts( $map, $delim );
+		return $this->renderDsnParts( array(
+            'host'		=> !is_null( $this->host ) ? $this->host : NULL,
+            'port'		=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+            'dbname'	=> $this->database,
+            'user'		=> $this->username,
+            'password'	=> $this->password
+        ), ' ' );
 	}
 
 	protected function renderDsnForSqlite()
@@ -317,7 +329,7 @@ class DataSourceName
 	 *	@param		string		$delimiter		Delimiter between DSN Parts
 	 *	@return		string
 	 */
-	protected function renderDsnParts( $map, $delimiter = '; ' )
+	protected function renderDsnParts( array $map, string $delimiter = '; ' )
 	{
 		$list	= array();
 		foreach( $map as $key => $value )

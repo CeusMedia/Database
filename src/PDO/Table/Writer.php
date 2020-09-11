@@ -25,11 +25,13 @@
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO\Table;
+
+use InvalidArgumentException;
+
 /**
  *	Write Access for Database Tables.
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
- *	@extends		\CeusMedia\Database\PDO\Table\Reader
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -57,16 +59,16 @@ class Writer extends Reader
 	 *	Deletes data by given conditions.
 	 *	@access		public
 	 *	@param		array		$where		associative Array of Condition Strings
-	 *	@return		boolean
+	 *	@return		integer
 	 */
-	public function deleteByConditions( $where = array() ): bool
+	public function deleteByConditions( array $where = array() ): int
 	{
 		//  render WHERE conditions, uncursored, without functions
-		$conditions	= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );
-		$query	= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
-		$result	= $this->dbc->exec( $query );
+		$conditions		= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );
+		$query			= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
+		$affectedRows	= $this->dbc->exec( $query );
 		$this->defocus();
-		return $result;
+		return $affectedRows;
 	}
 
 	/**
@@ -76,7 +78,7 @@ class Writer extends Reader
 	 *	@param		boolean		$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer		ID of inserted row
 	 */
-	public function insert( $data = array(), $stripTags = TRUE ): int
+	public function insert( array $data = array(), bool $stripTags = TRUE ): int
 	{
 		$columns	= array();
 		$values		= array();
@@ -110,9 +112,12 @@ class Writer extends Reader
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
 		$values		= implode( ', ', array_values( $values ) );
-		$query		= 'INSERT INTO '.$this->getTableName().' ('.$columns.') VALUES ('.$values.')';
-		$this->dbc->exec( $query );
-		return $this->dbc->lastInsertId();
+		$this->dbc->exec( vsprintf( 'INSERT INTO %s (%s) VALUES (%s)', [
+            $this->getTableName(),
+            $columns,
+            $values,
+        ] ) );
+		return (int) $this->dbc->lastInsertId();
 	}
 
 	/**
@@ -120,16 +125,16 @@ class Writer extends Reader
 	 *	@access		public
 	 *	@param		array		$data			Map of data to store
 	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
-	 *	@return		boolean
+	 *	@return		integer
 	 */
-	public function update( $data = array(), $stripTags = TRUE ): bool
+	public function update( array $data = array(), bool $stripTags = TRUE ): int
 	{
-		if( !( is_array( $data ) && $data ) )
-			throw new \InvalidArgumentException( 'Data for update must be an array and have atleast 1 pair' );
+		if( count( $data ) === 0 )
+			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		$this->validateFocus();
 		$has	= $this->get( FALSE );
-		if( !$has )
-			throw new \InvalidArgumentException( 'No data sets focused for update' );
+		if( is_null( $has ) || is_array( $has ) && count( $has ) === 0 )
+			throw new InvalidArgumentException( 'No data sets focused for update' );
 		$updates	= array();
 		foreach( $this->columns as $column ){
 			if( !array_key_exists($column, $data) )
@@ -140,13 +145,14 @@ class Writer extends Reader
 			$value	= $this->secureValue( $value );
 			$updates[] = '`'.$column.'`='.$value;
 		}
-		if( sizeof( $updates ) ){
+        $affectedRows   = 0;
+		if( count( $updates ) > 0 ){
 			$updates	= implode( ', ', $updates );
 			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery( array() );
-			$result	= $this->dbc->exec( $query );
-			return $result;
-		}
-	}
+			$affectedRows	= $this->dbc->exec( $query );
+        }
+        return $affectedRows;
+    }
 
 	/**
 	 *	Updates data in table where conditions are given for.
@@ -156,12 +162,12 @@ class Writer extends Reader
 	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
 	 */
-	public function updateByConditions( $data = array(), $conditions = array(), $stripTags = FALSE ): int
+	public function updateByConditions( array $data = array(), array $conditions = array(), bool $stripTags = FALSE ): int
 	{
-		if( !( is_array( $data ) && $data ) )
-			throw new \InvalidArgumentException( 'Data for update must be an array and have atleast 1 pair' );
-		if( !( is_array( $conditions ) && $conditions ) )
-			throw new \InvalidArgumentException( 'Conditions for update must be an array and have atleast 1 pair' );
+		if( count( $data ) === 0 )
+			throw new InvalidArgumentException( 'Data for update cannot be empty' );
+		if( count( $conditions ) === 0 )
+			throw new InvalidArgumentException( 'Conditions for update cannot be empty' );
 
 		$updates	= array();
 		//  render WHERE conditions, uncursored, without functions
@@ -176,13 +182,13 @@ class Writer extends Reader
 				$updates[] = '`'.$column.'`='.$data[$column];
 			}
 		}
-		if( count( $updates ) ){
+        $affectedRows   = 0;
+		if( count( $updates ) !== 0 ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$conditions;
-			$result		= $this->dbc->exec( $query );
-			return $result;
+			$affectedRows		= $this->dbc->exec( $query );
 		}
-		return 0;
+		return $affectedRows;
 	}
 
 	/**
@@ -192,7 +198,7 @@ class Writer extends Reader
 	 *	@return		self
 	 *	@see		http://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
-	public function truncate()
+	public function truncate(): self
 	{
 		$query	= 'TRUNCATE '.$this->getTableName();
 		$this->dbc->exec( $query );

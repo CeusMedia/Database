@@ -26,14 +26,21 @@
  */
 namespace CeusMedia\Database\PDO;
 
-use CeusMedia\Database\PDO\Connection;
+use Alg_Object_Factory;
+use CeusMedia\Cache\Adapter\Noop as NoCacheAdapter;
+use CeusMedia\Cache\AdapterInterface as CacheAdapter;
 use CeusMedia\Database\PDO\Table\Writer as TableWriter;
+use DomainException;
+use InvalidArgumentException;
+use PDO;
+use RangeException;
+use RuntimeException;
 
 /**
  *	Abstract database table.
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
- *	@uses			\CeusMedia\Database\PDO\Table\Writer
+ *	@uses			TableWriter
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -41,49 +48,57 @@ use CeusMedia\Database\PDO\Table\Writer as TableWriter;
  */
 abstract class Table
 {
-	/**	@var	Connection				$dbc			PDO database connection object */
+	/**	@var	?Connection				$dbc			PDO database connection object */
 	protected $dbc;
+
 	/**	@var	string					$name			Name of Database Table without Prefix */
-	protected $name						= "";
+	protected $name						= '';
+
 	/**	@var	array					$columns		List of Database Table Columns */
 	protected $columns					= array();
+
 	/**	@var	array					$name			List of foreign Keys of Database Table */
 	protected $indices					= array();
+
 	/**	@var	string					$primaryKey		Primary Key of Database Table */
-	protected $primaryKey				= "";
+	protected $primaryKey				= '';
+
 	/**	@var	TableWriter				$table			Database Table Writer Object for reading from and writing to Database Table */
 	protected $table;
+
 	/**	@var	string					$prefix			Database Table Prefix */
 	protected $prefix;
-	/**	@var	\ADT_List_Dictionary	$cache			Model data cache */
-	protected $cache;
-	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
-	protected $fetchMode				= \PDO::FETCH_OBJ;
 
-	public static $cacheClass			= '\\ADT_List_Dictionary';
+	/**	@var	CacheAdapter 	$cache			Model data cache */
+	protected $cache;
+
+	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
+	protected $fetchMode				= PDO::FETCH_OBJ;
+
+	public static $cacheClass			= NoCacheAdapter::class;
+
+	protected $cacheKey;
 
 	/**
 	 *	Constructor.
 	 *	@access		public
 	 *	@param		Connection		$dbc		PDO database connection object
-	 *	@param		string			$prefix		Table name prefix
-	 *	@param		integer			$id			ID to focus on
+	 *	@param		?string			$prefix		Table name prefix
+	 *	@param		?integer		$id			ID to focus on
 	 *	@return		void
 	 */
-	public function __construct( Connection $dbc, $prefix = NULL, $id = NULL )
+	public function __construct( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL )
 	{
 		$this->checkTableSetup();
-		$this->setDatabase( $dbc );
+		$this->setDatabase( $dbc, $prefix, $id );
 	}
 
 	private function checkTableSetup(): self
 	{
-		if( !$this->name )
-			throw new \RuntimeException( 'No table name set' );
-		if( !$this->columns )
-			throw new \RuntimeException( 'No table columns set' );
-		if( !$this->columns )
-			throw new \RuntimeException( 'No table columns set' );
+		if( strlen( trim( $this->name ) ) === 0 )
+			throw new RuntimeException( 'No table name set' );
+		if( count( $this->columns ) === 0 )
+			throw new RuntimeException( 'No table columns set' );
 		return $this;
 	}
 
@@ -94,10 +109,10 @@ abstract class Table
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer
 	 */
-	public function add( $data, $stripTags = TRUE ): int
+	public function add( array $data, bool $stripTags = TRUE ): int
 	{
 		$id	= $this->table->insert( $data, $stripTags );
-		$this->cache->set( $this->cacheKey.$id, $this->get( $id ) );
+		$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
 		return $id;
 	}
 
@@ -108,26 +123,21 @@ abstract class Table
 	 *	In strict mode exceptions will be thrown if field is not a string, empty but mandatory or not a table column.
 	 *	@access		protected
 	 *	@param		string			$field			Table Column to check for existence
-	 *	@param		string			$mandatory		Force a value, otherwise return NULL or throw exception in strict mode
+	 *	@param		boolean			$mandatory		Force a value, otherwise return NULL or throw exception in strict mode
 	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE or NULL
-	 *	@return		string|NULL		Trimmed Field name if found, NULL otherwise or exception in strict mode
-	 *	@throws		\InvalidArgumentException		in strict mode if field is not a string and strict mode is on
-	 *	@throws		\RangeException					in strict mode if field is empty but mandatory
-	 *	@throws		\DomainException				in strict mode if field is not a table column
+	 *	@return		string|NULL|FALSE				Trimmed Field name if found, NULL otherwise or exception in strict mode
+	 *	@throws		InvalidArgumentException		in strict mode if field is not a string and strict mode is on
+	 *	@throws		RangeException					in strict mode if field is empty but mandatory
+	 *	@throws		DomainException				    in strict mode if field is not a table column
 	 */
-	protected function checkField( $field, $mandatory = FALSE, $strict = TRUE )
+	protected function checkField( string $field, bool $mandatory = FALSE, bool $strict = TRUE )
 	{
-		if( !is_string( $field ) ){
-			if( !$strict )
-				return FALSE;
-			throw new \InvalidArgumentException( 'Field must be a string' );
-		}
 		$field	= trim( $field );
 		if( !strlen( $field ) ){
 			if( $mandatory ){
 				if( !$strict )
 					return FALSE;
-				throw new \RangeException( 'Field must have a value' );
+				throw new RangeException( 'Field must have a value' );
 			}
 			return NULL;
 		}
@@ -135,52 +145,9 @@ abstract class Table
 			if( !$strict )
 				return FALSE;
 			$message	= 'Field "%s" is not an existing column of table %s';
-			throw new \DomainException( sprintf( $message, $field, $this->getName() ) );
+			throw new DomainException( sprintf( $message, $field, $this->getName() ) );
 		}
 		return $field;
-	}
-
-	/**
-	 *	Indicates whether a given map of indices is valid.
-	 *	Returns map if valid or FALSE if not an array or empty but mandatory.
-	 *	In strict mode exceptions will be thrown if map is not an array or empty but mandatory.
-	 *	FYI: The next logical check - if index keys are valid columns and noted indices - is done by used table reader class.
-	 *	@access		protected
-	 *	@param		array			$indices		Map of Index Keys and Values
-	 *	@param		string			$mandatory		Force atleast one pair, otherwise return FALSE or throw exception in strict mode
-	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE
-	 *	@param		boolean			$withPrimaryKey	Flag: include table primary key within index list
-	 *	@return		array|boolean	Map if valid, FALSE otherwise or exceptions in strict mode
-	 *	@throws		\InvalidArgumentException		in strict mode if field is not a string
-	 *	@throws		\RangeException					in strict mode if field is empty but mandatory
-	 *	@throws		\DomainException				in strict mode if field is not an index
-	 */
-	protected function checkIndices( $indices, $mandatory = FALSE, $strict = TRUE, $withPrimaryKey = FALSE )
-	{
-		if( !is_array( $indices ) ){
-			if( !$strict )
-				return FALSE;
-			throw new \InvalidArgumentException( 'Index map must be an array' );
-		}
-		if( !$indices ){
-			if( $mandatory ){
-				if( !$strict )
-					return FALSE;
-				throw new \RangeException( 'Index map must have atleast one pair' );
-			}
-		}
-
-		$list		= array();
-		$indexList	= $this->table->getIndices( $withPrimaryKey );
-		foreach( $indices as $index => $value ){
-			if( !in_array( $index, $indexList ) ){
-				if( $strict )
-					throw new \DomainException( 'Column "'.$index.'" is not an index' );
-				return FALSE;
-			}
-			$list[$index]	= $value;
-		}
-		return $list;
 	}
 
 	/**
@@ -189,7 +156,7 @@ abstract class Table
 	 *	@param		array			$conditions		Map of conditions
 	 *	@return		integer			Number of entries
 	 */
-	public function count( $conditions = array() ): int
+	public function count( array $conditions = array() ): int
 	{
 		return $this->table->count( $conditions );
 	}
@@ -201,10 +168,9 @@ abstract class Table
 	 *	@param		string			$value			Value of Index
 	 *	@return		integer			Number of entries within this index
 	 */
-	public function countByIndex( $key, $value ): int
+	public function countByIndex( string $key, string $value ): int
 	{
-		$conditions	= array( $key => $value );
-		return $this->table->count( $conditions );
+		return $this->table->count( array( $key => $value ) );
 	}
 
 	/**
@@ -213,19 +179,19 @@ abstract class Table
 	 *	@param		array			$indices		Map of index conditions
 	 *	@return		integer			Number of entries within this index
 	 */
-	public function countByIndices( $indices ): int
+	public function countByIndices( array $indices ): int
 	{
 		return $this->count( $indices );
 	}
 
 	/**
 	 *	Returns number of entries of a large table by map of conditions.
-	 *	Attention: The returned number may be inaccurat, but this is much faster.
+	 *	Attention: The returned number may be inaccurate, but this is much faster.
 	 *	@access		public
 	 *	@param		array			$conditions		Map of conditions
 	 *	@return		integer			Number of entries
 	 */
-	public function countFast( $conditions ): int
+	public function countFast( array $conditions ): int
 	{
 		return $this->table->countFast( $conditions );
 	}
@@ -238,7 +204,7 @@ abstract class Table
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
 	 */
-	public function edit( $id, $data, $stripTags = TRUE ): int
+	public function edit( int $id, array $data, bool $stripTags = TRUE ): int
 	{
 		$this->table->focusPrimary( $id );
 		$result	= 0;
@@ -257,7 +223,7 @@ abstract class Table
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
 	 */
-	public function editByIndices( $indices, $data, $stripTags = TRUE ): int
+	public function editByIndices( array $indices, array $data, bool $stripTags = TRUE ): int
 	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		return $this->table->updateByConditions( $data, $indices, $stripTags );
@@ -270,15 +236,17 @@ abstract class Table
 	 *	@param		string			$field			Single Field to return
 	 *	@return		mixed
 	 */
-	public function get( $id, $field = '' )
+	public function get( int $id, string $field = '' )
 	{
 		$field	= $this->checkField( $field, FALSE, TRUE );
-		$data	= $this->cache->get( $this->cacheKey.$id );
-		if( !$data ){
+		if( $this->cache->has( $this->cacheKey.$id ) ) {
+            $data = unserialize($this->cache->get($this->cacheKey . $id));
+        }
+		else{
 			$this->table->focusPrimary( $id );
 			$data	= $this->table->get( TRUE );
 			$this->table->defocus();
-			$this->cache->set( $this->cacheKey.$id, $data );
+			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
 		if( strlen( trim( $field ) ) )
 			return $this->getFieldsFromResult( $data, array( $field ) );
@@ -293,13 +261,13 @@ abstract class Table
 	 *	@param		array			$limits			Map of Limits to include in SQL Query
 	 *	@param		array			$fields			Map of Columns to include in SQL Query
 	 *	@param		array			$groupings		List of columns to group by
-	 *	@param		array			$havings		List of conditions to apply after grouping
+	 *	@param		array			$having	    	List of conditions to apply after grouping
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		mixed
 	 */
-	public function getAll( $conditions = array(), $orders = array(), $limits = array(), $fields = array(), $groupings = array(), $havings = array(), $strict = FALSE )
+	public function getAll( array $conditions = array(), array $orders = array(), array $limits = array(), array $fields = array(), array $groupings = array(), array $having = array(), bool $strict = FALSE )
 	{
-		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $havings );
+		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $having );
 		if( count( $fields ) ){
 			foreach( $data as $nr => $set ){
 				$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
@@ -315,30 +283,29 @@ abstract class Table
 	 *	@param		string			$value			Value of Index
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
 	 *	@param		array			$limits			List of Limits to include in SQL Query
-	 *	@param		boolean			$fields			List of fields or one field to return from result
+	 *	@param		array			$fields			List of fields or one field to return from result
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex( $key, $value, $orders = array(), $limits = array(), $fields = array(), $strict = FALSE )
+	public function getAllByIndex( string $key, string $value, array $orders = array(), array $limits = array(), array $fields = array(), bool $strict = FALSE )
 	{
 		if( !in_array( $key, $this->table->getIndices() ) )
-			throw new \DomainException( 'Requested column "'.$key.'" is not an index' );
+			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
 		$conditions	= array( $key => $value );
-		return $this->getAll( $conditions, $orders, $limits, $fields );
+		return $this->getAll( $conditions, $orders, $limits, $fields, array(), array(), $strict );
 	}
 
 	/**
 	 *	Returns Data of all Lines selected by Indices.
 	 *	@access		public
 	 *	@param		array			$indices		Map of Index Keys and Values
-	 *	@param		array			$conditions		Map of Conditions to include in SQL Query
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
 	 *	@param		array			$limits			List of Limits to include in SQL Query
-	 *	@param		boolean			$fields			List of fields or one field to return from result
+	 *	@param		array			$fields			List of fields or one field to return from result
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndices( $indices = array(), $orders = array(), $limits = array(), $fields = array(), $strict = FALSE )
+	public function getAllByIndices( array $indices = array(), array $orders = array(), array $limits = array(), array $fields = array(), bool $strict = FALSE )
 	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
@@ -357,18 +324,18 @@ abstract class Table
 	 *	@param		string			$key			Key of Index
 	 *	@param		string			$value			Value of Index
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
-	 *	@param		string			$fields			List of fields or one field to return from result
+	 *	@param		array|string	$fields			List of fields or one field to return from result
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		mixed			Structure depending on fetch type, string if field selected, NULL if field selected and no entries
 	 *	@todo		change argument order: move fields to end
-	 *	@throws		\InvalidArgumentException			If given fields list is neither a list nor a string
+	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 */
-	public function getByIndex( $key, $value, $orders = array(), $fields = array(), $strict = FALSE )
+	public function getByIndex( string $key, string $value, array $orders = array(), $fields = array(), bool $strict = FALSE )
 	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
 		if( !is_array( $fields ) )
-			throw new \InvalidArgumentException( 'Fields must be of array or string' );
+			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $field )
 			$this->checkField( $field, FALSE, TRUE );
 		$this->table->focusIndex( $key, $value );
@@ -382,20 +349,20 @@ abstract class Table
 	 *	@access		public
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
-	 *	@param		string			$fields			List of fields or one field to return from result
+	 *	@param		array|string	$fields			List of fields or one field to return from result
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		mixed			Structure depending on fetch type, string if field selected, NULL if field selected and no entries
-	 *	@throws		\InvalidArgumentException			If given fields list is neither a list nor a string
+	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 *	@todo  		change default value of argument 'strict' to TRUE
 	 */
-	public function getByIndices( $indices, $orders = array(), $fields = array(), $strict = FALSE )
+	public function getByIndices( array $indices, array $orders = array(), $fields = array(), bool $strict = FALSE )
 	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
 		if( !is_array( $fields ) )
-			throw new \InvalidArgumentException( 'Fields must be of array or string' );
-		foreach( $fields as $field )
-			$field	= $this->checkField( $field, FALSE, TRUE );
+			throw new InvalidArgumentException( 'Fields must be of array or string' );
+		foreach( $fields as $nr => $field )
+			$fields[$nr]	= $this->checkField( $field, FALSE, TRUE );
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
@@ -412,84 +379,6 @@ abstract class Table
 	public function getColumns(): array
 	{
 		return $this->table->getColumns();
-	}
-
-	/**
-	 *	Returns any fields or one field from a query result.
-	 *	@access		protected
-	 *	@param		mixed			$result			Query result as array or object
-	 *	@param		array|string	$fields			List of fields or one field
-	 *	@param		boolean			$strict			Flag: throw exception if result is empty
-	 *	@return		string|array|object				Structure depending on result and field list length
-	 *	@throws		\InvalidArgumentException		If given fields list is neither a list nor a string
-	 *	@throws		\RangeException					If given result list is empty
-	 *	@throws		\DomainException				If requested field is not a table column
-	 *	@throws		\RangeException					If requested field is not within result fields
-	 */
-	protected function getFieldsFromResult( $result, $fields = array(), $strict = TRUE )
-	{
-		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
-		if( !is_array( $fields ) )
-			throw new \InvalidArgumentException( 'Fields must be of array or string' );
-		if( !$result ){
-			if( $strict )
-				throw new \RangeException( 'Result is empty' );
-			if( count( $fields ) === 1 )
-				return NULL;
-			return array();
-		}
-		if( !count( $fields ) )
-			return $result;
-
-		foreach( $fields as $nr => $field )
-			if( $field === '*' )
-				array_splice( $fields, $nr, 1, $this->columns );
-
-		foreach( $fields as $nr => $field ){
-			if( preg_match_all( '/^(.+) AS (.+)$/i', $field, $matches ) ){
-				if( in_array( $matches[2][0], $this->columns ) )
-					throw new \DomainException( 'Field "'.$field.'" is not possible sind '.$matches[2][0].' is a column' );
-				$fields[$nr]	= $matches[2][0];
-			}
-			else if( !in_array( $field, $this->columns ) )
-				throw new \DomainException( 'Field "'.$field.'" is not an existing column' );
-		}
-
-		if( count( $fields ) === 1 ){
-			$field	= $fields[0];
-			switch( $this->fetchMode ){
-				case \PDO::FETCH_CLASS:
-				case \PDO::FETCH_OBJ:
-					if( !isset( $result->$field ) )
-						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
-					return $result->$field;
-				default:
-					if( !isset( $result[$field] ) )
-						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
-					return $result[$field];
-			}
-		}
-
-		switch( $this->fetchMode ){
-			case \PDO::FETCH_CLASS:
-			case \PDO::FETCH_OBJ:
-				$map	= (object) array();
-				foreach( $fields as $field ){
-					if( !isset( $result->$field ) )
-						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
-					$map->$field	= $result->$field;
-				}
-				return $map;
-			default:
-				$list	= array();
-				foreach( $fields as $field ){
-					if( $field !== '*' && !isset( $result[$field] ) )
-						throw new \RangeException( 'Field "'.$field.'" is not an column of result set' );
-					$list[$field]	= $result[$field];
-				}
-				return $list;
-		}
 	}
 
 	/**
@@ -535,7 +424,7 @@ abstract class Table
 	 *	@param		integer			$id				ID to focus on
 	 *	@return		boolean
 	 */
-	public function has( $id ): bool
+	public function has( int $id ): bool
 	{
 		if( $this->cache->has( $this->cacheKey.$id ) )
 			return TRUE;
@@ -549,7 +438,7 @@ abstract class Table
 	 *	@param		string			$value			Value of Index
 	 *	@return		boolean
 	 */
-	public function hasByIndex( $key, $value ): bool
+	public function hasByIndex( string $key, string $value ): bool
 	{
 		return (bool) $this->getByIndex( $key, $value );
 	}
@@ -560,7 +449,7 @@ abstract class Table
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@return		boolean
 	 */
-	public function hasByIndices( $indices ): bool
+	public function hasByIndices( array $indices ): bool
 	{
 		return (bool) $this->getByIndices( $indices );
 	}
@@ -571,7 +460,7 @@ abstract class Table
 	 *	@param		integer			$id				ID to focus on
 	 *	@return		boolean
 	 */
-	public function remove( $id ):bool
+	public function remove( int $id ): bool
 	{
 		$this->table->focusPrimary( $id );
 		$result	= FALSE;
@@ -591,7 +480,7 @@ abstract class Table
 	 *	@param		string			$value			Value of Index
 	 *	@return		integer
 	 */
-	public function removeByIndex( $key, $value ): int
+	public function removeByIndex( string $key, string $value ): int
 	{
 		$this->table->focusIndex( $key, $value );
 		$number	= 0;
@@ -600,8 +489,8 @@ abstract class Table
 			$number = $this->table->delete();
 			foreach( $rows as $row ){
 				switch( $this->fetchMode ){
-					case \PDO::FETCH_CLASS:
-					case \PDO::FETCH_OBJ:
+					case PDO::FETCH_CLASS:
+					case PDO::FETCH_OBJ:
 						$id	= $row->{$this->primaryKey};
 						break;
 					default:
@@ -620,7 +509,7 @@ abstract class Table
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@return		integer			Number of removed entries
 	 */
-	public function removeByIndices( $indices ): int
+	public function removeByIndices( array $indices ): int
 	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
@@ -632,8 +521,8 @@ abstract class Table
 			$number	= $this->table->delete();
 			foreach( $rows as $row ){
 				switch( $this->fetchMode ){
-					case \PDO::FETCH_CLASS:
-					case \PDO::FETCH_OBJ:
+					case PDO::FETCH_CLASS:
+					case PDO::FETCH_OBJ:
 						$id	= $row->{$this->primaryKey};
 						break;
 					default:
@@ -646,7 +535,7 @@ abstract class Table
 		return $number;
 	}
 
-	public function setCache( \CeusMedia\Cache\AdapterInterface $cache ): self
+	public function setCache( CacheAdapter $cache ): self
 	{
 		$this->cache	= $cache;
 		return $this;
@@ -655,16 +544,16 @@ abstract class Table
 	/**
 	 *	Sets Environment of Controller by copying Framework Member Variables.
 	 *	@access		public
-	 *	@param		\CeusMedia\Database\PDO\Connection	$dbc		PDO database connection object
-	 *	@param		string				$prefix		Table name prefix
-	 *	@param		integer				$id			ID to focus on
+	 *	@param		Connection	    $dbc		PDO database connection object
+	 *	@param		string|NULL		$prefix		Table name prefix
+	 *	@param		integer|NULL	$id			ID to focus on
 	 *	@return		self
 	 */
-	public function setDatabase( \CeusMedia\Database\PDO\Connection $dbc, $prefix = NULL, $id = NULL ): self
+	public function setDatabase( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL ): self
 	{
 		$this->dbc		= $dbc;
 		$this->prefix	= (string) $prefix;
-		$this->table	= new \CeusMedia\Database\PDO\Table\Writer(
+		$this->table	= new TableWriter(
 			$dbc,
 			$this->prefix.$this->name,
 			$this->columns,
@@ -674,7 +563,7 @@ abstract class Table
 		if( $this->fetchMode )
 			$this->table->setFetchMode( $this->fetchMode );
 		$this->table->setIndices( $this->indices );
-		$this->cache	= \Alg_Object_Factory::createObject( self::$cacheClass );
+		$this->cache	= Alg_Object_Factory::createObject( self::$cacheClass );
 		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
 		return $this;
 	}
@@ -696,4 +585,127 @@ abstract class Table
 	{
 		$this->table->truncate();
 	}
+
+    //  --  PROTECTED  --  //
+
+    /**
+     *	Indicates whether a given map of indices is valid.
+     *	Returns map if valid or FALSE if not an array or empty but mandatory.
+     *	In strict mode exceptions will be thrown if map is not an array or empty but mandatory.
+     *	FYI: The next logical check - if index keys are valid columns and noted indices - is done by used table reader class.
+     *	@access		protected
+     *	@param		array			$indices		Map of Index Keys and Values
+     *	@param		boolean			$mandatory		Force at least one pair, otherwise return FALSE or throw exception in strict mode
+     *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE
+     *	@param		boolean			$withPrimaryKey	Flag: include table primary key within index list
+     *	@return		array|boolean	Map if valid, FALSE otherwise or exceptions in strict mode
+     *	@throws		InvalidArgumentException		in strict mode if field is not a string
+     *	@throws		RangeException					in strict mode if field is empty but mandatory
+     *	@throws		DomainException				in strict mode if field is not an index
+     */
+    protected function checkIndices( array $indices, bool $mandatory = FALSE, bool $strict = TRUE, bool $withPrimaryKey = FALSE )
+    {
+        if( !is_array( $indices ) ){
+            if( !$strict )
+                return FALSE;
+            throw new InvalidArgumentException( 'Index map must be an array' );
+        }
+        if( !$indices ){
+            if( $mandatory ){
+                if( !$strict )
+                    return FALSE;
+                throw new RangeException( 'Index map must have at least one pair' );
+            }
+        }
+
+        $list		= array();
+        $indexList	= $this->table->getIndices( $withPrimaryKey );
+        foreach( $indices as $index => $value ){
+            if( !in_array( $index, $indexList ) ){
+                if( $strict )
+                    throw new DomainException( 'Column "'.$index.'" is not an index' );
+                return FALSE;
+            }
+            $list[$index]	= $value;
+        }
+        return $list;
+    }
+
+    /**
+     *	Returns any fields or one field from a query result.
+     *	@access		protected
+     *	@param		mixed			$result			Query result as array or object
+     *	@param		array|string	$fields			List of fields or one field
+     *	@param		boolean			$strict			Flag: throw exception if result is empty
+     *	@return		string|array|object|NULL		Structure depending on result and field list length
+     *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
+     *	@throws		RangeException					If given result list is empty
+     *	@throws		DomainException				    If requested field is not a table column
+     *	@throws		RangeException					If requested field is not within result fields
+     */
+    protected function getFieldsFromResult( $result, $fields = array(), bool $strict = TRUE )
+    {
+        if( is_string( $fields ) )
+            $fields	= strlen( trim( $fields ) ) ? array( trim( $fields ) ) : array();
+        if( !is_array( $fields ) )
+            throw new InvalidArgumentException( 'Fields must be of array or string' );
+        if( !$result ){
+            if( $strict )
+                throw new RangeException( 'Result is empty' );
+            if( count( $fields ) === 1 )
+                return NULL;
+            return array();
+        }
+        if( !count( $fields ) )
+            return $result;
+
+        foreach( $fields as $nr => $field )
+            if( $field === '*' )
+                array_splice( $fields, $nr, 1, $this->columns );
+
+        foreach( $fields as $nr => $field ){
+            if( preg_match_all( '/^(.+) AS (.+)$/i', $field, $matches ) ){
+                if( in_array( $matches[2][0], $this->columns ) )
+                    throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2][0].' is a column' );
+                $fields[$nr]	= $matches[2][0];
+            }
+            else if( !in_array( $field, $this->columns ) )
+                throw new DomainException( 'Field "'.$field.'" is not an existing column' );
+        }
+
+        if( count( $fields ) === 1 ){
+            $field	= $fields[0];
+            switch( $this->fetchMode ){
+                case PDO::FETCH_CLASS:
+                case PDO::FETCH_OBJ:
+                    if( !isset( $result->$field ) )
+                        throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+                    return $result->$field;
+                default:
+                    if( !isset( $result[$field] ) )
+                        throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+                    return $result[$field];
+            }
+        }
+
+        switch( $this->fetchMode ){
+            case PDO::FETCH_CLASS:
+            case PDO::FETCH_OBJ:
+                $map	= (object) array();
+                foreach( $fields as $field ){
+                    if( !isset( $result->$field ) )
+                        throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+                    $map->$field	= $result->$field;
+                }
+                return $map;
+            default:
+                $list	= array();
+                foreach( $fields as $field ){
+                    if( $field !== '*' && !isset( $result[$field] ) )
+                        throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+                    $list[$field]	= $result[$field];
+                }
+                return $list;
+        }
+    }
 }
