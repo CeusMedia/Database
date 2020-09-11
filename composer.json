@@ -19,7 +19,11 @@
   "minimum-stability": "dev",
   "require": {
     "php": "~7.2",
-    "ceus-media/common": "*"
+    "ext-pdo": "*",
+    "ceus-media/common": "*",
+    "ceus-media/cache": "dev-master",
+    "phpstan/phpstan": "^0.12.0@dev",
+    "phpstan/phpstan-strict-rules": "^0.12.0@dev"
   },
   "require-dev": {
     "ceus-media/doc-creator": "dev-master",

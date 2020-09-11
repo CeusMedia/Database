@@ -1,9 +1,9 @@
 includes:
-	- vendor/phpstan/phpstan-strict-rules/rules.neon
-	- phpstan-baseline.neon
+#	- vendor/phpstan/phpstan-strict-rules/rules.neon
+#	- phpstan-baseline.neon
 
 parameters:
-	level: 8
+	level: 5
 	paths:
 		- src/PDO
 	checkMissingIterableValueType: false

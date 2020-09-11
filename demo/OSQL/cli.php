@@ -18,7 +18,7 @@ $dbConfig	= (object) $config['demo'];
 
 $command	= "mysql -u%s -p%s %s < %sdemo/demo_galleries.sql";
 $command	= sprintf( $command, $dbConfig->username, $dbConfig->password, $dbConfig->database, $pathLib );
-passthru( $command );
+//passthru( $command );
 
 $dsn		= DataSourceName::renderStatic(
 	$dbConfig->driver,
@@ -34,9 +34,11 @@ try{
 	$client	= new Client( $dbc );
 
 	$query	= Select::create( $client )
+		->get( ['*', 'SUM(galleryId) as summedGalleryIds'] )
+//		->groupBy( 'galleryId' )
 		->from( new Table( 'galleries', 'g' ) )
-		->where( new Condition( 'galleryId', 1, Condition::OP_EQ ) )
-		->countRows();
+		->where( new Condition( 'galleryId', 1, Condition::OP_EQ ) );
+//		->countRows();
 
 	$result	= $query->execute();
 
