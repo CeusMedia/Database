@@ -1,6 +1,7 @@
 /vendor
 /composer.lock
 /doc/
-/.phpunit.result.cache
 /demo/demo.ini
 /.idea
+/.phpunit.result.cache
+/.php_cs.cache
