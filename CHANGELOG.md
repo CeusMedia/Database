@@ -1,3 +1,13 @@
+## Version 0.4.2
+- General:
+	- Update PHPUnit to version 9 and migrate configuration.
+	- Include PHPStan.
+	- Include PHP-CS-Fixer.
+- PDO:
+	- Apply PHPStan and improve code strictness.
+	- Add connection pool.
+	- (Fix code style usind PHP-CS-Fixer.)
+
 ## Version 0.4.1
 - General:
 	- Relax needed version of CeusMedia/Common.
