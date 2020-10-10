@@ -1,3 +1,10 @@
+(## Version 0.5.0)
+(	Stable release after lot of code syntax changes.)
+
+(## Version 0.4.3)
+(- PDO:)
+(	- Fix code style using PHP-CS-Fixer.)
+
 ## Version 0.4.2
 - General:
 	- Update PHPUnit to version 9 and migrate configuration.
@@ -6,7 +13,6 @@
 - PDO:
 	- Apply PHPStan and improve code strictness.
 	- Add connection pool.
-	- (Fix code style usind PHP-CS-Fixer.)
 
 ## Version 0.4.1
 - General:
