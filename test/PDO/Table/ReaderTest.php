@@ -20,8 +20,8 @@ require_once 'test/initLoaders.php';
  *	@since			02.07.2008
  *	@version		0.1
  */
-class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Test_Case{
-
+class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Test_Case
+{
 	protected $directDbc;
 
 	/**
@@ -29,7 +29,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function __construct(){
+	public function __construct()
+	{
 		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
@@ -121,7 +122,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testConstruct1(){
+	public function testConstruct1()
+	{
 		$reader		= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, "table", array( 'col1', 'col2' ), 'col2', 1 );
 
 		$expected	= 'table';
@@ -146,7 +148,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testConstruct2(){
+	public function testConstruct2()
+	{
 		$reader		= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, $this->tableName, $this->columns, $this->primaryKey, 1 );
 
 		$expected	= array( 'id' => 1 );
@@ -159,7 +162,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testCount(){
+	public function testCount()
+	{
 		$expected	= 1;
 		$actual		= $this->reader->count();
 		$this->assertEquals( $expected, $actual );
@@ -184,7 +188,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testDefocus(){
+	public function testDefocus()
+	{
 		$this->reader->focusPrimary( 2 );
 		$this->reader->focusIndex( 'topic', 'test' );
 		$this->reader->defocus( TRUE );
@@ -205,7 +210,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFind1(){
+	public function testFind1()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find();
@@ -224,7 +230,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFind2(){
+	public function testFind2()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( array( "*" ) );
@@ -240,10 +247,11 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 
 	/**
 	 *	Tests Method 'find'.
-	 *	@access		public
+	 *	@access		public->fetchMode
 	 *	@return		void
 	 */
-	public function testFind3(){
+	public function testFind3()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( "*" );
@@ -262,7 +270,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFind4(){
+	public function testFind4()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( array( "id" ) );
@@ -285,7 +294,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFind5(){
+	public function testFind5()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( "id" );
@@ -308,7 +318,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWithOrder(){
+	public function testFindWithOrder()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( array( 'id' ), array(), array( 'id' => 'ASC' ) );
@@ -334,7 +345,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWithLimit(){
+	public function testFindWithLimit()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( array( 'id' ), array(), array( 'id' => 'DESC' ), array( 0, 1 ) );
@@ -357,7 +369,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWithFocus1(){
+	public function testFindWithFocus1()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 		//  will be ignored
 		$this->reader->focusIndex( 'topic', 'start' );
@@ -381,7 +394,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWithFocus2(){
+	public function testFindWithFocus2()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 		//  will be ignored
 		$this->reader->focusPrimary( 1 );
@@ -405,7 +419,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWithFocus3(){
+	public function testFindWithFocus3()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		//  will be ignored
@@ -424,7 +439,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWhereIn(){
+	public function testFindWhereIn()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInTest');" );
 
 		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'start', 'test' ), array( 'id' => 'ASC' ) );
@@ -461,7 +477,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWhereInWithLimit(){
+	public function testFindWhereInWithLimit()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInTest');" );
 
 		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'start', 'test' ), array( 'id' => "DESC" ), array( 0, 1 ) );
@@ -484,8 +501,9 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWhereInException1(){
-		$this->expectException( 'DomainException' );
+	public function testFindWhereInException1()
+	{
+		$this->expectException( 'TypeError' );
 		$this->reader->findWhereIn( array( 'not_valid' ), "id", 1 );
 	}
 
@@ -494,8 +512,9 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWhereInException2(){
-		$this->expectException( 'DomainException' );
+	public function testFindWhereInException2()
+	{
+		$this->expectException( 'TypeError' );
 		$this->reader->findWhereIn( "*", "not_valid", 1 );
 	}
 
@@ -504,7 +523,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWhereInAnd(){
+	public function testFindWhereInAnd()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'test' ), array( "label" => "findWhereInAndTest" ) );
 
@@ -532,7 +552,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFindWhereInAndWithFocus(){
+	public function testFindWhereInAndWithFocus()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 
 		//  will be ignored
@@ -581,7 +602,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFocusIndex(){
+	public function testFocusIndex()
+	{
 		$this->reader->focusIndex( 'topic', 'test' );
 		$expected	= array(
 			'topic' => 'test'
@@ -612,7 +634,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFocusIndexException(){
+	public function testFocusIndexException()
+	{
 		$this->expectException( 'DomainException' );
 		$this->reader->focusIndex( 'not_an_index', 'not_relevant' );
 	}
@@ -622,7 +645,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testFocusPrimary(){
+	public function testFocusPrimary()
+	{
 		$this->reader->focusPrimary( 2 );
 		$expected	= array( 'id' => 2 );
 		$actual		= $this->reader->getFocus();
@@ -639,7 +663,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetWithPrimary1(){
+	public function testGetWithPrimary1()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 		$this->reader->focusPrimary( 1 );
 		$result		= $this->reader->get( FALSE );
@@ -673,7 +698,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetWithPrimary2(){
+	public function testGetWithPrimary2()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 		$this->reader->focusIndex( $this->primaryKey, 1 );
 		$result		= $this->reader->get( FALSE );
@@ -707,7 +733,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetWithIndex(){
+	public function testGetWithIndex()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithIndexTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
 		$result		= $this->reader->get();
@@ -743,7 +770,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetWithOrders(){
+	public function testGetWithOrders()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithOrderTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
 		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ) );
@@ -788,7 +816,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetWithLimit(){
+	public function testGetWithLimit()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithLimitTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
 		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ), array( 0, 1 ) );
@@ -817,7 +846,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetWithNoFocusException(){
+	public function testGetWithNoFocusException()
+	{
 		$this->expectException( 'RuntimeException' );
 		$this->reader->get();
 	}
@@ -827,7 +857,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetColumns(){
+	public function testGetColumns()
+	{
 		$expected	= $this->columns;
 		$actual		= $this->reader->getColumns();
 		$this->assertEquals( $expected, $actual );
@@ -836,9 +867,10 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	/**
 	 *	Tests Method 'getDBConnection'.
 	 *	@access		public
-	 *	@return		void
+	 *	@return		void->fetchMode
 	 */
-	public function testGetDBConnection(){
+	public function testGetDBConnection()
+	{
 		$expected	= $this->connection;
 		$actual		= $this->reader->getDBConnection();
 		$this->assertEquals( $expected, $actual );
@@ -849,7 +881,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetFocus(){
+	public function testGetFocus()
+	{
 		$this->reader->focusPrimary( 1 );
 		$expected	= array(
 			'id' => 1
@@ -886,7 +919,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetIndices(){
+	public function testGetIndices()
+	{
 		$indices	= array( 'topic', 'timestamp' );
 		$this->reader->setIndices( $indices );
 
@@ -914,7 +948,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetPrimaryKey(){
+	public function testGetPrimaryKey()
+	{
 		$expected	= 'id';
 		$actual		= $this->reader->getPrimaryKey();
 		$this->assertEquals( $expected, $actual );
@@ -930,7 +965,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testGetTableName(){
+	public function testGetTableName()
+	{
 		$expected	= "transactions";
 		$actual		= $this->reader->getTableName();
 		$this->assertEquals( $expected, $actual );
@@ -947,7 +983,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testIsFocused(){
+	public function testIsFocused()
+	{
 		$expected	= FALSE;
 		$actual		= $this->reader->isFocused();
 		$this->assertEquals( $expected, $actual );
@@ -978,7 +1015,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetColumns(){
+	public function testSetColumns()
+	{
 		$columns	= array( 'col1', 'col2', 'col3' );
 
 		$this->reader->setColumns( $columns );
@@ -993,7 +1031,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetColumnsException1(){
+	public function testSetColumnsException1()
+	{
 		$this->expectException( 'RangeException' );
 		$this->reader->setColumns( array() );
 	}
@@ -1003,7 +1042,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetDbConnection(){
+	public function testSetDbConnection()
+	{
 		$dbc		= new Connection( $this->dsn, $this->username, $this->password );
 		$this->reader->setDBConnection( $dbc );
 
@@ -1017,7 +1057,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetIndices(){
+	public function testSetIndices()
+	{
 		$indices	= array( 'topic', 'timestamp' );
 		$this->reader->setIndices( $indices );
 
@@ -1045,7 +1086,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetIndicesException1(){
+	public function testSetIndicesException1()
+	{
 		$this->expectException( 'DomainException' );
 		$this->reader->setIndices( array( 'not_existing' ) );
 	}
@@ -1055,7 +1097,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetIndicesException2(){
+	public function testSetIndicesException2()
+	{
 		$this->expectException( 'DomainException' );
 		$this->reader->setIndices( array( 'id' ) );
 	}
@@ -1065,7 +1108,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetPrimaryKey(){
+	public function testSetPrimaryKey()
+	{
 		$this->reader->setPrimaryKey( 'topic' );
 
 		$expected	= 'topic';
@@ -1078,7 +1122,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetPrimaryKeyException(){
+	public function testSetPrimaryKeyException()
+	{
 		$this->expectException( 'DomainException' );
 		$this->reader->setPrimaryKey( 'not_existing' );
 	}
@@ -1088,7 +1133,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetTableName(){
+	public function testSetTableName()
+	{
 		$tableName	= "other_table";
 		$this->reader->setTableName( $tableName );
 

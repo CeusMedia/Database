@@ -44,27 +44,34 @@ use PDOStatement;
  */
 class Connection extends PDO
 {
+	/**	@var	?string				$driver					PDO driver */
 	protected $driver				= NULL;
 
+	/**	@var	integer				$numberExecutes			Number of execute calls */
 	public $numberExecutes			= 0;
 
+	/**	@var	integer				$numberStatements		Number of executed statements */
 	public $numberStatements		= 0;
 
-	//  eg. logs/db/pdo/error.log
+	/** @var	?string				$logFileErrors			Path of error log file, eg. logs/db/pdo/error.log */
 	public $logFileErrors			= NULL;
 
-	//  eg. logs/db/pdo/query.log
+	/** @var	?string				$logFileStatements		Path of statement log file, eg. logs/db/pdo/query.log */
 	public $logFileStatements		= NULL;
 
+	/**	@var	integer				$openTransactions		Number of opened nested transactions */
 	protected $openTransactions		= 0;
 
+	/** @var	?string				$lastQuery				Latest executed query */
 	public $lastQuery				= NULL;
 
-	//  Flag: inner (nested) Transaction has failed
+	/** @var	boolean				$innerTransactionFail	Flag: inner (nested) Transaction has failed */
 	protected $innerTransactionFail	= FALSE;
 
+	/** @var	string				$errorTemplate			Template for error log */
 	public static $errorTemplate	= "{time}: PDO:{pdoCode} SQL:{sqlCode} {sqlError} ({statement})\n";
 
+	/** @var	array				$defaultOptions			Map of default options */
 	public static $defaultOptions	= array(
 		PDO::ATTR_ERRMODE   => PDO::ERRMODE_EXCEPTION,
 	);
@@ -118,7 +125,7 @@ class Connection extends PDO
 	public function commit(): bool
 	{
 		//  there has been an inner RollBack or no Transaction was opened
-		if( !$this->openTransactions )
+		if( $this->openTransactions === 0 )
 			//  ignore Commit
 			return FALSE;
 		//  commit of an outer Transaction
@@ -144,17 +151,19 @@ class Connection extends PDO
 	/**
 	 *	Executes a Statement and returns Number of affected Rows.
 	 *	@access		public
-	 *	@param		mixed		$statement			SQL Statement to execute
+	 *	@param		string		$statement			SQL Statement to execute
 	 *	@return		integer
 	 */
 	public function exec( $statement )
 	{
-        $affectedRows   = 0;
+		$affectedRows   = 0;
 		$this->logStatement( $statement );
 		try{
 			$this->numberExecutes++;
 			$this->numberStatements++;
-			$affectedRows = parent::exec( $statement );
+			$result	= parent::exec( $statement );
+			if( $result !== FALSE )
+				$affectedRows = $result;
 		}
 		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
@@ -203,7 +212,13 @@ class Connection extends PDO
 	public function getTables( ?string $prefix = NULL ): array
 	{
 		$query	= "SHOW TABLES" . ( !is_null( $prefix ) ? " LIKE '".$prefix."%'" : "" );
-		return parent::query( $query )->fetchAll( PDO::FETCH_COLUMN );
+		$result	= parent::query( $query );
+		if( $result === FALSE )
+			return [];
+		$tables	= $result->fetchAll( PDO::FETCH_COLUMN );
+		if( $tables === FALSE )
+			return [];
+		return $tables;
 	}
 
 	/**
@@ -215,7 +230,7 @@ class Connection extends PDO
 	 */
 	protected function logError( PDOException $exception, string $statement )
 	{
-		if( !$this->logFileErrors )
+		if( $this->logFileErrors === NULL )
 			return;
 //			throw $exception;
 		$info		= $exception->errorInfo;
@@ -246,13 +261,20 @@ class Connection extends PDO
 	 */
 	protected function logStatement( string $statement )
 	{
-		if( !$this->logFileStatements )
+		if( $this->logFileStatements === NULL )
 			return;
 		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
 		$message	= time()." ".getenv( 'REMOTE_ADDR' )." ".$statement."\n";
 		error_log( $message, 3, $this->logFileStatements);
 	}
 
+	/**
+	 *	Prepare statement.
+	 *	@access		public
+	 *	@param		string		$statement		SQL Statement to prepare
+	 *	@param		array		$driverOptions	Map of additional driver options
+	 *	@return		PDOStatement
+	 */
 	public function prepare( $statement, $driverOptions = array() ): PDOStatement
 	{
 		$this->numberStatements++;
@@ -283,7 +305,7 @@ class Connection extends PDO
 	public function rollBack(): bool
 	{
 		//  there has been an inner RollBack or no Transaction was opened
-		if( !$this->openTransactions )
+		if( $this->openTransactions === 0 )
 			//  ignore Commit
 			return FALSE;
 		//  only 1 Transaction open

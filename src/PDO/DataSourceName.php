@@ -59,8 +59,8 @@ class DataSourceName
 	/**	@var		?int		$port			Host Port */
 	protected $port;
 
-    /**	@var		array		$drivers		List of possible PDO drivers */
-	protected $drivers      	= array(
+	/**	@var		array		$drivers		List of possible PDO drivers */
+	protected $drivers	  	= array(
 		'cubrid',
 		'dblib',
 		'firebird',
@@ -92,8 +92,8 @@ class DataSourceName
 	/**
 	 *	Converts DSN Object into a String.
 	 *	@access		public
-     *	@return		string
-     *	@throws		Exception
+	 *	@return		string
+	 *	@throws		Exception
 	 */
 	public function __toString()
 	{
@@ -135,15 +135,15 @@ class DataSourceName
 	 *	@return		self
 	 */
 	public static function getInstance( string $driver, ?string $database = NULL ): self
-    {
+	{
 		return new self( $driver, $database );
 	}
 
-    /**
-     *  ...
-     *  @return     string
-     *  @throws     Exception
-     */
+	/**
+	 *  ...
+	 *  @return	 	string
+	 *  @throws		 Exception
+	 */
 	public function render(): string
 	{
 		$prefix	= $this->driver.':';
@@ -177,7 +177,7 @@ class DataSourceName
 	 *	@param		?string		$username		Username
 	 *	@param		?string		$password		Password
 	 *	@return		string
-     *  @throws		Exception
+	 *  @throws		Exception
 	 */
 	public static function renderStatic( string $driver, string $database, ?string $host = NULL, ?int $port = NULL, ?string $username = NULL, ?string $password = NULL ): string
 	{
@@ -251,7 +251,12 @@ class DataSourceName
 
 	//  --  PROTECTED  --  //
 
-	protected function renderDsnForDefault()
+	/**
+	 *	...
+	 *	@access		protected
+	 *	@return		string
+	 */
+	protected function renderDsnForDefault(): string
 	{
 		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
 		$map	= array(
@@ -262,7 +267,12 @@ class DataSourceName
 		return $this->renderDsnParts( $map );
 	}
 
-	protected function renderDsnForFirebird()
+	/**
+	 *	...
+	 *	@access		protected
+	 *	@return		string
+	 */
+	protected function renderDsnForFirebird(): string
 	{
 		$host	= !is_null( $this->host ) ? $this->host : NULL;
 		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
@@ -276,19 +286,26 @@ class DataSourceName
 		return $this->renderDsnParts( $map );
 	}
 
-	protected function renderDsnForInformix()
+	/**
+	 *	...
+	 *	@access		protected
+	 *	@return		string
+	 */
+	protected function renderDsnForInformix(): string
 	{
 		return $this->renderDsnParts( array(
-            'host'		=> !is_null( $this->host ) ? $this->host : NULL,
-            'service'	=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
-            'database'	=> $this->database
-        ), '; ' );
+			'host'		=> !is_null( $this->host ) ? $this->host : NULL,
+			'service'	=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+			'database'	=> $this->database
+		), '; ' );
 	}
 
 	/**
-	 *	@todo	implement 'charset'
+	 *	@access		protected
+	 *	@return		string
+	 *	@todo		implement 'charset'
 	 */
-	protected function renderDsnForOci()
+	protected function renderDsnForOci(): string
 	{
 		$dbname	= $this->database;
 		$port	= !is_null( $this->port ) && $this->port > 0 ? ':'.$this->port : '';
@@ -298,38 +315,50 @@ class DataSourceName
 	}
 
 	/**
+	 *	@access		protected
+	 *	@return		string
 	 *	@todo		implement
-     *  @throws		Exception
+	 *  @throws		Exception
 	 */
 	protected function renderDsnForOdbc()
 	{
 		throw new Exception( 'Not yet implemented' );
 	}
 
-	protected function renderDsnForPgsql()
+	/**
+	 *	...
+	 *	@access		protected
+	 *	@return		string
+	 */
+	protected function renderDsnForPgsql(): string
 	{
 		return $this->renderDsnParts( array(
-            'host'		=> !is_null( $this->host ) ? $this->host : NULL,
-            'port'		=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
-            'dbname'	=> $this->database,
-            'user'		=> $this->username,
-            'password'	=> $this->password
-        ), ' ' );
+			'host'		=> !is_null( $this->host ) ? $this->host : NULL,
+			'port'		=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+			'dbname'	=> $this->database,
+			'user'		=> $this->username,
+			'password'	=> $this->password
+		), ' ' );
 	}
 
-	protected function renderDsnForSqlite()
+	/**
+	 *	...
+	 *	@access		protected
+	 *	@return		string
+	 */
+	protected function renderDsnForSqlite(): string
 	{
 		return $this->database;
 	}
 
 	/**
 	 *	Flattens Map of DSN Parts using a Delimiter.
-	 *	@access		public
+	 *	@access		protected
 	 *	@param		array		$map			DSN Parts Map
 	 *	@param		string		$delimiter		Delimiter between DSN Parts
 	 *	@return		string
 	 */
-	protected function renderDsnParts( array $map, string $delimiter = '; ' )
+	protected function renderDsnParts( array $map, string $delimiter = '; ' ): string
 	{
 		$list	= array();
 		foreach( $map as $key => $value )

@@ -113,10 +113,10 @@ class Writer extends Reader
 		$columns	= $this->getColumnEnumeration( $columns );
 		$values		= implode( ', ', array_values( $values ) );
 		$this->dbc->exec( vsprintf( 'INSERT INTO %s (%s) VALUES (%s)', [
-            $this->getTableName(),
-            $columns,
-            $values,
-        ] ) );
+			$this->getTableName(),
+			$columns,
+			$values,
+		] ) );
 		return (int) $this->dbc->lastInsertId();
 	}
 
@@ -145,14 +145,14 @@ class Writer extends Reader
 			$value	= $this->secureValue( $value );
 			$updates[] = '`'.$column.'`='.$value;
 		}
-        $affectedRows   = 0;
+		$affectedRows   = 0;
 		if( count( $updates ) > 0 ){
 			$updates	= implode( ', ', $updates );
 			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery( array() );
 			$affectedRows	= $this->dbc->exec( $query );
-        }
-        return $affectedRows;
-    }
+		}
+		return $affectedRows;
+	}
 
 	/**
 	 *	Updates data in table where conditions are given for.
@@ -182,7 +182,7 @@ class Writer extends Reader
 				$updates[] = '`'.$column.'`='.$data[$column];
 			}
 		}
-        $affectedRows   = 0;
+		$affectedRows   = 0;
 		if( count( $updates ) !== 0 ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$conditions;

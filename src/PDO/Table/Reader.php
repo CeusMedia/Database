@@ -90,7 +90,7 @@ class Reader
 		$this->setPrimaryKey( $primaryKey );
 		$this->fetchMode	= self::$defaultFetchMode;
 		$this->defocus();
-		if( $focus )
+		if( $focus !== NULL )
 			$this->focusPrimary( $focus );
 	}
 
@@ -104,7 +104,7 @@ class Reader
 	{
 		//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
-		$conditions	= $conditions ? ' WHERE '.$conditions : '';
+		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$query	= 'SELECT COUNT(`%s`) as count FROM %s%s';
 		$query	= sprintf( $query, $this->primaryKey, $this->getTableName(), $conditions );
 		return (int) $this->dbc->query( $query )->fetch( PDO::FETCH_OBJ )->count;
@@ -121,7 +121,7 @@ class Reader
 	{
 		//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
-		$conditions	= $conditions ? ' WHERE '.$conditions : '';
+		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
 		return (int) $this->dbc->query( $query )->fetch( PDO::FETCH_OBJ )->rows;
 	}
@@ -134,7 +134,7 @@ class Reader
 	 */
 	public function defocus( bool $primaryOnly = FALSE )
 	{
-		if( !$this->focusedIndices )
+		if( count( $this->focusedIndices ) === 0 )
 			return FALSE;
 		if( $primaryOnly ){
 			if( !array_key_exists( $this->primaryKey, $this->focusedIndices ) )
@@ -162,15 +162,15 @@ class Reader
 		$this->validateColumns( $columns );
 		//  render WHERE clause if needed, uncursored, allow functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );
-		$conditions = $conditions ? ' WHERE '.$conditions : '';
+		$conditions = strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		//  render ORDER BY clause if needed
 		$orders		= $this->getOrderCondition( $orders );
 		//  render LIMIT BY clause if needed
 		$limits		= $this->getLimitCondition( $limits );
 		//  render GROUP BY clause if needed
-		$groupings	= !empty( $groupings ) ? ' GROUP BY '.join( ', ', $groupings ) : '';
+		$groupings	= count( $groupings ) > 0 ? ' GROUP BY '.join( ', ', $groupings ) : '';
 		//  render HAVING clause if needed
-		$havings 	= !empty( $havings ) ? ' HAVING '.join( ' AND ', $havings ) : '';
+		$havings 	= count( $havings ) > 0 ? ' HAVING '.join( ' AND ', $havings ) : '';
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
 		//  render base query
@@ -185,9 +185,16 @@ class Reader
 	}
 
 	/**
-	 *	@throws		DomainException			if column is not an index
+	 *	Returns all entries of this table in an array.
+	 *	@access		public
+	 *	@param		mixed		$columns		List of columns to deliver
+	 *	@param		string		$column			Column to match with values
+	 *	@param		array		$values			List of possible values of column
+	 *	@param		array		$orders			Map of order relations
+	 *	@param		array		$limits			Array of limit conditions
+	 *	@throws		DomainException				if column is not an index
 	 */
-	public function findWhereIn( $columns, $column, $values, $orders = [], $limits = [] ): array
+	public function findWhereIn( $columns, string $column, array $values, array $orders = [], array $limits = [] ): array
 	{
 		//  columns attribute needs to of string or array
 		if( !is_string( $columns ) && !is_array( $columns ) )
@@ -213,6 +220,13 @@ class Reader
 	}
 
 	/**
+	 *	@access		public
+	 *	@param		mixed		$columns		List of columns to deliver
+	 *	@param		string		$column			Column to match with values
+	 *	@param		array		$values			List of possible values of column
+	 *	@param		array		$conditions		Additional AND-related conditions
+	 *	@param		array		$orders			Map of order relations
+	 *	@param		array		$limits			Array of limit conditions
 	 *	@throws		RangeException			if column is not an index
 	 */
 	public function findWhereInAnd( $columns, string $column, array $values, array $conditions = [], array $orders = [], array $limits = [] ): array
@@ -233,7 +247,7 @@ class Reader
 		for( $i=0; $i<count( $values ); $i++ )
 			$values[$i]	= $this->secureValue( $values[$i] );
 
-		if( $conditions )
+		if( strlen( $conditions ) > 0 )
 			$conditions	.= ' AND ';
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
@@ -340,7 +354,7 @@ class Reader
 	{
 		$this->validateColumns( $columns );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, FALSE );
-		$conditions	= $conditions ? ' WHERE '.$conditions : '';
+		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
 		$query		= 'SELECT DISTINCT('.$column.') FROM '.$this->getTableName().$conditions.$orders.$limits;
@@ -392,9 +406,9 @@ class Reader
 	/**
 	 *	...
 	 *	@access		public
-	 *	@return		array
+	 *	@return		?string
 	 */
-	public function getLastQuery(): array
+	public function getLastQuery(): ?string
 	{
 		return $this->dbc->lastQuery;
 	}
@@ -423,8 +437,8 @@ class Reader
 	/**
 	 *	Indicates whether the focus on a index (including primary key) is set.
 	 *	@access		public
-     *	@param		?string			$index			...
-     *	@return		boolean
+	 *	@param		?string			$index			...
+	 *	@return		boolean
 	 */
 	public function isFocused( ?string $index = NULL ): bool
 	{
@@ -564,7 +578,7 @@ class Reader
 	 *	@param		array		$conditions			Array of conditions
 	 *	@param		bool		$usePrimary			Flag: use focused primary key
 	 *	@param		bool		$useIndices			Flag: use focused indices
-     *	@param		bool		$allowFunctions		Flag: use focused indices
+	 *	@param		bool		$allowFunctions		Flag: use focused indices
 	 *	@return		string
 	 */
 	protected function getConditionQuery( array $conditions, bool $usePrimary = TRUE, bool $useIndices = TRUE, bool $allowFunctions = FALSE ): string
@@ -668,15 +682,15 @@ class Reader
 		return $order;
 	}
 
-    /**
-     *	...
-     *	@access		protected
-     *	@param		string		$column			...
-     *	@param		mixed		$value			...
-     *	@param		boolean		$maskColumn		...
-     *	@return		string		...
-     *	@throws		Exception
-     */
+	/**
+	 *	...
+	 *	@access		protected
+	 *	@param		string		$column			...
+	 *	@param		mixed		$value			...
+	 *	@param		boolean		$maskColumn		...
+	 *	@return		string		...
+	 *	@throws		Exception
+	 */
 	protected function realizeConditionQueryPart( string $column, $value, bool $maskColumn = TRUE ): string
 	{
 		$patternBetween		= '/^(><|!><)( ?)([0-9]+)( ?)&( ?)([0-9]+)$/';

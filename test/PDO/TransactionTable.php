@@ -1,6 +1,6 @@
 <?php
-class CeusMedia_Database_Test_PDO_TransactionTable extends \CeusMedia\Database\PDO\Table{
-
+class CeusMedia_Database_Test_PDO_TransactionTable extends \CeusMedia\Database\PDO\Table
+{
 	protected $name					= "transactions";
 	protected $columns				= array(
 		'id',

@@ -25,7 +25,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function __construct(){
+	public function __construct()
+	{
 		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
@@ -98,7 +99,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testBeginTransaction(){
+	public function testBeginTransaction()
+	{
 //		$expected	= $this->connection;
 		$actual		= $this->connection->beginTransaction();
 		$this->assertEquals( TRUE, $actual );
@@ -118,7 +120,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testCommit(){
+	public function testCommit()
+	{
 		$this->connection->beginTransaction();
 
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
@@ -138,7 +141,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testExec(){
+	public function testExec()
+	{
 		for( $i=0; $i<10; $i++ )
 			$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', '".microtime()."');" );
 
@@ -164,7 +168,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testPrepare(){
+	public function testPrepare()
+	{
 		$statement	= $this->connection->prepare( "SELECT * FROM transactions" );
 
 		$expected	= TRUE;
@@ -195,7 +200,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testQuery(){
+	public function testQuery()
+	{
 		$expected	= FALSE;
 		$actual		= NULL;
 		try
@@ -229,7 +235,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testRollBack(){
+	public function testRollBack()
+	{
 		$this->connection->beginTransaction();
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
 
@@ -250,7 +257,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetErrorLogFile(){
+	public function testSetErrorLogFile()
+	{
 		$logFile	= $this->path."error_log";
 		$this->connection->setErrorLogFile( $logFile );
 		try{
@@ -268,7 +276,8 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testSetStatementLogFile(){
+	public function testSetStatementLogFile()
+	{
 		$logFile	= $this->path."statement_log";
 		$this->connection->setStatementLogFile( $logFile );
 		try{

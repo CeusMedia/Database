@@ -17,8 +17,8 @@ require_once 'test/initLoaders.php';
  *	@since			02.05.2008
  *	@version		0.1
  */
-class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Test_Case{
-
+class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Test_Case
+{
 	protected $directDbc;
 
 	/**
@@ -26,7 +26,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function __construct(){
+	public function __construct()
+	{
 		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
@@ -118,7 +119,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testDelete(){
+	public function testDelete()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
@@ -163,7 +165,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testDeleteException1(){
+	public function testDeleteException1()
+	{
 		$this->expectException( 'RuntimeException' );
 		$this->writer->delete();
 	}
@@ -173,7 +176,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testDeleteByConditions(){
+	public function testDeleteByConditions()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
@@ -196,7 +200,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testInsert(){
+	public function testInsert()
+	{
 		$data	= array(
 			'topic'	=> 'insert',
 			'label'	=> 'insertTest',
@@ -236,7 +241,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdatePrimary(){
+	public function testUpdatePrimary()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest1');" );
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 		$this->writer->focusPrimary( 2 );
@@ -258,7 +264,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdateIndex(){
+	public function testUpdateIndex()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest1');" );
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 		$this->writer->focusIndex( 'topic', 'update' );
@@ -281,7 +288,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdateException1(){
+	public function testUpdateException1()
+	{
 		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->updateByConditions( array() );
 	}
@@ -291,7 +299,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdateException2(){
+	public function testUpdateException2()
+	{
 		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->focusPrimary( 9999 );
 		$this->writer->update( array( 'label' => 'not_relevant' ));
@@ -302,7 +311,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdateByConditions(){
+	public function testUpdateByConditions()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest1');" );
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 
@@ -348,7 +358,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdateByConditionsException1(){
+	public function testUpdateByConditionsException1()
+	{
 		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->updateByConditions( array(), array( 'label' => 'not_relevant' ) );
 	}
@@ -358,7 +369,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testUpdateByConditionsException2(){
+	public function testUpdateByConditionsException2()
+	{
 		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->updateByConditions( array( 'label' => 'not_relevant' ), array() );
 	}
@@ -368,7 +380,8 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function testTruncate(){
+	public function testTruncate()
+	{
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'truncateTest');" );
 
 		$expected	= 2;

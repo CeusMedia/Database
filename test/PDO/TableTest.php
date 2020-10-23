@@ -17,8 +17,8 @@ require_once 'test/initLoaders.php';
  *	@since			02.07.2008
  *	@version		0.1
  */
-class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case{
-
+class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
+{
 	protected $directDbc;
 
 	/**
@@ -26,7 +26,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function __construct(){
+	public function __construct()
+	{
 		parent::__construct();
 		$this->host		= self::$config['unitTest-Database']['host'];
 		$this->port		= self::$config['unitTest-Database']['port'];
@@ -100,12 +101,14 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		}
 	}
 
-	public function testAdd(){
+	public function testAdd()
+	{
 		$this->table->add( array( 'topic' => 'stop', 'label' => microtime( TRUE ) ) );
 		$this->assertEquals( 2, $this->table->count() );
 	}
 
-	public function testCount(){
+	public function testCount()
+	{
 		$this->assertEquals( 1, $this->table->count() );
 		$this->table->add( array( 'topic' => 'stop', 'label' => time() ) );
 		$this->assertEquals( 2, $this->table->count() );
@@ -113,7 +116,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( 3, $this->table->count() );
 	}
 
-	public function testCountByIndex(){
+	public function testCountByIndex()
+	{
 		$this->table->add( array( 'topic' => 'stop', 'label' => microtime( TRUE ) ) );
 		$this->table->add( array( 'topic' => 'stop', 'label' => microtime( TRUE ) ) );
 
@@ -122,7 +126,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( 2, $this->table->countByIndex( 'topic', 'stop' ) );
 	}
 
-	public function testCountByIndices(){
+	public function testCountByIndices()
+	{
 		$this->table->add( array( 'topic' => 'stop', 'label' => 'label1' ) );
 		$this->table->add( array( 'topic' => 'stop', 'label' => 'label2' ) );
 
@@ -136,7 +141,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( 1, $this->table->countByIndices( $indices ) );
 	}
 
-	public function testEdit(){
+	public function testEdit()
+	{
 		$this->table->add( array( 'topic' => 'stop', 'label' => 'label1' ) );
 
 		$indices	= array( 'topic' => 'stop' );
@@ -154,7 +160,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( 1, $this->table->countByIndices( $indices ) );
 	}
 
-	public function testEditByIndices(){
+	public function testEditByIndices()
+	{
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 
 		$indices	= array( 'topic' => 'start' );
@@ -170,7 +177,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( 0, $this->table->countByIndices( $indices ) );
 	}
 
-	public function testGet(){
+	public function testGet()
+	{
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 
 		$data	= $this->table->get( 2 );
@@ -186,7 +194,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( $data, 'label1' );
 	}
 
-	public function testGetAll(){
+	public function testGetAll()
+	{
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label2' ) );
 
@@ -223,7 +232,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( $results[0]->label, 'label1' );
 	}
 
-	public function testGetAllByIndex(){
+	public function testGetAllByIndex()
+	{
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label2' ) );
 
@@ -252,7 +262,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( $results[0]->label, 'label1' );
 	}
 
-	public function testGetAllByIndices(){
+	public function testGetAllByIndices()
+	{
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label2' ) );
 
@@ -282,7 +293,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( $results[0]->label, 'label1' );
 	}
 
-	public function testGetByIndex(){
+	public function testGetByIndex()
+	{
 		$this->table->remove( 1 );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label2' ) );
@@ -307,14 +319,16 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( (object) array( 'label' => 'label2', 'topic' => 'start' ),$result );
 	}
 
-	public function testGetByIndexException1(){
+	public function testGetByIndexException1()
+	{
 		$this->expectException( 'DomainException' );
 		$result		= $this->table->getByIndex( 'label', 'label2' );
 		unset( $result->timestamp );
 		$this->assertEquals( (object) array( 'id' => 3, 'topic' => 'start', 'label' => 'label2' ), $result );
 	}
 
-	public function testGetByIndices(){
+	public function testGetByIndices()
+	{
 		$this->table->remove( 1 );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label1' ) );
 		$this->table->add( array( 'topic' => 'start', 'label' => 'label2' ) );
@@ -344,7 +358,8 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( $expected, $result );
 	}
 
-	public function testGetByIndicesException1(){
+	public function testGetByIndicesException1()
+	{
 		$this->expectException( 'DomainException' );
 
 		$indices	= array( 'label' => 'label2' );
@@ -354,21 +369,25 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 		$this->assertEquals( $expected, $result );
 	}
 
-	public function testGetColumns(){
+	public function testGetColumns()
+	{
 		$expected	= array( 'id', 'topic', 'label', 'timestamp' );
 		$this->assertEquals( $expected, $this->table->getColumns() );
 	}
 
-	public function testGetIndices(){
+	public function testGetIndices()
+	{
 		$this->assertEquals( array( 'topic' ), $this->table->getIndices() );
 	}
 
-	public function testGetName(){
+	public function testGetName()
+	{
 		$this->assertEquals( 'transactions', $this->table->getName() );
 		$this->assertEquals( 'transactions', $this->table->getName( TRUE ) );
 	}
 
-	public function testGetPrimaryKey(){
+	public function testGetPrimaryKey()
+	{
 		$this->assertEquals( 'id', $this->table->getPrimaryKey() );
 	}
 }
