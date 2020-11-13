@@ -498,7 +498,8 @@ abstract class Table
 				switch( $this->fetchMode ){
 					case PDO::FETCH_CLASS:
 					case PDO::FETCH_OBJ:
-						$id	= $row->{$this->primaryKey};
+//						$id	= $row->{$this->primaryKey};
+						$id	= get_object_vars( $row)[$this->primaryKey];
 						break;
 					default:
 						$id	= $row[$this->primaryKey];
@@ -530,7 +531,8 @@ abstract class Table
 				switch( $this->fetchMode ){
 					case PDO::FETCH_CLASS:
 					case PDO::FETCH_OBJ:
-						$id	= $row->{$this->primaryKey};
+//						$id	= $row->{$this->primaryKey};
+						$id	= get_object_vars( $row)[$this->primaryKey];
 						break;
 					default:
 						$id	= $row[$this->primaryKey];
@@ -651,7 +653,7 @@ abstract class Table
 			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : array();
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
-		if( !$result ){
+		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
 			if( $strict )
 				throw new RangeException( 'Result is empty' );
 			if( count( $fields ) === 1 )

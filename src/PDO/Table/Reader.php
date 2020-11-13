@@ -298,7 +298,7 @@ class Reader
 	 *	@param		array	$orders		Associative array of orders
 	 *	@param		array	$limits		Array of offset and limit
 	 *	@param		array	$fields		List of column, otherwise all
-	 *	@return		array|NULL
+	 *	@return		array|object|NULL
 	 *	@todo		implement using given fields
 	 */
 	public function get( bool $first = TRUE, array $orders = [], array $limits = [], array $fields = [] )
