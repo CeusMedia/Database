@@ -21,7 +21,7 @@
     "php": "~7.2",
     "ext-pdo": "*",
     "ceus-media/common": "*",
-    "ceus-media/cache": "dev-master",
+    "ceus-media/cache": "dev-master"
   },
   "require-dev": {
     "ceus-media/doc-creator": "dev-master",
