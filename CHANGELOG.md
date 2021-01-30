@@ -1,9 +1,8 @@
-(## Version 0.5.0)
-(	Stable release after lot of code syntax changes.)
+## Version 0.4.4
+- General: Support PHP 8.
 
-(## Version 0.4.3)
-(- PDO:)
-(	- Fix code style using PHP-CS-Fixer.)
+## Version 0.4.3
+- PDO: Improve code quality.
 
 ## Version 0.4.2
 - General:
