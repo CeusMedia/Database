@@ -72,14 +72,20 @@ abstract class Table
 	/**	@var	CacheAdapter 			$cache			Model data cache */
 	protected $cache;
 
-	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
-	protected $fetchMode				= PDO::FETCH_OBJ;
+	/**	@var	CacheAdapter|null		$cacheInstance	Cache adapter instance to use as cache by default */
+	public static $cacheInstance		= NULL;
 
-	/** @var	string					$cacheClass		Name of cache adapter class */
+	/** @var	string					$cacheClass		Name of default cache adapter class */
 	public static $cacheClass			= NoCacheAdapter::class;
+
+	/** @var	mixed					$cacheResource	Resource to connect to by cache adapter */
+	public static $cacheResource		= NULL;
 
 	/** @var	string					$cacheKey		Prefix of cache key */
 	protected $cacheKey;
+
+	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
+	protected $fetchMode				= PDO::FETCH_OBJ;
 
 	/**
 	 *	Constructor.
@@ -572,7 +578,12 @@ abstract class Table
 		if( $this->fetchMode > 0 )
 			$this->table->setFetchMode( $this->fetchMode );
 		$this->table->setIndices( $this->indices );
-		$this->cache	= Alg_Object_Factory::createObject( self::$cacheClass );
+		if( self::$cacheInstance instanceof CacheAdapter )
+			$this->cache	= self::$cacheInstance;
+		else{
+			$cacheFactory	= new Alg_Object_Factory( [self::$cacheResource] );
+			$this->cache	= $cacheFactory->create( self::$cacheClass );
+		}
 		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
 		return $this;
 	}

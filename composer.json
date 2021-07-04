@@ -20,7 +20,7 @@
   "require": {
     "php": ">=7.2",
     "ext-pdo": "*",
-    "ceus-media/common": "*",
+    "ceus-media/common": ">= 0.8.5.8 | dev-master",
     "ceus-media/cache": "dev-master"
   },
   "require-dev": {
