@@ -1,6 +1,6 @@
 includes:
 	- vendor/phpstan/phpstan-strict-rules/rules.neon
-#	- phpstan-baseline.neon
+	- phpstan-baseline.neon
 
 parameters:
 	level: 5
@@ -8,3 +8,4 @@ parameters:
 		- src/PDO
 	checkMissingIterableValueType: false
 	treatPhpDocTypesAsCertain: false
+	reportUnmatchedIgnoredErrors: false

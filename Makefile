@@ -34,8 +34,7 @@ dev-phpstan:
 	@vendor/bin/phpstan analyse --configuration phpstan.neon --xdebug || true
 
 dev-phpstan-save-baseline:
-	@vendor/bin/phpstan analyse --configuration phpstan.neon --generate-baseline phpstan-baseline.neon || true
+	@vendor/bin/phpstan analyse --configuration phpstan.neon --generate-baseline phpstan-baseline.neon --allow-empty-baseline || true
 
 dev-fix-cs:
 	@vendor/bin/php-cs-fixer fix src/PDO -vvv
-
