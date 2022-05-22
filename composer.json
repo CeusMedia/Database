@@ -20,15 +20,15 @@
   "require": {
     "php": ">=7.2",
     "ext-pdo": "*",
-    "ceus-media/common": ">= 0.8.5.8 | dev-master",
+    "ceus-media/common": "^0.9 | 0.9.x@dev | >= 0.8.5.8 | dev-master",
     "ceus-media/cache": "dev-master"
   },
   "require-dev": {
     "ceus-media/doc-creator": "dev-master",
     "phpunit/phpunit": "*",
-    "phpstan/phpstan": "^1",
-    "phpstan/phpstan-strict-rules": "^1",
-    "friendsofphp/php-cs-fixer": "^2.17@dev"
+    "phpstan/phpstan": "*",
+    "phpstan/phpstan-strict-rules": "*",
+    "friendsofphp/php-cs-fixer": "*"
   },
   "autoload": {
     "psr-4": {
