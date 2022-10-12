@@ -43,8 +43,8 @@ use CeusMedia\Database\OSQL\Table;
  */
 abstract class AbstractQuery
 {
-	protected $conditions	= array();
-	protected $joins		= array();
+	protected $conditions	= [];
+	protected $joins		= [];
 	protected $fields;
 	protected $limit;
 	protected $offset;
@@ -222,7 +222,7 @@ abstract class AbstractQuery
 	{
 		if( !$this->joins )
 			return '';
-		$list	= array();
+		$list	= [];
 		foreach( $this->joins as $join ){
 			$prefix	= '';
 			if( $join->type === static::JOIN_TYPE_LEFT )
@@ -248,7 +248,7 @@ abstract class AbstractQuery
 	{
 		if( !$this->conditions )
 			return '';
-		$list	= array();
+		$list	= [];
 		foreach( $this->conditions as $condition ){
 			if( $list )
 				$list[]	= $condition['operation'];

@@ -44,10 +44,10 @@ use CeusMedia\Database\OSQL\Table;
 class Select extends AbstractQuery implements QueryInterface
 {
 	protected $countRows	= FALSE;
-	protected $conditions	= array();
-	protected $orders		= array();
+	protected $conditions	= [];
+	protected $orders		= [];
 	protected $fields		= '*';
-	protected $tables		= array();
+	protected $tables		= [];
 	protected $groupBy		= NULL;
 
 	public $foundRows		= 0;
@@ -138,7 +138,7 @@ class Select extends AbstractQuery implements QueryInterface
 	{
 		if( !$this->tables )
 			throw new \RuntimeException( 'No table set' );
-		$list	= array();
+		$list	= [];
 		foreach( $this->tables as $table )
 			$list[]	= $table->render();
 		return ' FROM '.implode( ', ', $list );
@@ -176,7 +176,7 @@ class Select extends AbstractQuery implements QueryInterface
 	{
 		$clock		= new \Alg_Time_Clock();
 		$this->checkSetup();
-		$parameters	= array();
+		$parameters	= [];
 		$fields		= is_array( $this->fields ) ? implode( ', ', $this->fields ) : $this->fields;
 		$from		= $this->renderFrom();
 		$joins		= $this->renderJoins();

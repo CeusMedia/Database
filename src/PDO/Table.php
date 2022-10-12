@@ -26,10 +26,11 @@
  */
 namespace CeusMedia\Database\PDO;
 
-use Alg_Object_Factory;
-use CeusMedia\Cache\Adapter\Noop as NoCacheAdapter;
-use CeusMedia\Cache\AdapterInterface as CacheAdapter;
+use CeusMedia\Cache\Adapter\Noop as NoopCache;
+use CeusMedia\Common\Alg\Obj\Factory as ObjectFactory;
 use CeusMedia\Database\PDO\Table\Writer as TableWriter;
+use Psr\SimpleCache\CacheInterface as SimpleCacheInterface;
+
 use DomainException;
 use InvalidArgumentException;
 use PDO;
@@ -51,41 +52,41 @@ abstract class Table
 	/**	@var	?Connection				$dbc			PDO database connection object */
 	protected $dbc;
 
-	/**	@var	string					$name			Name of Database Table without Prefix */
-	protected $name						= '';
+	/**	@var	string							$name			Name of Database Table without Prefix */
+	protected string $name						= '';
 
-	/**	@var	array					$columns		List of Database Table Columns */
-	protected $columns					= array();
+	/**	@var	array							$columns		List of Database Table Columns */
+	protected array $columns					= [];
 
-	/**	@var	array					$indices		List of foreign Keys of Database Table */
-	protected $indices					= array();
+	/**	@var	array							$indices		List of foreign Keys of Database Table */
+	protected array $indices					= [];
 
-	/**	@var	string					$primaryKey		Primary Key of Database Table */
-	protected $primaryKey				= '';
+	/**	@var	string							$primaryKey		Primary Key of Database Table */
+	protected string $primaryKey				= '';
 
-	/**	@var	TableWriter				$table			Database Table Writer Object for reading from and writing to Database Table */
-	protected $table;
+	/**	@var	TableWriter						$table			Database Table Writer Object for reading from and writing to Database Table */
+	protected TableWriter $table;
 
-	/**	@var	string					$prefix			Database Table Prefix */
-	protected $prefix;
+	/**	@var	string							$prefix			Database Table Prefix */
+	protected string $prefix					= '';
 
-	/**	@var	CacheAdapter 			$cache			Model data cache */
-	protected $cache;
+	/**	@var	SimpleCacheInterface			$cache			Model data cache */
+	protected SimpleCacheInterface $cache;
 
-	/**	@var	CacheAdapter|null		$cacheInstance	Cache adapter instance to use as cache by default */
-	public static $cacheInstance		= NULL;
+	/**	@var	SimpleCacheInterface|null		$cacheInstance	Cache adapter instance to use as cache by default */
+	public static ?SimpleCacheInterface $cacheInstance		= NULL;
 
-	/** @var	string					$cacheClass		Name of default cache adapter class */
-	public static $cacheClass			= NoCacheAdapter::class;
+	/** @var	string							$cacheClass		Name of default cache adapter class */
+	public static string $cacheClass			= NoopCache::class;
 
-	/** @var	mixed					$cacheResource	Resource to connect to by cache adapter */
-	public static $cacheResource		= NULL;
+	/** @var	mixed							$cacheResource	Resource to connect to by cache adapter */
+	public static $cacheResource				= NULL;
 
-	/** @var	string					$cacheKey		Prefix of cache key */
-	protected $cacheKey;
+	/** @var	string							$cacheKey		Prefix of cache key */
+	protected string $cacheKey					= '';
 
-	/**	@var	integer					$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
-	protected $fetchMode				= PDO::FETCH_OBJ;
+	/**	@var	integer							$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
+	protected int $fetchMode					= PDO::FETCH_OBJ;
 
 	/**
 	 *	Constructor.
@@ -164,7 +165,7 @@ abstract class Table
 	 *	@param		array			$conditions		Map of conditions
 	 *	@return		integer			Number of entries
 	 */
-	public function count( array $conditions = array() ): int
+	public function count( array $conditions = [] ): int
 	{
 		return $this->table->count( $conditions );
 	}
@@ -216,10 +217,10 @@ abstract class Table
 	{
 		$this->table->focusPrimary( $id );
 		$result	= 0;
-		if( count( $this->table->get( FALSE ) ) > 0 )
+		if( $this->table->get( TRUE ) !== NULL )
 			$result	= $this->table->update( $data, $stripTags );
 		$this->table->defocus();
-		$this->cache->remove( $this->cacheKey.$id );
+		$this->cache->delete( $this->cacheKey.$id );
 		return $result;
 	}
 
@@ -246,6 +247,7 @@ abstract class Table
 	 */
 	public function get( int $id, string $field = '' )
 	{
+		/** @var string $field */
 		$field	= $this->checkField( $field, FALSE, TRUE );
 		if( $this->cache->has( $this->cacheKey.$id ) ) {
 			$data = unserialize($this->cache->get($this->cacheKey . $id));
@@ -256,7 +258,7 @@ abstract class Table
 			$this->table->defocus();
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
-		if( strlen( trim( $field ) ) > 0 )
+		if( strlen( trim( $field ) ) !== 0 )
 			return $this->getFieldsFromResult( $data, array( $field ) );
 		return $data;
 	}
@@ -273,7 +275,7 @@ abstract class Table
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		mixed
 	 */
-	public function getAll( array $conditions = array(), array $orders = array(), array $limits = array(), array $fields = array(), array $groupings = array(), array $having = array(), bool $strict = FALSE )
+	public function getAll( array $conditions = [], array $orders = [], array $limits = [], array $fields = [], array $groupings = [], array $having = [], bool $strict = FALSE )
 	{
 		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $having );
 		if( count( $fields ) > 0 ){
@@ -295,12 +297,12 @@ abstract class Table
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex( string $key, string $value, array $orders = array(), array $limits = array(), array $fields = array(), bool $strict = FALSE )
+	public function getAllByIndex( string $key, string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE )
 	{
 		if( !in_array( $key, $this->table->getIndices(), TRUE ) )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
 		$conditions	= array( $key => $value );
-		return $this->getAll( $conditions, $orders, $limits, $fields, array(), array(), $strict );
+		return $this->getAll( $conditions, $orders, $limits, $fields, [], [], $strict );
 	}
 
 	/**
@@ -313,7 +315,7 @@ abstract class Table
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndices( array $indices = array(), array $orders = array(), array $limits = array(), array $fields = array(), bool $strict = FALSE )
+	public function getAllByIndices( array $indices = [], array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE )
 	{
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
@@ -338,10 +340,10 @@ abstract class Table
 	 *	@todo		change argument order: move fields to end
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 */
-	public function getByIndex( string $key, string $value, array $orders = array(), $fields = array(), bool $strict = FALSE )
+	public function getByIndex( string $key, string $value, array $orders = [], $fields = [], bool $strict = FALSE )
 	{
 		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : array();
+			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $field )
@@ -363,10 +365,10 @@ abstract class Table
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 *	@todo  		change default value of argument 'strict' to TRUE
 	 */
-	public function getByIndices( array $indices, array $orders = array(), $fields = array(), bool $strict = FALSE )
+	public function getByIndices( array $indices, array $orders = [], $fields = [], bool $strict = FALSE )
 	{
 		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : array();
+			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $nr => $field )
@@ -482,7 +484,7 @@ abstract class Table
 			$result	= TRUE;
 		}
 		$this->table->defocus();
-		$this->cache->remove( $this->cacheKey.$id );
+		$this->cache->delete( $this->cacheKey.$id );
 		return $result;
 	}
 
@@ -510,7 +512,7 @@ abstract class Table
 					default:
 						$id	= $row[$this->primaryKey];
 				}
-				$this->cache->remove( $this->cacheKey.$id );
+				$this->cache->delete( $this->cacheKey.$id );
 			}
 		}
 		$this->table->defocus();
@@ -543,14 +545,14 @@ abstract class Table
 					default:
 						$id	= $row[$this->primaryKey];
 				}
-				$this->cache->remove( $this->cacheKey.$id );
+				$this->cache->delete( $this->cacheKey.$id );
 			}
 		}
 		$this->table->defocus();
 		return $number;
 	}
 
-	public function setCache( CacheAdapter $cache ): self
+	public function setCache( SimpleCacheInterface $cache ): self
 	{
 		$this->cache	= $cache;
 		return $this;
@@ -578,21 +580,21 @@ abstract class Table
 		if( $this->fetchMode > 0 )
 			$this->table->setFetchMode( $this->fetchMode );
 		$this->table->setIndices( $this->indices );
-		if( self::$cacheInstance instanceof CacheAdapter )
+		if( self::$cacheInstance instanceof SimpleCacheInterface)
 			$this->cache	= self::$cacheInstance;
 		else{
-			$cacheFactory	= new Alg_Object_Factory( [self::$cacheResource] );
+			$cacheFactory	= new ObjectFactory( [self::$cacheResource] );
 			$this->cache	= $cacheFactory->create( self::$cacheClass );
 		}
 		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
 		return $this;
 	}
 
-	public function setUndoStorage( $storage ): self
+/*	public function setUndoStorage( $storage ): self
 	{
 		$this->table->setUndoStorage( $storage );
 		return $this;
-	}
+	}*/
 
 	/**
 	 *	Removes all data and resets incremental counter.
@@ -633,7 +635,7 @@ abstract class Table
 			}
 		}
 
-		$list		= array();
+		$list		= [];
 		$indexList	= $this->table->getIndices( $withPrimaryKey );
 		foreach( $indices as $index => $value ){
 			if( !in_array( $index, $indexList, TRUE ) ){
@@ -658,10 +660,10 @@ abstract class Table
 	 *	@throws		DomainException					If requested field is not a table column
 	 *	@throws		RangeException					If requested field is not within result fields
 	 */
-	protected function getFieldsFromResult( $result, $fields = array(), bool $strict = TRUE )
+	protected function getFieldsFromResult( $result, $fields = [], bool $strict = TRUE )
 	{
 		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : array();
+			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
@@ -669,7 +671,7 @@ abstract class Table
 				throw new RangeException( 'Result is empty' );
 			if( count( $fields ) === 1 )
 				return NULL;
-			return array();
+			return [];
 		}
 		if( count( $fields ) === 0 )
 			return $result;
@@ -707,7 +709,7 @@ abstract class Table
 		switch( $this->fetchMode ){
 			case PDO::FETCH_CLASS:
 			case PDO::FETCH_OBJ:
-				$map	= (object) array();
+				$map	= (object) [];
 				foreach( $fields as $field ){
 					if( !property_exists( $result, $field ) )
 						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
@@ -716,7 +718,7 @@ abstract class Table
 				}
 				return $map;
 			default:
-				$list	= array();
+				$list	= [];
 				foreach( $fields as $field ){
 					if( $field !== '*' && !isset( $result[$field] ) )
 						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );

@@ -24,6 +24,7 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL;
 
 /**
@@ -37,34 +38,34 @@ namespace CeusMedia\Database\OSQL;
  */
 class Condition
 {
-	const OP_EQ		= '=';
-	const OP_GT		= '>';
-	const OP_GTE	= '>=';
-	const OP_LT		= '<';
-	const OP_LTE	= '<=';
-	const OP_NEQ	= '!=';
-	const OP_IS		= 'IS';
-	const OP_ISN	= 'IS NOT';
-	const OP_LIKE	= 'LIKE';
+	public const OP_EQ		= '=';
+	public const OP_GT		= '>';
+	public const OP_GTE	= '>=';
+	public const OP_LT		= '<';
+	public const OP_LTE	= '<=';
+	public const OP_NEQ	= '!=';
+	public const OP_IS		= 'IS';
+	public const OP_ISN	= 'IS NOT';
+	public const OP_LIKE	= 'LIKE';
 
-	protected $type			= NULL;
-	protected $fieldName	= NULL;
-	protected $operation	= self::OP_EQ;
-	protected $value		= NULL;
+	protected ?string $type			= NULL;
+	protected ?string $fieldName	= NULL;
+	protected string $operation		= self::OP_EQ;
+	protected $value				= NULL;
 
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		string		$fieldName		Column name
-	 *	@param		mixed		$value			Value to match
-	 *	@param		string		$operation		Comparison operation
+	 *	@param		string|NULL		$fieldName		Column name
+	 *	@param		mixed|NULL		$value			Value to match
+	 *	@param		string|NULL		$operation		Comparison operation
 	 *	@return		void
 	 */
-	public function __construct( $fieldName = NULL, $value = NULL, $operation = NULL )
+	public function __construct( string $fieldName = NULL, $value = NULL, ?string $operation = NULL )
 	{
-		if( $fieldName )
+		if( $fieldName !== NULL )
 			$this->setFieldName( $fieldName );
-		if( $operation )
+		if( $operation !== NULL )
 			$this->setOperation( $operation );
 		if( $value !== NULL )
 			$this->setValue( $value );
@@ -73,11 +74,11 @@ class Condition
 	/**
 	 *	Gets column name.
 	 *	@access		public
-	 *	@return		string
+	 *	@return		string|NULL
 	 */
 	public function getFieldName(): ?string
 	{
-		return $this->name;
+		return $this->fieldName;
 	}
 
 	/**

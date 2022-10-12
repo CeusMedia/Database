@@ -6,16 +6,14 @@
  *	@since			02.05.2008
  *	@version		0.1
  */
-require_once 'test/initLoaders.php';
+
+use CeusMedia\Database\PDO\Connection as PdoConnection;
+use CeusMedia\Database\PDO\Table\Writer as PdoTableWriter;
+
 /**
  *	TestUnit of DB_PDO_TableWriter.
  *	@package		Tests.{classPackage}
- *	@extends		Test_Case
- *	@uses			DB_PDO_Connection
- *	@uses			DB_PDO_TableWriter
- *	@author			Christian WÃ¼rker <christian.wuerker@ceusmedia.de>
- *	@since			02.05.2008
- *	@version		0.1
+ *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
 class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Test_Case
 {
@@ -65,7 +63,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		if( !extension_loaded( 'pdo_mysql' ) )
 			$this->markTestSkipped( "PDO driver for MySQL not supported" );
 
-		$this->connection	= new \CeusMedia\Database\PDO\Connection( $this->dsn, $this->username, $this->password, $this->options );
+		$this->connection	= new PdoConnection( $this->dsn, $this->username, $this->password, $this->options );
 		$this->connection->setAttribute( \PDO::ATTR_CASE, \PDO::CASE_NATURAL );
 		$this->connection->setAttribute( \PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, TRUE );
 		$this->connection->setErrorLogFile( $this->errorLog );
@@ -91,7 +89,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 			$this->markTestSkipped( "Support for MySQL is missing" );
 		}
 
-		$this->writer	= new \CeusMedia\Database\PDO\Table\Writer( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
+		$this->writer	= new PdoTableWriter( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
 		$this->writer->setIndices( $this->indices );
 	}
 

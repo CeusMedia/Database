@@ -5,7 +5,7 @@ if( !file_exists( dirname( __DIR__ ).'/vendor/autoload.php' ) )
 $pathTest	= __DIR__.'/';
 
 //  get new Loader Instance
-$loaderTest	= new \Loader();
+$loaderTest	= new \CeusMedia\Common\Loader();
 //  set allowed Extension
 $loaderTest->setExtensions( 'php' );
 //  set fixed Library Path

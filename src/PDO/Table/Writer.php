@@ -47,7 +47,7 @@ class Writer extends Reader
 	public function delete(): int
 	{
 		$this->validateFocus();
-		$conditions	= $this->getConditionQuery( array() );
+		$conditions	= $this->getConditionQuery( [] );
 		$query	= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
 #		$has	= $this->get( FALSE );
 #		if( !$has )
@@ -61,7 +61,7 @@ class Writer extends Reader
 	 *	@param		array		$where		associative Array of Condition Strings
 	 *	@return		integer
 	 */
-	public function deleteByConditions( array $where = array() ): int
+	public function deleteByConditions( array $where = [] ): int
 	{
 		//  render WHERE conditions, uncursored, without functions
 		$conditions		= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );
@@ -78,10 +78,10 @@ class Writer extends Reader
 	 *	@param		boolean		$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer		ID of inserted row
 	 */
-	public function insert( array $data = array(), bool $stripTags = TRUE ): int
+	public function insert( array $data = [], bool $stripTags = TRUE ): int
 	{
-		$columns	= array();
-		$values		= array();
+		$columns	= [];
+		$values		= [];
 		//  iterate Columns
 		foreach( $this->columns as $column ){
 			//  no Data given for Column
@@ -127,7 +127,7 @@ class Writer extends Reader
 	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
 	 */
-	public function update( array $data = array(), bool $stripTags = TRUE ): int
+	public function update( array $data = [], bool $stripTags = TRUE ): int
 	{
 		if( count( $data ) === 0 )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
@@ -135,7 +135,7 @@ class Writer extends Reader
 		$has	= $this->get( FALSE );
 		if( is_null( $has ) || is_array( $has ) && count( $has ) === 0 )
 			throw new InvalidArgumentException( 'No data sets focused for update' );
-		$updates	= array();
+		$updates	= [];
 		foreach( $this->columns as $column ){
 			if( !array_key_exists($column, $data) )
 				continue;
@@ -148,7 +148,7 @@ class Writer extends Reader
 		$affectedRows   = 0;
 		if( count( $updates ) > 0 ){
 			$updates	= implode( ', ', $updates );
-			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery( array() );
+			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery( [] );
 			$affectedRows	= $this->dbc->exec( $query );
 		}
 		return $affectedRows;
@@ -162,14 +162,14 @@ class Writer extends Reader
 	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
 	 */
-	public function updateByConditions( array $data = array(), array $conditions = array(), bool $stripTags = FALSE ): int
+	public function updateByConditions( array $data = [], array $conditions = [], bool $stripTags = FALSE ): int
 	{
 		if( count( $data ) === 0 )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		if( count( $conditions ) === 0 )
 			throw new InvalidArgumentException( 'Conditions for update cannot be empty' );
 
-		$updates	= array();
+		$updates	= [];
 		//  render WHERE conditions, uncursored, without functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, FALSE );
 		foreach( $this->columns as $column ){

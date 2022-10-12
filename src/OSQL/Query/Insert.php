@@ -75,8 +75,8 @@ class Insert extends AbstractQuery implements QueryInterface
 	{
 		if( !$this->fields )
 			return '';
-		$listKeys	= array();
-		$listVals	= array();
+		$listKeys	= [];
+		$listVals	= [];
 		foreach( $this->fields as $name => $value ){
 			$key	= 'value_'.str_replace( '.', '_', $name );
 			$listKeys[]	= $name;
@@ -97,7 +97,7 @@ class Insert extends AbstractQuery implements QueryInterface
 	public function render(): object
 	{
 		$this->checkSetup();
-		$parameters	= array();
+		$parameters	= [];
 		$table		= $this->table->render();
 		$fields		= $this->renderFields( $parameters );
 		$conditions	= $this->renderConditions( $parameters );

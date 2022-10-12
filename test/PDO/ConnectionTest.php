@@ -3,18 +3,15 @@
  *	TestUnit of DB_PDO_Connection.
  *	@package		Tests.database.pdo
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@since			02.07.2008
- *	@version		0.1
  */
-require_once 'test/initLoaders.php';
+
+use CeusMedia\Common\Exception\SQL as SqlException;
+use CeusMedia\Database\PDO\Connection as PdoConnection;
+
 /**
  *	TestUnit of DB_PDO_Connection.
  *	@package		Tests.database.pdo
- *	@extends		Test_Case
- *	@uses			DB_PDO_Connection
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@since			02.07.2008
- *	@version		0.1
  */
 class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test_Case{
 
@@ -49,7 +46,7 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 			$this->markTestSkipped( "PDO driver for MySQL not supported" );
 		$dsn 		= "mysql:host=".$this->host.";dbname=".$this->database;
 		$options	= array();
-		$this->connection	= new \CeusMedia\Database\PDO\Connection( $dsn, $this->username, $this->password, $options );
+		$this->connection	= new PdoConnection( $dsn, $this->username, $this->password, $options );
 		$this->connection->setAttribute( PDO::ATTR_CASE, PDO::CASE_NATURAL );
 		$this->connection->setAttribute( PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, TRUE );
 		$this->connection->setErrorLogFile( $this->errorLog );
@@ -71,7 +68,7 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 					mysqli_query( $this->directDbc, $part ) or die( mysqli_error() );
 		}
 		else{
-			throw new \RuntimeException( 'No suitable MySQL connector found' );
+			throw new RuntimeException( 'No suitable MySQL connector found' );
 		}
 	}
 
@@ -263,7 +260,7 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		$this->connection->setErrorLogFile( $logFile );
 		try{
 			$this->connection->query( "SELECT none FROM nowhere" );
-		}catch( Exception_SQL $e ){}
+		}catch( SqlException $e ){}
 
 		$expected	= TRUE;
 		$actual		= file_exists( $logFile );
@@ -282,7 +279,9 @@ class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test
 		$this->connection->setStatementLogFile( $logFile );
 		try{
 			$this->connection->query( "SELECT none FROM nowhere" );
-		}catch( Exception_SQL $e ){}
+		}
+		catch( SqlException $e ){
+		}
 
 		$expected	= TRUE;
 		$actual		= file_exists( $logFile );

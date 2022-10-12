@@ -40,7 +40,7 @@ abstract class Table
 	protected $name;
 	protected $prefix;
 	protected $primaryKey;
-	protected $indices		= array();
+	protected $indices		= [];
 	protected $isValid		= FALSE;
 	protected $modelClass;
 
@@ -110,8 +110,8 @@ abstract class Table
 	public function indexByConditions( $conditions, $limit = NULL, $offset = NULL )
 	{
 		$this->validateSetup();
-		$list	= array();
-		$params	= array();
+		$list	= [];
+		$params	= [];
 		$from	= 'FROM '.$this->prefix.$this->name;
 		foreach( $conditions as $condition ){
 			$name	= $condition['name'];
@@ -157,7 +157,7 @@ abstract class Table
 
 	public function index( $limit = NULL, $offset = NULL )
 	{
-		return $this->indexByConditions( array(), $limit, $offset );
+		return $this->indexByConditions( [], $limit, $offset );
 	}
 
 	public function getConnection()

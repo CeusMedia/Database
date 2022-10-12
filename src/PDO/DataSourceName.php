@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 /**
  *	Builder for Data Source Name Strings.
  *
@@ -41,26 +42,26 @@ use RuntimeException;
  */
 class DataSourceName
 {
-	/**	@var		?string		$driver			Database Driver */
-	protected $driver;
+	/**	@var		string|NULL		$driver			Database Driver */
+	protected ?string $driver;
 
-	/**	@var		?string		$database		Database Name */
-	protected $database;
+	/**	@var		string|NULL		$database		Database Name */
+	protected ?string $database;
 
-	/**	@var		?string		$username		Database Username */
-	protected $username	;
+	/**	@var		string|NULL		$username		Database Username */
+	protected ?string $username;
 
-	/**	@var		?string		$password		Database Password */
-	protected $password;
+	/**	@var		string|NULL		$password		Database Password */
+	protected ?string $password;
 
-	/**	@var		?string		$host			Host Name or URI*/
-	protected $host;
+	/**	@var		string|NULL		$host			Host Name or URI*/
+	protected ?string $host;
 
-	/**	@var		?int		$port			Host Port */
-	protected $port;
+	/**	@var		int|NULL		$port			Host Port */
+	protected ?int $port;
 
 	/**	@var		array		$drivers		List of possible PDO drivers */
-	protected $drivers	  	= array(
+	protected array $drivers	  	= [
 		'cubrid',
 		'dblib',
 		'firebird',
@@ -72,7 +73,7 @@ class DataSourceName
 		'pgsql',
 		'sqlite',
 		'sybase',
-	);
+	];
 
 	/**
 	 *	Constructor.
@@ -95,7 +96,7 @@ class DataSourceName
 	 *	@return		string
 	 *	@throws		Exception
 	 */
-	public function __toString()
+	public function __toString(): string
 	{
 		return $this->render();
 	}
@@ -293,11 +294,11 @@ class DataSourceName
 	 */
 	protected function renderDsnForInformix(): string
 	{
-		return $this->renderDsnParts( array(
+		return $this->renderDsnParts( [
 			'host'		=> !is_null( $this->host ) ? $this->host : NULL,
 			'service'	=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
-			'database'	=> $this->database
-		), '; ' );
+			'database'	=> $this->database,
+		] );
 	}
 
 	/**
@@ -320,7 +321,7 @@ class DataSourceName
 	 *	@todo		implement
 	 *  @throws		Exception
 	 */
-	protected function renderDsnForOdbc()
+	protected function renderDsnForOdbc(): string
 	{
 		throw new Exception( 'Not yet implemented' );
 	}
@@ -360,7 +361,7 @@ class DataSourceName
 	 */
 	protected function renderDsnParts( array $map, string $delimiter = '; ' ): string
 	{
-		$list	= array();
+		$list	= [];
 		foreach( $map as $key => $value )
 			if( !is_null( $value ) )
 				$list[]	= $key.'='.$value;

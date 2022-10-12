@@ -1,19 +1,24 @@
 <?php
-class CeusMedia_Database_Test_PDO_TransactionTable extends \CeusMedia\Database\PDO\Table
+
+use CeusMedia\Common\ADT\Collection\Dictionary;
+use CeusMedia\Database\PDO\Table as PdoTable;
+use PDO as Pdo;
+
+class CeusMedia_Database_Test_PDO_TransactionTable extends PdoTable
 {
-	protected $name					= "transactions";
-	protected $columns				= array(
+	protected string $name					= "transactions";
+	protected array $columns				= array(
 		'id',
 		'topic',
 		'label',
 		'timestamp'
 	);
-	protected $primaryKey			= 'id';
-	protected $indices				= array(
+	protected string $primaryKey			= 'id';
+	protected array $indices				= array(
 		'topic'
 	);
 
-	protected $prefix;
-	protected $fetchMode			= \PDO::FETCH_OBJ;
-	public static $cacheClass		= 'ADT_List_Dictionary';
+	protected string $prefix;
+	protected int $fetchMode			= Pdo::FETCH_OBJ;
+	public static string $cacheClass		= Dictionary::class;
 }

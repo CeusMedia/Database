@@ -1,11 +1,11 @@
 includes:
-	- vendor/phpstan/phpstan-strict-rules/rules.neon
+#	- ../vendor/phpstan/phpstan-strict-rules/rules.neon
 	- phpstan-baseline.neon
 
 parameters:
-	level: 5
+	level: 7
 	paths:
-		- src/PDO
+		- ../src/PDO
 	checkMissingIterableValueType: false
 	treatPhpDocTypesAsCertain: false
 	reportUnmatchedIgnoredErrors: false

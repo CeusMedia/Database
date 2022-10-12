@@ -43,7 +43,7 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Delete extends AbstractQuery implements QueryInterface
 {
-	protected $conditions	= array();
+	protected $conditions	= [];
 	protected $table		= NULL;
 
 	public $affectedRows;
@@ -74,7 +74,7 @@ class Delete extends AbstractQuery implements QueryInterface
 	{
 		$clock		= new \Alg_Time_Clock();
 		$this->checkSetup();
-		$parameters	= array();
+		$parameters	= [];
 		$table		= $this->table->render();
 		$conditions	= $this->renderConditions( $parameters );
 		$limit		= $this->renderLimit( $parameters );

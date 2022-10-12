@@ -7,18 +7,13 @@
  *	@version		0.1
  */
 
-use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\Connection as PdoConnection;
+use CeusMedia\Database\PDO\Table\Reader as PdoTableReader;
 
-require_once 'test/initLoaders.php';
 /**
  *	TestUnit of PDO Table Reader.
  *	@package		Tests.database.pdo
- *	@extends		Test_Case
- *	@uses			DB_PDO_Connection
- *	@uses			\CeusMedia\Database\PDO\Table\Reader
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@since			02.07.2008
- *	@version		0.1
  */
 class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Test_Case
 {
@@ -69,7 +64,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 			$this->markTestSkipped( "PDO driver for MySQL not supported" );
 
 		$options	= array();
-		$this->connection	= new \CeusMedia\Database\PDO\Connection( $this->dsn, $this->username, $this->password, $this->options );
+		$this->connection	= new PdoConnection( $this->dsn, $this->username, $this->password, $this->options );
 		$this->connection->setAttribute( \PDO::ATTR_CASE, \PDO::CASE_NATURAL );
 		$this->connection->setAttribute( \PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, TRUE );
 		$this->connection->setErrorLogFile( $this->errorLog );
@@ -94,7 +89,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 			$this->markTestSkipped( "Support for MySQL is missing" );
 		}
 
-		$this->reader	= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
+		$this->reader	= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
 		$this->reader->setIndices( $this->indices );
 	}
 
@@ -124,7 +119,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testConstruct1()
 	{
-		$reader		= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, "table", array( 'col1', 'col2' ), 'col2', 1 );
+		$reader		= new PdoTableReader( $this->connection, "table", array( 'col1', 'col2' ), 'col2', 1 );
 
 		$expected	= 'table';
 		$actual		= $reader->getTableName();
@@ -150,7 +145,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testConstruct2()
 	{
-		$reader		= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, $this->tableName, $this->columns, $this->primaryKey, 1 );
+		$reader		= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey, 1 );
 
 		$expected	= array( 'id' => 1 );
 		$actual		= array_slice( $reader->get(), 0, 1 );
@@ -1044,7 +1039,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testSetDbConnection()
 	{
-		$dbc		= new Connection( $this->dsn, $this->username, $this->password );
+		$dbc		= new PdoConnection( $this->dsn, $this->username, $this->password );
 		$this->reader->setDBConnection( $dbc );
 
 		$expected	= $dbc;

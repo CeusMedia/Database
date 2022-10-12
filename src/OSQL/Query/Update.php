@@ -43,8 +43,8 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Update extends AbstractQuery implements QueryInterface
 {
-	protected $conditions	= array();
-	protected $fields		= array();
+	protected $conditions	= [];
+	protected $fields		= [];
 	protected $table		= NULL;
 
 	public $affectedRows;
@@ -81,7 +81,7 @@ class Update extends AbstractQuery implements QueryInterface
 	{
 		$clock	= new \Alg_Time_Clock();
 		$this->checkSetup();
-		$parameters	= array();
+		$parameters	= [];
 		$fields		= $this->renderFields( $parameters );
 		$table		= $this->table->render();
 		$conditions	= $this->renderConditions( $parameters );
@@ -105,7 +105,7 @@ class Update extends AbstractQuery implements QueryInterface
 	{
 		if( !$this->fields )
 			return '';
-		$list	= array();
+		$list	= [];
 		foreach( $this->fields as $name => $value )
 			$list[]	= $name.' = :'.$name;
 		$parameters[$name]	= array(

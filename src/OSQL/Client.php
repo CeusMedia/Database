@@ -24,9 +24,12 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL;
 
+use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Database\OSQL\Query\QueryInterface;
+use PDO;
 
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
@@ -40,7 +43,7 @@ use CeusMedia\Database\OSQL\Query\QueryInterface;
 class Client
 {
 	protected $fetchMode;
-	public static $defaultFetchMode	= \PDO::FETCH_OBJ;
+	public static $defaultFetchMode	= PDO::FETCH_OBJ;
 
 	/**
 	 *	Constructor.
@@ -48,7 +51,7 @@ class Client
 	 *	@param		PDO		$dbc		Database connection using PDO
 	 *	@return		void
 	 */
-	public function __construct( \PDO $dbc )
+	public function __construct( PDO $dbc )
 	{
 		$this->dbc	= $dbc;
 		$this->setFetchMode( self::$defaultFetchMode );
@@ -80,12 +83,12 @@ class Client
 	/**
 	 *	Executes query and returns result.
 	 *	@access		public
-	 *	@param		QueryInterface
-	 *	@param		array
+	 *	@param		QueryInterface		$query
+	 *	@return		array
 	 */
-	public function execute( QueryInterface $query )
+	public function execute( QueryInterface $query ): array
 	{
-		$clock		= new \Alg_Time_Clock();
+		$clock		= new Clock();
 		$queryParts	= $query->render();
 		$query->timing['render']	= $clock->stop( 0, 6 );
 		$query->statement			= $queryParts->query;

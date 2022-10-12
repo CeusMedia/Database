@@ -9,9 +9,9 @@ class Group
 	const OPERATION_OR		= 'OR';
 
 	protected $operation;
-	protected $conditions	= array();
+	protected $conditions	= [];
 
-	public function __construct( string $operation, array $conditions = array() ){
+	public function __construct( string $operation, array $conditions = [] ){
 		$this->setOperation( $operation );
 		foreach( $conditions as $condition )
 			$this->add( $condition );

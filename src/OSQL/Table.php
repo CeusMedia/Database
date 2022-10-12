@@ -39,7 +39,7 @@ class Table
 {
 	protected $name;
 	protected $alias;
-	protected $joins	= array();
+	protected $joins	= [];
 
 	/**
 	 *	Constructor.
@@ -83,7 +83,7 @@ class Table
 		$joins	= '';
 		if( $this->joins )
 		{
-			$joins	= array();
+			$joins	= [];
 			foreach( $this->joins as $join )
 			{
 				$tableName	= $join['table']->render();
