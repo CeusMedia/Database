@@ -2,6 +2,7 @@
 /composer.lock
 /doc/
 /demo/demo.ini
-/.idea
+;/.idea
 /.phpunit.result.cache
 /.php_cs.cache
+/util/.phpunit.result.cache

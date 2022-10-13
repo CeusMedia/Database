@@ -1,4 +1,6 @@
-<?php
+<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+/** @noinspection PhpUnused */
+
 /**
  *	Abstract database table.
  *
@@ -49,8 +51,8 @@ use RuntimeException;
  */
 abstract class Table
 {
-	/**	@var	?Connection				$dbc			PDO database connection object */
-	protected $dbc;
+	/**	@var	Connection|NULL					$dbc			PDO database connection object */
+	protected ?Connection $dbc;
 
 	/**	@var	string							$name			Name of Database Table without Prefix */
 	protected string $name						= '';
@@ -100,15 +102,7 @@ abstract class Table
 	{
 		$this->checkTableSetup();
 		$this->setDatabase( $dbc, $prefix, $id );
-	}
-
-	private function checkTableSetup(): self
-	{
-		if( strlen( trim( $this->name ) ) === 0 )
-			throw new RuntimeException( 'No table name set' );
-		if( count( $this->columns ) === 0 )
-			throw new RuntimeException( 'No table columns set' );
-		return $this;
+		$this->setupCache();
 	}
 
 	/**
@@ -123,40 +117,6 @@ abstract class Table
 		$id	= $this->table->insert( $data, $stripTags );
 		$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
 		return $id;
-	}
-
-	/**
-	 *	Indicates whether a requested field is a table column.
-	 *	Returns trimmed field key if found, otherwise FALSE if not a string or not a table column.
-	 *	Returns FALSE if empty and mandatory, otherwise NULL.
-	 *	In strict mode exceptions will be thrown if field is not a string, empty but mandatory or not a table column.
-	 *	@access		protected
-	 *	@param		string			$field			Table Column to check for existence
-	 *	@param		boolean			$mandatory		Force a value, otherwise return NULL or throw exception in strict mode
-	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE or NULL
-	 *	@return		string|NULL|FALSE				Trimmed Field name if found, NULL otherwise or exception in strict mode
-	 *	@throws		InvalidArgumentException		in strict mode if field is not a string and strict mode is on
-	 *	@throws		RangeException					in strict mode if field is empty but mandatory
-	 *	@throws		DomainException					in strict mode if field is not a table column
-	 */
-	protected function checkField( string $field, bool $mandatory = FALSE, bool $strict = TRUE )
-	{
-		$field	= trim( $field );
-		if( strlen( $field ) === 0 ){
-			if( $mandatory ){
-				if( !$strict )
-					return FALSE;
-				throw new RangeException( 'Field must have a value' );
-			}
-			return NULL;
-		}
-		if( !in_array( $field, $this->columns, TRUE ) ){
-			if( !$strict )
-				return FALSE;
-			$message	= 'Field "%s" is not an existing column of table %s';
-			throw new DomainException( sprintf( $message, $field, $this->getName() ) );
-		}
-		return $field;
 	}
 
 	/**
@@ -217,7 +177,7 @@ abstract class Table
 	{
 		$this->table->focusPrimary( $id );
 		$result	= 0;
-		if( $this->table->get( TRUE ) !== NULL )
+		if( $this->table->get() !== NULL )
 			$result	= $this->table->update( $data, $stripTags );
 		$this->table->defocus();
 		$this->cache->delete( $this->cacheKey.$id );
@@ -234,7 +194,7 @@ abstract class Table
 	 */
 	public function editByIndices( array $indices, array $data, bool $stripTags = TRUE ): int
 	{
-		$this->checkIndices( $indices, TRUE, TRUE );
+		$this->checkIndices( $indices, TRUE );
 		return $this->table->updateByConditions( $data, $indices, $stripTags );
 	}
 
@@ -248,13 +208,13 @@ abstract class Table
 	public function get( int $id, string $field = '' )
 	{
 		/** @var string $field */
-		$field	= $this->checkField( $field, FALSE, TRUE );
+		$field	= $this->checkField( $field );
 		if( $this->cache->has( $this->cacheKey.$id ) ) {
-			$data = unserialize($this->cache->get($this->cacheKey . $id));
+			$data = unserialize( $this->cache->get($this->cacheKey . $id ) );
 		}
 		else{
 			$this->table->focusPrimary( $id );
-			$data	= $this->table->get( TRUE );
+			$data	= $this->table->get();
 			$this->table->defocus();
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
@@ -273,12 +233,12 @@ abstract class Table
 	 *	@param		array			$groupings		List of columns to group by
 	 *	@param		array			$having			List of conditions to apply after grouping
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
-	 *	@return		mixed
+	 *	@return		array
 	 */
-	public function getAll( array $conditions = [], array $orders = [], array $limits = [], array $fields = [], array $groupings = [], array $having = [], bool $strict = FALSE )
+	public function getAll( array $conditions = [], array $orders = [], array $limits = [], array $fields = [], array $groupings = [], array $having = [], bool $strict = FALSE ): array
 	{
 		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $having );
-		if( count( $fields ) > 0 ){
+		if( count( $fields ) !== 0 ){
 			foreach( $data as $nr => $set ){
 				$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
 			}
@@ -297,7 +257,7 @@ abstract class Table
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex( string $key, string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE )
+	public function getAllByIndex( string $key, string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
 		if( !in_array( $key, $this->table->getIndices(), TRUE ) )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
@@ -320,6 +280,7 @@ abstract class Table
 		$this->checkIndices( $indices, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
+		/** @var array $data */
 		$data	= $this->table->get( FALSE, $orders, $limits );
 		$this->table->defocus();
 		if( count( $fields ) > 0 )
@@ -347,7 +308,7 @@ abstract class Table
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $field )
-			$this->checkField( $field, FALSE, TRUE );
+			$this->checkField( $field );
 		$this->table->focusIndex( $key, $value );
 		$data	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
@@ -372,8 +333,8 @@ abstract class Table
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $nr => $field )
-			$fields[$nr]	= $this->checkField( $field, FALSE, TRUE );
-		$this->checkIndices( $indices, TRUE, TRUE );
+			$fields[$nr]	= $this->checkField( $field );
+		$this->checkIndices( $indices, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
 		$result	= $this->table->get( TRUE, $orders );
@@ -417,7 +378,7 @@ abstract class Table
 	 *	@param		boolean			$prefixed		Flag: return table name with prefix
 	 *	@return		string			Table name with or without prefix
 	 */
-	public function getName( $prefixed = TRUE ): string
+	public function getName( bool $prefixed = TRUE ): string
 	{
 		if( $prefixed )
 			return $this->prefix.$this->name;
@@ -479,7 +440,9 @@ abstract class Table
 	{
 		$this->table->focusPrimary( $id );
 		$result	= FALSE;
-		if( count( $this->table->get( FALSE ) ) > 0 ){
+		/** @var array $found */
+		$found	= $this->table->get( FALSE );
+		if( count( $found ) === 1 ){
 			$this->table->delete();
 			$result	= TRUE;
 		}
@@ -498,23 +461,7 @@ abstract class Table
 	public function removeByIndex( string $key, string $value ): int
 	{
 		$this->table->focusIndex( $key, $value );
-		$number	= 0;
-		$rows	= $this->table->get( FALSE );
-		if( count( $rows ) > 0 ){
-			$number = $this->table->delete();
-			foreach( $rows as $row ){
-				switch( $this->fetchMode ){
-					case PDO::FETCH_CLASS:
-					case PDO::FETCH_OBJ:
-//						$id	= $row->{$this->primaryKey};
-						$id	= get_object_vars( $row)[$this->primaryKey];
-						break;
-					default:
-						$id	= $row[$this->primaryKey];
-				}
-				$this->cache->delete( $this->cacheKey.$id );
-			}
-		}
+		$number	= $this->removeBySetFocus();
 		$this->table->defocus();
 		return $number;
 	}
@@ -527,27 +474,10 @@ abstract class Table
 	 */
 	public function removeByIndices( array $indices ): int
 	{
-		$this->checkIndices( $indices, TRUE, TRUE );
+		$this->checkIndices( $indices, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
-
-		$number	= 0;
-		$rows	= $this->table->get( FALSE );
-		if( count( $rows ) > 0 ){
-			$number	= $this->table->delete();
-			foreach( $rows as $row ){
-				switch( $this->fetchMode ){
-					case PDO::FETCH_CLASS:
-					case PDO::FETCH_OBJ:
-//						$id	= $row->{$this->primaryKey};
-						$id	= get_object_vars( $row)[$this->primaryKey];
-						break;
-					default:
-						$id	= $row[$this->primaryKey];
-				}
-				$this->cache->delete( $this->cacheKey.$id );
-			}
-		}
+		$number	= $this->removeBySetFocus();
 		$this->table->defocus();
 		return $number;
 	}
@@ -555,38 +485,6 @@ abstract class Table
 	public function setCache( SimpleCacheInterface $cache ): self
 	{
 		$this->cache	= $cache;
-		return $this;
-	}
-
-	/**
-	 *	Sets Environment of Controller by copying Framework Member Variables.
-	 *	@access		public
-	 *	@param		Connection		$dbc		PDO database connection object
-	 *	@param		string|NULL		$prefix		Table name prefix
-	 *	@param		integer|NULL	$id			ID to focus on
-	 *	@return		self
-	 */
-	public function setDatabase( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL ): self
-	{
-		$this->dbc		= $dbc;
-		$this->prefix	= (string) $prefix;
-		$this->table	= new TableWriter(
-			$dbc,
-			$this->prefix.$this->name,
-			$this->columns,
-			$this->primaryKey,
-			$id
-		);
-		if( $this->fetchMode > 0 )
-			$this->table->setFetchMode( $this->fetchMode );
-		$this->table->setIndices( $this->indices );
-		if( self::$cacheInstance instanceof SimpleCacheInterface)
-			$this->cache	= self::$cacheInstance;
-		else{
-			$cacheFactory	= new ObjectFactory( [self::$cacheResource] );
-			$this->cache	= $cacheFactory->create( self::$cacheClass );
-		}
-		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
 		return $this;
 	}
 
@@ -609,6 +507,40 @@ abstract class Table
 	}
 
 	//  --  PROTECTED  --  //
+
+	/**
+	 *	Indicates whether a requested field is a table column.
+	 *	Returns trimmed field key if found, otherwise FALSE if not a string or not a table column.
+	 *	Returns FALSE if empty and mandatory, otherwise NULL.
+	 *	In strict mode exceptions will be thrown if field is not a string, empty but mandatory or not a table column.
+	 *	@access		protected
+	 *	@param		string			$field			Table Column to check for existence
+	 *	@param		boolean			$mandatory		Force a value, otherwise return NULL or throw exception in strict mode
+	 *	@param		boolean			$strict			Strict mode (default): throw exception instead of returning FALSE or NULL
+	 *	@return		string|NULL|FALSE				Trimmed Field name if found, NULL otherwise or exception in strict mode
+	 *	@throws		InvalidArgumentException		in strict mode if field is not a string and strict mode is on
+	 *	@throws		RangeException					in strict mode if field is empty but mandatory
+	 *	@throws		DomainException					in strict mode if field is not a table column
+	 */
+	protected function checkField( string $field, bool $mandatory = FALSE, bool $strict = TRUE )
+	{
+		$field	= trim( $field );
+		if( strlen( $field ) === 0 ){
+			if( $mandatory ){
+				if( !$strict )
+					return FALSE;
+				throw new RangeException( 'Field must have a value' );
+			}
+			return NULL;
+		}
+		if( !in_array( $field, $this->columns, TRUE ) ){
+			if( !$strict )
+				return FALSE;
+			$message	= 'Field "%s" is not an existing column of table %s';
+			throw new DomainException( sprintf( $message, $field, $this->getName() ) );
+		}
+		return $field;
+	}
 
 	/**
 	 *	Indicates whether a given map of indices is valid.
@@ -681,10 +613,10 @@ abstract class Table
 				array_splice( $fields, $nr, 1, $this->columns );
 
 		foreach( $fields as $nr => $field ){
-			if( preg_match_all( '/^(.+) AS (.+)$/i', $field, $matches ) ){
-				if( in_array( $matches[2][0], $this->columns, TRUE ) )
-					throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2][0].' is a column' );
-				$fields[$nr]	= $matches[2][0];
+			if( preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) === 1 ){
+				if( in_array( $matches[2], $this->columns, TRUE ) )
+					throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2].' is a column' );
+				$fields[$nr]	= $matches[2];
 			}
 			else if( !in_array( $field, $this->columns, TRUE ) )
 				throw new DomainException( 'Field "'.$field.'" is not an existing column' );
@@ -726,5 +658,80 @@ abstract class Table
 				}
 				return $list;
 		}
+	}
+
+	/**
+	 *	@access		protected
+	 *	@return		self
+	 */
+	protected function setupCache(): self
+	{
+		if( self::$cacheInstance instanceof SimpleCacheInterface)
+			$this->cache	= self::$cacheInstance;
+		else{
+			$cacheFactory	= new ObjectFactory( [self::$cacheResource] );
+			/** @var SimpleCacheInterface $cacheInstance */
+			/** @noinspection PhpUnhandledExceptionInspection */
+			$cacheInstance = $cacheFactory->create( self::$cacheClass );
+			$this->cache	= $cacheInstance;
+		}
+		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
+		return $this;
+	}
+
+	/**
+	 *	@access		protected
+	 *	@param		Connection		$dbc		PDO database connection object
+	 *	@param		string|NULL		$prefix		Table name prefix
+	 *	@param		integer|NULL	$id			ID to focus on
+	 *	@return		self
+	 */
+	protected function setDatabase( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL ): self
+	{
+		$this->dbc = $dbc;
+		$this->prefix = (string) $prefix;
+		$this->table = new TableWriter(
+			$dbc,
+			$this->prefix . $this->name,
+			$this->columns,
+			$this->primaryKey,
+			$id
+		);
+		if ($this->fetchMode > 0)
+			$this->table->setFetchMode($this->fetchMode);
+		$this->table->setIndices( $this->indices );
+		return $this;
+	}
+
+	//  --  PRIVATE  --  //
+
+	private function checkTableSetup(): void
+	{
+		if( strlen( trim( $this->name ) ) === 0 )
+			throw new RuntimeException( 'No table name set' );
+		if( count( $this->columns ) === 0 )
+			throw new RuntimeException( 'No table columns set' );
+	}
+
+	private function removeBySetFocus(): int
+	{
+		/** @var array $rows */
+		$rows	= $this->table->get( FALSE );
+		if( count( $rows ) === 0 )
+			return 0;
+		$number = $this->table->delete();
+		foreach( $rows as $row ){
+			switch( $this->fetchMode ){
+				case PDO::FETCH_CLASS:
+				case PDO::FETCH_OBJ:
+//						$id	= $row->{$this->primaryKey};
+					$id	= get_object_vars( $row )[$this->primaryKey];
+					break;
+				default:
+					$id	= $row[$this->primaryKey];
+			}
+			$this->cache->delete( $this->cacheKey.$id );
+		}
+		return $number;
 	}
 }

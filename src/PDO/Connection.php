@@ -1,4 +1,5 @@
-<?php /** @noinspection PhpUnused */
+<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+/** @noinspection PhpUnused */
 
 /**
  *	Enhanced PDO Connection.
@@ -93,7 +94,10 @@ class Connection extends PDO
 		$options	= $driverOptions + self::$defaultOptions;
 		parent::__construct( $dsn, $username, $password, $options );
 		//  note name of used driver
-		$this->driver	= $this->getAttribute( PDO::ATTR_DRIVER_NAME );
+		/** @var string|NULL $defaultDriver */
+		$defaultDriver	= $this->getAttribute( PDO::ATTR_DRIVER_NAME );
+		if( $defaultDriver !== NULL )
+			$this->driver	= $defaultDriver;
 	}
 
 /*	for PHP 5.3.6+
@@ -239,7 +243,9 @@ class Connection extends PDO
 		$sqlCode	= $info[1];
 		$pdoCode	= $info[0];
 		$message	= $exception->getMessage();
+		/** @var string $statement */
 		$statement	= preg_replace( "@\r?\n@", " ", $statement );
+		/** @var string $statement */
 		$statement	= preg_replace( "@  +@", " ", $statement );
 
 		$note	= self::$errorTemplate;

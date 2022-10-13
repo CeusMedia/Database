@@ -42,8 +42,8 @@ use RuntimeException;
  */
 class DataSourceName
 {
-	/**	@var		string|NULL		$driver			Database Driver */
-	protected ?string $driver;
+	/**	@var		string			$driver			Database Driver */
+	protected string $driver;
 
 	/**	@var		string|NULL		$database		Database Name */
 	protected ?string $database;
@@ -84,9 +84,8 @@ class DataSourceName
 	 */
 	public function __construct( string $driver, string $database = NULL )
 	{
-		$this->checkDriverSupport( $driver );
-		$this->driver	= strtolower( $driver );
-		if( strlen( trim( $database ) ) > 0 )
+		$this->driver	= $this->checkDriverSupport( $driver );
+		if( $database !== NULL && strlen( trim( $database ) ) > 0 )
 			$this->setDatabase( $database );
 	}
 
@@ -102,20 +101,21 @@ class DataSourceName
 	}
 
 	/**
-	 *	Checks whether current Driver is installed with PHP and supported by Class.
+	 *	Checks whether current driver is installed with PHP and supported.
 	 *	@access		protected
-	 *	@param		string		$driver			Driver Name to check (lowercase)
-	 *	@return		self
+	 *	@param		string		$driver			Driver Name to check (will become lowercase)
+	 *	@return		string		Sanitized driver key
 	 *	@throws		RuntimeException			if PDO Driver is not supported
 	 *	@throws		RuntimeException			if PDO Driver is not loaded
 	 */
-	protected function checkDriverSupport( string $driver ): self
+	protected function checkDriverSupport( string $driver ): string
 	{
+		$driver	= strtolower( $driver );
 		if( !in_array( $driver, $this->drivers, TRUE ) )
 			throw new RuntimeException( 'PDO driver "'.$driver.'" is not supported' );
 		if( !in_array( $driver, PDO::getAvailableDrivers(), TRUE ) )
 			throw new RuntimeException( 'PDO driver "'.$driver.'" is not loaded' );
-		return $this;
+		return $driver;
 	}
 
 	/**
@@ -183,10 +183,14 @@ class DataSourceName
 	public static function renderStatic( string $driver, string $database, ?string $host = NULL, ?int $port = NULL, ?string $username = NULL, ?string $password = NULL ): string
 	{
 		$dsn	= new self( $driver, $database );
-		$dsn->setHost( $host );
-		$dsn->setPort( $port );
-		$dsn->setUsername( $username );
-		$dsn->setPassword( $password );
+		if( $host !== NULL )
+			$dsn->setHost( $host );
+		if( $port !== NULL )
+			$dsn->setPort( $port );
+		if( $username !== NULL )
+			$dsn->setUsername( $username );
+		if( $password !== NULL )
+			$dsn->setPassword( $password );
 		return $dsn->render();
 	}
 
@@ -349,7 +353,9 @@ class DataSourceName
 	 */
 	protected function renderDsnForSqlite(): string
 	{
-		return $this->database;
+		if( $this->database !== NULL )
+			return $this->database;
+		throw new RuntimeException( 'No sqlite file set (using $database parameter or ::setDatabase)' );
 	}
 
 	/**

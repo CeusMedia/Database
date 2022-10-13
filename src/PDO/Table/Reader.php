@@ -337,8 +337,11 @@ class Reader
 		$resultSet	= $this->dbc->query( $query );
 		if( $resultSet instanceof PDOStatement ){
 			$resultList = $resultSet->fetchAll($this->getFetchMode());
-			if ($resultList !== FALSE)
-				return $first ? current($resultList) ?: NULL : $resultList;
+			if( $resultList !== FALSE ){
+				if( $first )
+					return count( $resultList ) !== 0 ? $resultList[0] : NULL;
+				return $resultList;
+			}
 		}
 		return $first ? NULL : [];
 	}
@@ -789,6 +792,7 @@ class Reader
 			return $this->dbc->quote( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
+		return $this->dbc->quote( (string) $value );
 	}
 
 	/**

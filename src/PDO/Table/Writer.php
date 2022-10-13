@@ -47,7 +47,7 @@ class Writer extends Reader
 	public function delete(): int
 	{
 		$this->validateFocus();
-		$conditions	= $this->getConditionQuery( [] );
+		$conditions	= $this->getConditionQuery();
 		$query	= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
 #		$has	= $this->get( FALSE );
 #		if( !$has )
