@@ -23,6 +23,7 @@
     "ceus-media/cache": "^0.4 | dev-0.4-dev"
   },
   "require-dev": {
+    "ext-mysqli": "*",
     "ceus-media/doc-creator": "*",
     "phpunit/phpunit": "*",
     "phpstan/phpstan": "*",
@@ -33,7 +34,8 @@
   },
   "autoload": {
     "psr-4": {
-        "CeusMedia\\Database\\": ["src/"]
+      "CeusMedia\\Database\\": ["src/"],
+      "CeusMedia\\DatabaseTest\\": ["test/"]
     }
   },
   "scripts": {

@@ -5,16 +5,34 @@
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
 
+namespace CeusMedia\DatabaseTest\PDO;
+
 use CeusMedia\Database\PDO\Connection as PdoConnection;
+use CeusMedia\DatabaseTest\TestCase;
 
 /**
  *	TestUnit of DB_PDO_TableReader.
  *	@package		Tests.database.pdo
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
-class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
+class TableTest extends TestCase
 {
 	protected $directDbc;
+
+	protected string $host;
+	protected string $port;
+	protected string $username;
+	protected string $password;
+	protected string $database;
+	protected string $path;
+	protected string $errorLog;
+	protected string $queryLog;
+	protected array $columns;
+	protected string $tableName;
+	protected array $indices;
+	protected string $primaryKey;
+	protected string $dsn;
+	protected array $options;
 
 	/**
 	 *	Constructor.
@@ -74,7 +92,7 @@ class CeusMedia_Database_Test_PDO_TableTest extends CeusMedia_Database_Test_Case
 			$this->markTestSkipped( "Support for MySQL is missing" );
 		}
 
-		$this->table	= new \CeusMedia_Database_Test_PDO_TransactionTable( $this->connection );
+		$this->table	= new TransactionTable( $this->connection );
 	}
 
 	/**

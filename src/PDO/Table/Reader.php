@@ -115,8 +115,12 @@ class Reader
 		$query	= 'SELECT COUNT(`%s`) as count FROM %s%s';
 		$query	= sprintf( $query, $this->primaryKey, $this->getTableName(), $conditions );
 		$result	= $this->dbc->query( $query );
-		if( $result !== FALSE )
-			return (int) $result->fetch( PDO::FETCH_OBJ )->count;
+		if( $result !== FALSE ){
+			/** @var object|FALSE $object */
+			$object	= $result->fetch( PDO::FETCH_OBJ );
+			if( $object !== FALSE )
+				return (int) $object->count;
+		}
 		return 0;
 	}
 
@@ -134,8 +138,12 @@ class Reader
 		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
 		$result	= $this->dbc->query( $query );
-		if( $result !== FALSE )
-			return (int) $result->fetch( PDO::FETCH_OBJ )->rows;
+		if( $result !== FALSE ){
+			/** @var array|FALSE $array */
+			$array	= $result->fetch( PDO::FETCH_ASSOC );
+			if( $array !== FALSE )
+				return (int) $array['rows'];
+		}
 		return 0;
 	}
 

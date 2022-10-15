@@ -5,17 +5,33 @@
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
 
+namespace CeusMedia\DatabaseTest\PDO;
+
 use CeusMedia\Common\Exception\SQL as SqlException;
 use CeusMedia\Database\PDO\Connection as PdoConnection;
+use CeusMedia\DatabaseTest\TestCase;
 
 /**
  *	TestUnit of DB_PDO_Connection.
  *	@package		Tests.database.pdo
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
-class CeusMedia_Database_Test_PDO_ConnectionTest extends CeusMedia_Database_Test_Case{
-
+class ConnectionTest extends TestCase
+{
 	protected $directDbc;
+
+	protected string $host;
+	protected string $port;
+	protected string $username;
+	protected string $password;
+	protected string $database;
+	protected string $path;
+	protected string $errorLog;
+	protected string $queryLog;
+	protected array $columns;
+	protected string $tableName;
+	protected array $indices;
+	protected string $primaryKey;
 
 	/**
 	 *	Constructor.

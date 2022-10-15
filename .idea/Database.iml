@@ -5,7 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/spec" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" packagePrefix="CeusMedia\Database\" />
-      <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="false" packagePrefix="CeusMedia\DatabaseTest\" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/ceus-media/cache" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/ceus-media/doc-creator" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/composer" />
