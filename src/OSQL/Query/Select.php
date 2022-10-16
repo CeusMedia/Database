@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 /**
  *	Builder for SELECT statements.
  *
@@ -26,16 +27,14 @@
  */
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
+use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Database\OSQL\Table;
+use InvalidArgumentException;
 
 /**
  *	Builder for SELECT statements.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
- *	@extends		\CeusMedia\Database\OSQL\QueryAbstract
- *	@implements		\CeusMedia\Database\OSQL\QueryInterface
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -44,13 +43,13 @@ use CeusMedia\Database\OSQL\Table;
 class Select extends AbstractQuery implements QueryInterface
 {
 	protected $countRows	= FALSE;
-	protected $conditions	= [];
-	protected $orders		= [];
+	protected array $conditions	= [];
+	protected array $orders		= [];
 	protected $fields		= '*';
-	protected $tables		= [];
+	protected array $tables		= [];
 	protected $groupBy		= NULL;
 
-	public $foundRows		= 0;
+	public int $foundRows		= 0;
 	public $finalQuery;
 
 	/**
@@ -59,7 +58,7 @@ class Select extends AbstractQuery implements QueryInterface
 	 *	@access		public
 	 *	@param		bool		Flag: enable or disable counting
 	 */
-	public function countRows( ?bool $count = TRUE ): self
+	public function countRows( bool $count = TRUE ): self
 	{
 		$this->countRows	= $count;
 		return $this;
@@ -76,7 +75,7 @@ class Select extends AbstractQuery implements QueryInterface
 		if( is_string( $fields ) )
 			$fields	= array( $fields );
 		if( !is_array( $fields ) )
-			throw new \InvalidArgumentException( 'Must be array or string' );
+			throw new InvalidArgumentException( 'Must be array or string' );
 		foreach( $fields as $field ){
 			if( trim( $field ) === '*' )
 				$this->fields	= '*';
@@ -121,7 +120,7 @@ class Select extends AbstractQuery implements QueryInterface
 	{
 		$direction	= strtoupper( $direction );
 		if( !in_array( $direction, ['ASC', 'DESC'] ) )
-			throw new \InvalidArgumentException( 'Direction must be ASC or DESC' );
+			throw new InvalidArgumentException( 'Direction must be ASC or DESC' );
 		$this->orders[]	= (object) array(
 			'field'		=> $field,
 			'direction'	=> $direction,
@@ -170,11 +169,11 @@ class Select extends AbstractQuery implements QueryInterface
 	/**
 	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		object
 	 */
 	public function render(): object
 	{
-		$clock		= new \Alg_Time_Clock();
+		$clock		= new Clock();
 		$this->checkSetup();
 		$parameters	= [];
 		$fields		= is_array( $this->fields ) ? implode( ', ', $this->fields ) : $this->fields;

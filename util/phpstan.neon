@@ -4,8 +4,10 @@ includes:
 
 parameters:
 	phpVersion: 70400
-	level: 9
+	level: max
 	paths:
+		- ../src/DAO
+		- ../src/OSQL
 		- ../src/PDO
 	checkMissingIterableValueType: false
 	treatPhpDocTypesAsCertain: false

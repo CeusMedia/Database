@@ -31,9 +31,9 @@ class TableTest extends TestCase
 	public function testCount(): void
 	{
 		self::assertEquals( 1, $this->table->count() );
-		$this->table->add( array( 'topic' => 'stop', 'label' => time() ) );
+		$this->table->add( ['topic' => 'stop', 'label' => time()] );
 		self::assertEquals( 2, $this->table->count() );
-		$this->table->add( array( 'topic' => 'stop', 'label' => time() ) );
+		$this->table->add( ['topic' => 'stop', 'label' => time()] );
 		self::assertEquals( 3, $this->table->count() );
 	}
 

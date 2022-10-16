@@ -1,4 +1,7 @@
 <?php
+/** @noinspection PhpUnused */
+declare(strict_types=1);
+
 /**
  *	Abstract query class.
  *
@@ -24,13 +27,17 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Database\OSQL;
 use CeusMedia\Database\OSQL\Client;
+use CeusMedia\Database\OSQL\Condition;
 use CeusMedia\Database\OSQL\Condition\Group;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
+use Exception;
+use InvalidArgumentException;
+use PDO as Pdo;
+use RuntimeException;
 
 /**
  *	Abstract query class.
@@ -43,23 +50,24 @@ use CeusMedia\Database\OSQL\Table;
  */
 abstract class AbstractQuery
 {
-	protected $conditions	= [];
-	protected $joins		= [];
+	protected Client $dbc;
+	protected array $conditions		= [];
+	protected array $joins			= [];
 	protected $fields;
-	protected $limit;
-	protected $offset;
+	protected ?int $limit			= NULL;
+	protected ?int $offset			= NULL;
 	protected $query;
 
-	public $timing			= array(
+	public array $timing			= [
 		'render'	=> 0,
 		'prepare'	=> 0,
 		'execute'	=> 0,
 		'total'		=> 0,
-	);
+	];
 
-	const JOIN_TYPE_NATURAL	= 0;
-	const JOIN_TYPE_LEFT	= 1;
-	const JOIN_TYPE_RIGHT	= 2;
+	public const JOIN_TYPE_NATURAL	= 0;
+	public const JOIN_TYPE_LEFT		= 1;
+	public const JOIN_TYPE_RIGHT	= 2;
 
 	/**
 	 *	Constructor.
@@ -86,9 +94,9 @@ abstract class AbstractQuery
 	/**
 	 *	Sends query to assigned client for execution and returns response.
 	 *	@access		public
-	 *	@return		mixed
+	 *	@return		array
 	 */
-	public function execute()
+	public function execute(): array
 	{
 		return $this->dbc->execute( $this );
 	}
@@ -128,11 +136,12 @@ abstract class AbstractQuery
 	 *	@access		public
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
+	 *	@throws		RuntimeException				if no conditions are set before
 	 */
 	 public function or( $condition ): self
 	 {
-		if( !$this->conditions )
-			throw new \Exception( 'No condition set yet' );
+		if( count( $this->conditions ) === 0 )
+			throw new RuntimeException( 'No condition set yet' );
 		$this->conditions[]	= [
 			'operation'	=> Group::OPERATION_OR,
 			'condition'	=> $condition,
@@ -143,9 +152,13 @@ abstract class AbstractQuery
 	/**
 	 *
 	 *	@access		public
-	 *	@return		QueryInterface
+	 *	@param		Table			$table
+	 *	@param		string			$keyLeft
+	 *	@param		string|null		$keyRight
+	 *	@param		int|null		$type
+	 *	@return		self
 	 */
-	public function join( Table $table, string $keyLeft, ?string $keyRight = NULL, ?int $type = self::JOIN_TYPE_NATURAL ): QueryInterface
+	public function join( Table $table, string $keyLeft, ?string $keyRight = NULL, ?int $type = self::JOIN_TYPE_NATURAL ): self
 	{
 		$this->joins[]	= (object) [
 			'table'		=> $table,
@@ -153,8 +166,6 @@ abstract class AbstractQuery
 			'right'		=> $keyRight,
 			'type'		=> $type,
 		];
-		return $this;
-		array_push( $this->tables, $lastTable );
 		return $this;
 	}
 
@@ -171,17 +182,16 @@ abstract class AbstractQuery
 	/**
 	 *	Sets limit.
 	 *	@access		public
-	 *	@throws		\InvalidArgumentException	if limit is not an integer
-	 *	@throws		\InvalidArgumentException	if limit is not greater than 0
+	 *	@param		int|NULL		$limit		Positive number or NULL
+	 *	@throws		InvalidArgumentException	if limit is not an integer
+	 *	@throws		InvalidArgumentException	if limit is not greater than 0
 	 *	@return		self
 	 */
-	public function limit( $limit = NULL ): self
+	public function limit( ?int $limit = NULL ): self
 	{
 		if( !is_null( $limit ) ){
-			if( !is_int( $limit ) )
-				throw new \InvalidArgumentException( 'Must be integer or NULL' );
 			if( $limit <= 0 )
-				throw new \InvalidArgumentException( 'Must greater than 0' );
+				throw new InvalidArgumentException( 'Must greater than 0' );
 			$this->limit	= $limit;
 		}
 		else
@@ -192,17 +202,16 @@ abstract class AbstractQuery
 	/**
 	 *	Sets
 	 *	@access		public
-	 *	@throws		\InvalidArgumentException	if limit is not an integer
-	 *	@throws		\InvalidArgumentException	if limit is not greater than 0
+	 *	@param		int|NULL		$offset		Positive number or NULL
+	 *	@throws		InvalidArgumentException	if limit is not an integer
+	 *	@throws		InvalidArgumentException	if limit is not greater than 0
 	 *	@return		self
 	 */
-	public function offset( $offset = NULL ): self
+	public function offset( ?int $offset = NULL ): self
 	{
 		if( !is_null( $offset ) ){
-			if( !is_int( $offset ) )
-				throw new \InvalidArgumentException( 'Must be integer or NULL' );
 			if( $offset <= 0 )
-				throw new \InvalidArgumentException( 'Must greater than 0' );
+				throw new InvalidArgumentException( 'Must greater than 0' );
 			$this->offset	= $offset;
 		}
 		else
@@ -215,7 +224,6 @@ abstract class AbstractQuery
 	/**
 	 *
 	 *	@access		protected
-	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
 	protected function renderJoins(): string
@@ -246,11 +254,11 @@ abstract class AbstractQuery
 	 */
 	protected function renderConditions( & $parameters ): string
 	{
-		if( !$this->conditions )
+		if( count( $this->conditions ) === 0 )
 			return '';
 		$list	= [];
 		foreach( $this->conditions as $condition ){
-			if( $list )
+			if( count( $list ) !== 0 )
 				$list[]	= $condition['operation'];
 			$list[]	= $condition['condition']->render( $parameters );
 		}
@@ -265,13 +273,13 @@ abstract class AbstractQuery
 	 */
 	protected function renderLimit( & $parameters ): string
 	{
-		if( !$this->limit )
+		if( $this->limit === NULL )
 			return '';
 		$limit		= ' LIMIT :limit';
-		$parameters['limit']	= array(
-			'type'	=> \PDO::PARAM_INT,
+		$parameters['limit']	= [
+			'type'	=> Pdo::PARAM_INT,
 			'value'	=> $this->limit,
-		);
+		];
 		return $limit;
 	}
 
@@ -283,13 +291,13 @@ abstract class AbstractQuery
 	 */
 	protected function renderOffset( & $parameters ): string
 	{
-		if( !$this->offset )
+		if( $this->offset === NULL )
 			return '';
 		$offset		= ' OFFSET :offset';
-		$parameters['offset']	= array(
-			'type'	=> \PDO::PARAM_INT,
+		$parameters['offset']	= [
+			'type'	=> Pdo::PARAM_INT,
 			'value'	=> $this->offset,
-		);
+		];
 		return $offset;
 	}
 }

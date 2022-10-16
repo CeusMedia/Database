@@ -46,22 +46,22 @@ class DataSourceName
 	protected string $driver;
 
 	/**	@var		string|NULL		$database		Database Name */
-	protected ?string $database;
+	protected ?string $database		= NULL;
 
 	/**	@var		string|NULL		$username		Database Username */
-	protected ?string $username;
+	protected ?string $username		= NULL;
 
 	/**	@var		string|NULL		$password		Database Password */
-	protected ?string $password;
+	protected ?string $password		= NULL;
 
 	/**	@var		string|NULL		$host			Host Name or URI*/
-	protected ?string $host;
+	protected ?string $host			= NULL;
 
 	/**	@var		int|NULL		$port			Host Port */
-	protected ?int $port;
+	protected ?int $port			= NULL;
 
-	/**	@var		array		$drivers		List of possible PDO drivers */
-	protected array $drivers	  	= [
+	/**	@var		array			$drivers		List of possible PDO drivers */
+	protected array $drivers		= [
 		'cubrid',
 		'dblib',
 		'firebird',

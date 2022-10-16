@@ -35,17 +35,17 @@ class WriterTest extends TestCase
 		parent::__construct();
 
 		$this->tableName	= "transactions";
-		$this->columns		= array(
+		$this->columns		= [
 			'id',
 			'topic',
 			'label',
 			'timestamp',
-		);
+		];
 		$this->primaryKey	= $this->columns[0];
-		$this->indices	= array(
+		$this->indices		= [
 			'topic',
 			'label'
-		);
+		];
 	}
 
 	/**
@@ -118,10 +118,7 @@ class WriterTest extends TestCase
 	 */
 	public function testInsert()
 	{
-		$data	= array(
-			'topic'	=> 'insert',
-			'label'	=> 'insertTest',
-		);
+		$data	= ['topic' => 'insert', 'label' => 'insertTest'];
 
 		self::assertEquals( 2, $this->writer->insert( $data ) );
 		self::assertEquals( 2, $this->writer->count() );
@@ -159,9 +156,7 @@ class WriterTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 		$this->writer->focusPrimary( 2 );
 
-		$data		= array(
-			'label'	=> "updateTest1-changed"
-		);
+		$data		= ['label' => "updateTest1-changed"];
 
 		self::assertEquals( 1, $this->writer->update( $data ) );
 
@@ -181,9 +176,7 @@ class WriterTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 		$this->writer->focusIndex( 'topic', 'update' );
 
-		$data		= array(
-			'label'	=> "changed"
-		);
+		$data		= ['label' => "changed"];
 
 		self::assertEquals( 2, $this->writer->update( $data ) );
 
@@ -213,7 +206,7 @@ class WriterTest extends TestCase
 	{
 		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->focusPrimary( 9999 );
-		$this->writer->update( ['label' => 'not_relevant']);
+		$this->writer->update( ['label' => 'not_relevant'] );
 	}
 
 	/**
@@ -226,36 +219,25 @@ class WriterTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest1');" );
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 
-		$conditions	= array(
-			'label' => "updateTest1"
-		);
-		$data		= array(
-			'label'	=> "updateTest1-changed"
-		);
+		$conditions	= ['label' => "updateTest1"];
+		$data		= ['label' => "updateTest1-changed"];
 
-		$expected	= 0;
 		$wrongData	= ['invalid_column' => 'not_important'];
 		$actual		= $this->writer->updateByConditions( $wrongData, $conditions );
-		self::assertEquals( $expected, $actual );
+		self::assertEquals( 0, $actual );
 
-		$expected	= 1;
 		$actual		= $this->writer->updateByConditions( $data, $conditions );
-		self::assertEquals( $expected, $actual );
+		self::assertEquals( 1, $actual );
 
 		$expected	= ['label' => "updateTest1-changed"];
 		$actual		= $this->writer->find( ['label'], ['id' => 2] );
 		self::assertEquals( $expected, end( $actual ) );
 
-		$conditions	= array(
-			'topic' => "update"
-		);
-		$data		= array(
-			'label'	=> "changed"
-		);
+		$conditions	= ['topic' => "update"];
+		$data		= ['label' => "changed"];
 
-		$expected	= 2;
 		$actual		= $this->writer->updateByConditions( $data, $conditions );
-		self::assertEquals( $expected, $actual );
+		self::assertEquals( 2, $actual );
 
 		$this->writer->focusIndex( 'label', 'changed' );
 		/** @var array $result */
@@ -293,18 +275,9 @@ class WriterTest extends TestCase
 	public function testTruncate()
 	{
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'truncateTest');" );
-
-		$expected	= 2;
-		$actual		= $this->writer->count();
-		self::assertEquals( $expected, $actual );
-
-		$expected	= $this->writer;
-		$actual		= $this->writer->truncate();
-		self::assertEquals( $expected, $actual );
-
-		$expected	= 0;
-		$actual		= $this->writer->count();
-		self::assertEquals( $expected, $actual );
+		self::assertEquals( 2, $this->writer->count() );
+		self::assertEquals( $this->writer, $this->writer->truncate() );
+		self::assertEquals( 0, $this->writer->count() );
 	}
 
 	//  --  PROTECTED  --  //

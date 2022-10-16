@@ -139,7 +139,7 @@ abstract class Table
 	 */
 	public function countByIndex( string $key, string $value ): int
 	{
-		return $this->table->count( array( $key => $value ) );
+		return $this->table->count( [$key => $value] );
 	}
 
 	/**
@@ -208,18 +208,20 @@ abstract class Table
 	public function get( int $id, string $field = '' )
 	{
 		/** @var string $field */
-		$field	= $this->checkField( $field );
-		if( $this->cache->has( $this->cacheKey.$id ) ) {
-			$data = unserialize( $this->cache->get($this->cacheKey . $id ) );
-		}
+		$field		= $this->checkField( $field );
+		$cacheData	= $this->cache->get($this->cacheKey . $id );
+		if( is_string( $cacheData ) )
+			/** @var object|array $data */
+			$data = unserialize( $cacheData );
 		else{
 			$this->table->focusPrimary( $id );
+			/** @var object|array $data */
 			$data	= $this->table->get();
 			$this->table->defocus();
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
 		if( strlen( trim( $field ) ) !== 0 )
-			return $this->getFieldsFromResult( $data, array( $field ) );
+			return $this->getFieldsFromResult( $data, [$field] );
 		return $data;
 	}
 
@@ -261,7 +263,7 @@ abstract class Table
 	{
 		if( !in_array( $key, $this->table->getIndices(), TRUE ) )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
-		$conditions	= array( $key => $value );
+		$conditions	= [$key => $value];
 		return $this->getAll( $conditions, $orders, $limits, $fields, [], [], $strict );
 	}
 
@@ -310,6 +312,7 @@ abstract class Table
 		foreach( $fields as $field )
 			$this->checkField( $field );
 		$this->table->focusIndex( $key, $value );
+		/** @var object|array $data */
 		$data	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
 		return $this->getFieldsFromResult( $data, $fields, $strict );
@@ -337,6 +340,7 @@ abstract class Table
 		$this->checkIndices( $indices, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
+		/** @var object|array $result */
 		$result	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
 		return $this->getFieldsFromResult( $result, $fields, $strict );
@@ -583,10 +587,10 @@ abstract class Table
 	/**
 	 *	Returns any fields or one field from a query result.
 	 *	@access		protected
-	 *	@param		mixed			$result			Query result as array or object
-	 *	@param		array|string	$fields			List of fields or one field
-	 *	@param		boolean			$strict			Flag: throw exception if result is empty
-	 *	@return		string|array|object|NULL		Structure depending on result and field list length
+	 *	@param		object|array			$result			Query result as array or object
+	 *	@param		string[]|string			$fields			List of fields or one field
+	 *	@param		boolean					$strict			Flag: throw exception if result is empty
+	 *	@return		mixed							Structure depending on result and field list length
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 *	@throws		RangeException					If given result list is empty
 	 *	@throws		DomainException					If requested field is not a table column
@@ -595,7 +599,7 @@ abstract class Table
 	protected function getFieldsFromResult( $result, $fields = [], bool $strict = TRUE )
 	{
 		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
+			$fields	= strlen( trim( $fields ) ) > 0 ? [trim( $fields )] : [];
 		if( !is_array( $fields ) )
 			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
@@ -627,11 +631,13 @@ abstract class Table
 			switch( $this->fetchMode ){
 				case PDO::FETCH_CLASS:
 				case PDO::FETCH_OBJ:
+					/** @var object $result */
 					if( !property_exists( $result, $field ) )
 						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
 					$values	= get_object_vars( $result );
 					return $values[$field];
 				default:
+					/** @var array $result */
 					if( !isset( $result[$field] ) )
 						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
 					return $result[$field];
@@ -641,6 +647,7 @@ abstract class Table
 		switch( $this->fetchMode ){
 			case PDO::FETCH_CLASS:
 			case PDO::FETCH_OBJ:
+				/** @var object $result */
 				$map	= (object) [];
 				foreach( $fields as $field ){
 					if( !property_exists( $result, $field ) )
@@ -650,6 +657,7 @@ abstract class Table
 				}
 				return $map;
 			default:
+				/** @var array $result */
 				$list	= [];
 				foreach( $fields as $field ){
 					if( $field !== '*' && !isset( $result[$field] ) )
@@ -672,7 +680,7 @@ abstract class Table
 			$cacheFactory	= new ObjectFactory( [self::$cacheResource] );
 			/** @var SimpleCacheInterface $cacheInstance */
 			/** @noinspection PhpUnhandledExceptionInspection */
-			$cacheInstance = $cacheFactory->create( self::$cacheClass );
+			$cacheInstance	= $cacheFactory->create( self::$cacheClass );
 			$this->cache	= $cacheInstance;
 		}
 		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';

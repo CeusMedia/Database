@@ -112,14 +112,14 @@ class Reader
 		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		/** @noinspection SqlNoDataSourceInspection */
 		/** @noinspection SqlResolve */
-		$query	= 'SELECT COUNT(`%s`) as count FROM %s%s';
+		$query	= 'SELECT COUNT(`%s`) AS count FROM %s%s';
 		$query	= sprintf( $query, $this->primaryKey, $this->getTableName(), $conditions );
 		$result	= $this->dbc->query( $query );
 		if( $result !== FALSE ){
-			/** @var object|FALSE $object */
-			$object	= $result->fetch( PDO::FETCH_OBJ );
-			if( $object !== FALSE )
-				return (int) $object->count;
+			/** @var array|FALSE $array */
+			$array	= $result->fetch( PDO::FETCH_NUM );
+			if( $array !== FALSE )
+				return (int) $array[0];
 		}
 		return 0;
 	}
@@ -720,10 +720,10 @@ class Reader
 	/**
 	 *	...
 	 *	@access		protected
-	 *	@param		string		$column			...
-	 *	@param		mixed		$value			...
-	 *	@param		boolean		$maskColumn		...
-	 *	@return		string		...
+	 *	@param		string				$column			...
+	 *	@param		string|int|float	$value			...
+	 *	@param		boolean				$maskColumn		...
+	 *	@return		string				...
 	 *	@throws		Exception
 	 */
 	protected function realizeConditionQueryPart( string $column, $value, bool $maskColumn = TRUE ): string
@@ -749,7 +749,7 @@ class Reader
 		}
 		else if( preg_match( $patternBitwise, $valueString, $result ) === 1 ){
 			$matches	= [];
-			preg_match_all( $patternOperators, $valueString, $matches );
+			preg_match_all( $patternBitwise, $valueString, $matches );
 			$operation	= ' '.$matches[1][0].' ';
 			$valueString		= $this->secureValue( $matches[3][0] );
 			if( strlen( $matches[2][0] ) === 0 )
@@ -786,7 +786,7 @@ class Reader
 	/**
 	 *	Secures Conditions Value by adding slashes or quoting.
 	 *	@access		protected
-	 *	@param		mixed		$value		String, integer, float or NULL to be secured
+	 *	@param		string|int|float	$value		String, integer, float or NULL to be secured
 	 *	@return		string
 	 */
 	protected function secureValue( $value ): string

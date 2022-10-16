@@ -221,8 +221,8 @@ class ReaderTest extends TestCase
 		self::assertCount( 1, $result[0] );
 
 		$expected	= array(
-			array( 'id' => 1 ),
-			array( 'id' => 2 ),
+			['id' => 1],
+			['id' => 2],
 		);
 		$actual		= $result;
 		self::assertEquals( $expected, $actual );
@@ -407,28 +407,16 @@ class ReaderTest extends TestCase
 	public function testFocusIndex()
 	{
 		$this->reader->focusIndex( 'topic', 'test' );
-		$expected	= array(
-			'topic' => 'test'
-			);
-		$actual		= $this->reader->getFocus();
-		self::assertEquals( $expected, $actual );
+		$expected	= ['topic' => 'test'];
+		self::assertEquals( $expected, $this->reader->getFocus() );
 
 		$this->reader->focusIndex( 'label', 'text' );
-		$expected	= array(
-			'topic' => 'test',
-			'label'	=> 'text'
-		);
-		$actual		= $this->reader->getFocus();
-		self::assertEquals( $expected, $actual );
+		$expected	= ['topic' => 'test', 'label'	=> 'text'];
+		self::assertEquals( $expected, $this->reader->getFocus() );
 
 		$this->reader->focusIndex( 'id', 1 );
-		$expected	= array(
-			'topic' => 'test',
-			'label'	=> 'text',
-			'id'	=> 1
-		);
-		$actual		= $this->reader->getFocus();
-		self::assertEquals( $expected, $actual );
+		$expected	= ['topic' => 'test', 'label'	=> 'text', 'id'	=> 1];
+		self::assertEquals( $expected, $this->reader->getFocus() );
 	}
 
 	/**
