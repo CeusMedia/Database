@@ -36,7 +36,9 @@ use Psr\SimpleCache\CacheInterface as SimpleCacheInterface;
 use DomainException;
 use InvalidArgumentException;
 use PDO;
+use Psr\SimpleCache\InvalidArgumentException as SimpleCacheInvalidArgumentException;
 use RangeException;
+use ReflectionException;
 use RuntimeException;
 
 /**
@@ -97,6 +99,7 @@ abstract class Table
 	 *	@param		?string			$prefix		Table name prefix
 	 *	@param		?integer		$id			ID to focus on
 	 *	@return		void
+	 *	@throws		ReflectionException
 	 */
 	public function __construct( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL )
 	{
@@ -111,6 +114,7 @@ abstract class Table
 	 *	@param		array			$data			Data to add to Table
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function add( array $data, bool $stripTags = TRUE ): int
 	{
@@ -172,6 +176,7 @@ abstract class Table
 	 *	@param		array			$data			Data to edit
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function edit( int $id, array $data, bool $stripTags = TRUE ): int
 	{
@@ -203,7 +208,8 @@ abstract class Table
 	 *	@access		public
 	 *	@param		integer			$id				ID to focus on
 	 *	@param		string			$field			Single Field to return
-	 *	@return		mixed
+	 *	@return		object|array|string|int|float|bool|NULL
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function get( int $id, string $field = '' )
 	{
@@ -221,7 +227,7 @@ abstract class Table
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
 		if( strlen( trim( $field ) ) !== 0 )
-			return $this->getFieldsFromResult( $data, [$field] );
+			return $this->getFieldFromResult( $data, $field );
 		return $data;
 	}
 
@@ -242,7 +248,10 @@ abstract class Table
 		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $having );
 		if( count( $fields ) !== 0 ){
 			foreach( $data as $nr => $set ){
-				$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
+				if( count( $fields ) === 1 )
+					$data[$nr]	= $this->getFieldFromResult( $set, $fields[0], $strict );
+				else
+					$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
 			}
 		}
 		return $data;
@@ -277,29 +286,33 @@ abstract class Table
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndices( array $indices = [], array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE )
+	public function getAllByIndices( array $indices = [], array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
-		$this->checkIndices( $indices, TRUE, TRUE );
+		$this->checkIndices( $indices, TRUE );
 		foreach( $indices as $key => $value )
 			$this->table->focusIndex( $key, $value );
 		/** @var array $data */
 		$data	= $this->table->get( FALSE, $orders, $limits );
 		$this->table->defocus();
 		if( count( $fields ) > 0 )
-			foreach( $data as $nr => $set )
-				$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
+			foreach( $data as $nr => $set ){
+				if( count( $fields ) === 1 )
+					$data[$nr]	= $this->getFieldFromResult( $set, current( $fields ), $strict );
+				else
+					$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
+			}
 		return $data;
 	}
 
 	/**
 	 *	Returns data of first entry selected by index.
 	 *	@access		public
-	 *	@param		string			$key			Key of Index
-	 *	@param		string			$value			Value of Index
-	 *	@param		array			$orders			Map of Orders to include in SQL Query
-	 *	@param		array|string	$fields			List of fields or one field to return from result
-	 *	@param		boolean			$strict			Flag: throw exception if result is empty (default: FALSE)
-	 *	@return		mixed			Structure depending on fetch type, string if field selected, NULL if field selected and no entries
+	 *	@param		string				$key			Key of Index
+	 *	@param		string				$value			Value of Index
+	 *	@param		array				$orders			Map of Orders to include in SQL Query
+	 *	@param		array|string		$fields			List of fields or one field to return from result
+	 *	@param		boolean				$strict			Flag: throw exception if result is empty (default: FALSE)
+	 *	@return		object|array|string|int|float|bool|NULL	Structure depending on fetch type, string if field selected, NULL if field selected and no entries
 	 *	@todo		change argument order: move fields to end
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 */
@@ -315,17 +328,19 @@ abstract class Table
 		/** @var object|array $data */
 		$data	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
+		if( count( $fields ) === 1 )
+			return $this->getFieldFromResult( $data, current( $fields ), $strict );
 		return $this->getFieldsFromResult( $data, $fields, $strict );
 	}
 
 	/**
 	 *	Returns data of single line selected by indices.
 	 *	@access		public
-	 *	@param		array			$indices		Map of Index Keys and Values
-	 *	@param		array			$orders			Map of Orders to include in SQL Query
-	 *	@param		array|string	$fields			List of fields or one field to return from result
-	 *	@param		boolean			$strict			Flag: throw exception if result is empty (default: FALSE)
-	 *	@return		mixed			Structure depending on fetch type, string if field selected, NULL if field selected and no entries
+	 *	@param		array				$indices		Map of Index Keys and Values
+	 *	@param		array				$orders			Map of Orders to include in SQL Query
+	 *	@param		array|string		$fields			List of fields or one field to return from result
+	 *	@param		boolean				$strict			Flag: throw exception if result is empty (default: FALSE)
+	 *	@return		object|array|string|int|float|bool|NULL	Structure depending on fetch type, string if field selected, NULL if field selected and no entries
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 *	@todo  		change default value of argument 'strict' to TRUE
 	 */
@@ -343,6 +358,8 @@ abstract class Table
 		/** @var object|array $result */
 		$result	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
+		if( count( $fields ) === 1 )
+			return $this->getFieldFromResult( $result, current( $fields ), $strict );
 		return $this->getFieldsFromResult( $result, $fields, $strict );
 	}
 
@@ -403,6 +420,7 @@ abstract class Table
 	 *	Indicates whether a table row is existing by ID.
 	 *	@param		integer			$id				ID to focus on
 	 *	@return		boolean
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function has( int $id ): bool
 	{
@@ -439,6 +457,7 @@ abstract class Table
 	 *	@access		public
 	 *	@param		integer			$id				ID to focus on
 	 *	@return		boolean
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function remove( int $id ): bool
 	{
@@ -461,6 +480,7 @@ abstract class Table
 	 *	@param		string			$key			Key of Index
 	 *	@param		string			$value			Value of Index
 	 *	@return		integer
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function removeByIndex( string $key, string $value ): int
 	{
@@ -475,6 +495,7 @@ abstract class Table
 	 *	@access		public
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@return		integer			Number of removed entries
+	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function removeByIndices( array $indices ): int
 	{
@@ -587,30 +608,69 @@ abstract class Table
 	/**
 	 *	Returns any fields or one field from a query result.
 	 *	@access		protected
-	 *	@param		object|array			$result			Query result as array or object
-	 *	@param		string[]|string			$fields			List of fields or one field
-	 *	@param		boolean					$strict			Flag: throw exception if result is empty
-	 *	@return		mixed							Structure depending on result and field list length
+	 *	@param		object|array				$result			Query result as array or object
+	 *	@param		string						$field			Field to return value of
+	 *	@param		boolean						$strict			Flag: throw exception if result is empty
+	 *	@return		string|int|float|bool|NULL	Structure depending on result and field list length
+	 *	@throws		RangeException				If given result list is empty
+	 *	@throws		DomainException				If requested field is not a table column
+	 *	@throws		RangeException				If requested field is not within result fields
+	 */
+	protected function getFieldFromResult( $result, string $field, bool $strict = TRUE )
+	{
+		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
+			if( $strict )
+				throw new RangeException( 'Result is empty' );
+			return NULL;
+		}
+		if( !in_array( $field, $this->columns, TRUE ) )
+			throw new DomainException( 'Field "'.$field.'" is not an existing column' );
+
+		if( preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) === 1 ){
+			if( in_array( $matches[2], $this->columns, TRUE ) )
+				throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2].' is a column' );
+			$field	= $matches[2];
+		}
+
+		if( in_array( $this->fetchMode, [PDO::FETCH_CLASS, PDO::FETCH_OBJ], TRUE ) ){
+			/** @var object $result */
+			if( !property_exists( $result, $field ) )
+				throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+			/** @var array<string,string|int|float|bool|NULL> $values */
+			$values	= get_object_vars( $result );
+			return $values[$field];
+		}
+
+		/** @var array $result */
+		if( !isset( $result[$field] ) )
+			throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+		return $result[$field];
+	}
+
+	/**
+	 *	Returns any fields from a query result.
+	 *	@access		protected
+	 *	@param		object|array				$result			Query result as array or object
+	 *	@param		string[]					$fields			List of fields
+	 *	@param		boolean						$strict			Flag: throw exception if result is empty
+	 *	@return		string|int|float|bool|array|object|NULL	Structure depending on result and field list length
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 *	@throws		RangeException					If given result list is empty
 	 *	@throws		DomainException					If requested field is not a table column
 	 *	@throws		RangeException					If requested field is not within result fields
 	 */
-	protected function getFieldsFromResult( $result, $fields = [], bool $strict = TRUE )
+	protected function getFieldsFromResult( $result, array $fields = [], bool $strict = TRUE )
 	{
-		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? [trim( $fields )] : [];
-		if( !is_array( $fields ) )
-			throw new InvalidArgumentException( 'Fields must be of array or string' );
+		if( count( $fields ) === 0 )
+			return $result;
+		if( count( $fields ) === 1 )
+			return $this->getFieldFromResult( $result, current( $fields ) );
+
 		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
 			if( $strict )
 				throw new RangeException( 'Result is empty' );
-			if( count( $fields ) === 1 )
-				return NULL;
 			return [];
 		}
-		if( count( $fields ) === 0 )
-			return $result;
 
 		foreach( $fields as $nr => $field )
 			if( $field === '*' )
@@ -626,51 +686,32 @@ abstract class Table
 				throw new DomainException( 'Field "'.$field.'" is not an existing column' );
 		}
 
-		if( count( $fields ) === 1 ){
-			$field	= $fields[0];
-			switch( $this->fetchMode ){
-				case PDO::FETCH_CLASS:
-				case PDO::FETCH_OBJ:
-					/** @var object $result */
-					if( !property_exists( $result, $field ) )
-						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
-					$values	= get_object_vars( $result );
-					return $values[$field];
-				default:
-					/** @var array $result */
-					if( !isset( $result[$field] ) )
-						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
-					return $result[$field];
+		if( in_array( $this->fetchMode, [PDO::FETCH_CLASS, PDO::FETCH_OBJ], TRUE ) ) {
+			/** @var object $result */
+			$map = (object)[];
+			foreach ($fields as $field) {
+				if (!property_exists($result, $field))
+					throw new RangeException('Field "' . $field . '" is not an column of result set');
+				$values = get_object_vars($result);
+				$map->$field = $values[$field];
 			}
+			return $map;
 		}
 
-		switch( $this->fetchMode ){
-			case PDO::FETCH_CLASS:
-			case PDO::FETCH_OBJ:
-				/** @var object $result */
-				$map	= (object) [];
-				foreach( $fields as $field ){
-					if( !property_exists( $result, $field ) )
-						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
-					$values	= get_object_vars( $result );
-					$map->$field	= $values[$field];
-				}
-				return $map;
-			default:
-				/** @var array $result */
-				$list	= [];
-				foreach( $fields as $field ){
-					if( $field !== '*' && !isset( $result[$field] ) )
-						throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
-					$list[$field]	= $result[$field];
-				}
-				return $list;
+		/** @var array $result */
+		$list	= [];
+		foreach( $fields as $field ){
+			if( $field !== '*' && !isset( $result[$field] ) )
+				throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+			$list[$field]	= $result[$field];
 		}
+		return $list;
 	}
 
 	/**
 	 *	@access		protected
 	 *	@return		self
+	 *	@throws		ReflectionException
 	 */
 	protected function setupCache(): self
 	{
@@ -721,6 +762,10 @@ abstract class Table
 			throw new RuntimeException( 'No table columns set' );
 	}
 
+	/**
+	 *	@return		int
+	 *	@throws		SimpleCacheInvalidArgumentException
+	 */
 	private function removeBySetFocus(): int
 	{
 		/** @var array $rows */

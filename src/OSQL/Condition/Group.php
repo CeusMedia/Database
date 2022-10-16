@@ -41,7 +41,7 @@ class Group
 		return $this;
 	}
 
-	public function render( & $parameters ): string
+	public function render( array & $parameters ): string
 	{
 		$list	= [];
 		foreach( $this->conditions as $condition ){

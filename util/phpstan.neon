@@ -6,7 +6,7 @@ parameters:
 	phpVersion: 70400
 	level: max
 	paths:
-		- ../src/DAO
+#		- ../src/DAO
 		- ../src/OSQL
 		- ../src/PDO
 	checkMissingIterableValueType: false

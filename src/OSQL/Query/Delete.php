@@ -26,16 +26,16 @@
  */
 namespace CeusMedia\Database\OSQL\Query;
 
+use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Database\OSQL\Query\AbstractQuery;
 use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
+use RuntimeException;
 
 /**
  *	Builder for DELETE statements.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
- *	@extends		\CeusMedia\Database\OSQL\QueryAbstract
- *	@implements		\CeusMedia\Database\OSQL\QueryInterface
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -43,10 +43,10 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Delete extends AbstractQuery implements QueryInterface
 {
-	protected $conditions	= [];
-	protected $table		= NULL;
+	public int $affectedRows;
 
-	public $affectedRows;
+	protected array $conditions	= [];
+	protected ?Table $table		= NULL;
 
 	public function from( Table $table ): self
 	{
@@ -61,8 +61,8 @@ class Delete extends AbstractQuery implements QueryInterface
 	 */
 	protected function checkSetup()
 	{
-		if( !$this->table )
-			throw new \Exception( 'No table clause set' );
+		if( $this->table === NULL )
+			throw new RuntimeException( 'No table clause set' );
 	}
 
 	/**
@@ -72,15 +72,16 @@ class Delete extends AbstractQuery implements QueryInterface
 	 */
 	public function render(): object
 	{
-		$clock		= new \Alg_Time_Clock();
+//		$clock		= new Clock();
 		$this->checkSetup();
 		$parameters	= [];
+		/** @phpstan-ignore-next-line  */
 		$table		= $this->table->render();
 		$conditions	= $this->renderConditions( $parameters );
 		$limit		= $this->renderLimit( $parameters );
 		$offset		= $this->renderOffset( $parameters );
 		$query		= 'DELETE FROM '.$table.$conditions.$limit.$offset;
-		$this->timeRender	= $clock->stop( 6, 0 );
+//		$this->timeRender	= $clock->stop( 6, 0 );
 		return (object) array(
 			'query'			=> $query,
 			'parameters'	=> $parameters,

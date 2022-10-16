@@ -38,6 +38,7 @@
       "CeusMedia\\DatabaseTest\\": ["test/"]
     }
   },
+  "minimum-stability": "dev",
   "scripts": {
     "dev:install": "composer install --quiet",
     "dev:update": "composer update --quiet",

@@ -67,6 +67,7 @@ abstract class TestCase extends BaseTestCase
 
 	protected function dropTransactionsTable(): bool
 	{
+		return TRUE;
 		if( extension_loaded( 'mysqli' ) && $this->directDbc instanceof mysqli ) {
 			/** @noinspection SqlNoDataSourceInspection */
 			/** @noinspection SqlResolve */

@@ -48,15 +48,11 @@ use RuntimeException;
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-abstract class AbstractQuery
+abstract class AbstractQuery implements QueryInterface
 {
-	protected Client $dbc;
-	protected array $conditions		= [];
-	protected array $joins			= [];
-	protected $fields;
-	protected ?int $limit			= NULL;
-	protected ?int $offset			= NULL;
-	protected $query;
+	public const JOIN_TYPE_NATURAL	= 0;
+	public const JOIN_TYPE_LEFT		= 1;
+	public const JOIN_TYPE_RIGHT	= 2;
 
 	public array $timing			= [
 		'render'	=> 0,
@@ -65,9 +61,13 @@ abstract class AbstractQuery
 		'total'		=> 0,
 	];
 
-	public const JOIN_TYPE_NATURAL	= 0;
-	public const JOIN_TYPE_LEFT		= 1;
-	public const JOIN_TYPE_RIGHT	= 2;
+	protected Client $dbc;
+	protected array $conditions		= [];
+	protected array $joins			= [];
+	protected array $fields			= [];
+	protected ?int $limit			= NULL;
+	protected ?int $offset			= NULL;
+//	protected $query;
 
 	/**
 	 *	Constructor.
@@ -228,7 +228,7 @@ abstract class AbstractQuery
 	 */
 	protected function renderJoins(): string
 	{
-		if( !$this->joins )
+		if( count( $this->joins ) === 0 )
 			return '';
 		$list	= [];
 		foreach( $this->joins as $join ){

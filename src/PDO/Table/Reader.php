@@ -728,8 +728,8 @@ class Reader
 	 */
 	protected function realizeConditionQueryPart( string $column, $value, bool $maskColumn = TRUE ): string
 	{
-		$patternBetween		= '/^(><|!><)( ?)([0-9]+)( ?)&( ?)([0-9]+)$/';
-		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)([0-9]+)$/';
+		$patternBetween		= '/^(><|!><)( ?)(\d+)( ?)&( ?)(\d+)$/';
+		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)(\d+)$/';
 		$patternOperators	= '/^(<=|>=|<|>|!=)( ?)(.+)$/';
 
 		$valueString	= (string) $value;
@@ -800,7 +800,11 @@ class Reader
 			return $this->dbc->quote( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
-		return $this->dbc->quote( (string) $value );
+		/** @var string|FALSE $result */
+		$result	= $this->dbc->quote( (string) $value );
+        if( $result === FALSE )
+			throw new RuntimeException( 'Securing value failed' );
+		return $result;
 	}
 
 	/**

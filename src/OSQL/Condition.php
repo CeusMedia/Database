@@ -40,17 +40,24 @@ class Condition
 {
 	public const OP_EQ		= '=';
 	public const OP_GT		= '>';
-	public const OP_GTE	= '>=';
+	public const OP_GTE		= '>=';
 	public const OP_LT		= '<';
-	public const OP_LTE	= '<=';
-	public const OP_NEQ	= '!=';
+	public const OP_LTE		= '<=';
+	public const OP_NEQ		= '!=';
 	public const OP_IS		= 'IS';
-	public const OP_ISN	= 'IS NOT';
+	public const OP_ISN		= 'IS NOT';
 	public const OP_LIKE	= 'LIKE';
 
+	/** @var string|NULL $type */
 	protected ?string $type			= NULL;
+
+	/** @var string|NULL $fieldName */
 	protected ?string $fieldName	= NULL;
+
+	/** @var string $operation */
 	protected string $operation		= self::OP_EQ;
+
+	/** @var mixed|NULL $value */
 	protected $value				= NULL;
 
 	/**
@@ -107,17 +114,17 @@ class Condition
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	public function render( & $parameters ): string
+	public function render( array & $parameters ): string
 	{
 		$counter	= 0;
 
 		do{
-			$key	= 'c_'.preg_replace( '/[^a-z0-9]/i', '_', $this->name ).'_'.$counter;
+			$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ).'_'.$counter;
 			$counter++;
 		}
 		while( isset( $parameters[$key] ) );
 
-		if( in_array( $this->type, ['array', 'object'] ) ){
+		if( in_array( $this->type, ['array', 'object'], TRUE ) ){
 			$keyList	= [];
 			foreach( $this->value as $value ){
 				$keyList[]	= ':'.$key;
@@ -125,17 +132,17 @@ class Condition
 					'type'	=> gettype( $value ),
 					'value'	=> $value
 				);
-				$key	= 'c_'.preg_replace( '/[^a-z0-9]/i', '_', $this->name ).'_'.$counter;
+				$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ).'_'.$counter;
 				$counter++;
 			}
-			$condition	= $this->name.' '.$this->operation.' ('.implode( ',', $keyList ).')';
+			$condition	= $this->fieldName.' '.$this->operation.' ('.implode( ',', $keyList ).')';
 		}
 		else{
 			$parameters[$key]	= array(
 				'type'	=> $this->type,
 				'value'	=> $this->value
 			);
-			$condition	= $this->name.' '.$this->operation.' :'.$key;
+			$condition	= $this->fieldName.' '.$this->operation.' :'.$key;
 		}
 		return $condition;
 	}
@@ -148,7 +155,7 @@ class Condition
 	 */
 	public function setFieldName( string $fieldName ): self
 	{
-		$this->name		= $fieldName;
+		$this->fieldName		= $fieldName;
 		return $this;
 	}
 
@@ -174,7 +181,7 @@ class Condition
 	public function setValue( $value ): self
 	{
 		$type	= gettype( $value );
-		if( in_array( $type, ['object', 'resource', 'resource (closed)'] ) )
+		if( in_array( $type, ['object', 'resource', 'resource (closed)'], TRUE ) )
 			throw new \InvalidArgumentException( 'Value of type "'.$type.'" is not allowed' );
 		$this->value	= $value;
 		$this->type		= $type;
