@@ -1,12 +1,11 @@
-<?php /** @noinspection SqlResolve */
+<?php /** @noinspection ALL */
+/** @noinspection SqlResolve */
 /** @noinspection SqlNoDataSourceInspection */
 
 /**
  *	TestUnit of PDO Table Reader.
  *	@package		Tests.database.pdo
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@since			02.07.2008
- *	@version		0.1
  */
 
 namespace CeusMedia\DatabaseTest\PDO\Table;
@@ -14,6 +13,7 @@ namespace CeusMedia\DatabaseTest\PDO\Table;
 use CeusMedia\Database\PDO\Connection as PdoConnection;
 use CeusMedia\Database\PDO\Table\Reader as PdoTableReader;
 use CeusMedia\DatabaseTest\PDO\TestCase;
+use mysqli;
 
 
 /**
@@ -23,9 +23,6 @@ use CeusMedia\DatabaseTest\PDO\TestCase;
  */
 class ReaderTest extends TestCase
 {
-	/** @var resource|FALSE $directDbc */
-	protected $directDbc;
-
 	protected array $columns;
 	protected string $tableName;
 	protected array $indices;
@@ -40,6 +37,7 @@ class ReaderTest extends TestCase
 	public function __construct()
 	{
 		parent::__construct();
+
 		$this->tableName	= "transactions";
 		$this->columns		= array(
 			'id',
@@ -48,33 +46,10 @@ class ReaderTest extends TestCase
 			'timestamp',
 		);
 		$this->primaryKey	= $this->columns[0];
-		$this->indices	= array(
+		$this->indices		= array(
 			'topic',
 			'label'
 		);
-	}
-
-	/**
-	 *	Setup for every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function setUp(): void
-	{
-		parent::setUp();
-
-		$this->reader	= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
-		$this->reader->setIndices( $this->indices );
-	}
-
-	/**
-	 *	Cleanup after every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function tearDown(): void
-	{
-		parent::tearDown();
 	}
 
 	/**
@@ -84,13 +59,13 @@ class ReaderTest extends TestCase
 	 */
 	public function testConstruct1()
 	{
-		$reader		= new PdoTableReader( $this->connection, "table", array( 'col1', 'col2' ), 'col2', 1 );
+		$reader		= new PdoTableReader( $this->connection, "table", ['col1', 'col2'], 'col2', 1 );
 
 		$expected	= 'table';
 		$actual		= $reader->getTableName();
 		self::assertEquals( $expected, $actual );
 
-		$expected	= array( 'col1', 'col2' );
+		$expected	= ['col1', 'col2'];
 		$actual		= $reader->getColumns();
 		self::assertEquals( $expected, $actual );
 
@@ -98,7 +73,7 @@ class ReaderTest extends TestCase
 		$actual		= $reader->getPrimaryKey();
 		self::assertEquals( $expected, $actual );
 
-		$expected	= array( 'col2' => 1 );
+		$expected	= ['col2' => 1];
 		$actual		= $reader->getFocus();
 		self::assertEquals( $expected, $actual );
 	}
@@ -112,7 +87,7 @@ class ReaderTest extends TestCase
 	{
 		$reader		= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey, 1 );
 
-		$expected	= array( 'id' => 1 );
+		$expected	= ['id' => 1];
 		$actual		= array_slice( $reader->get(), 0, 1 );
 		self::assertEquals( $expected, $actual );
 	}
@@ -130,10 +105,10 @@ class ReaderTest extends TestCase
 
 		self::assertEquals( 2, $this->reader->count() );
 
-		$actual		= $this->reader->count( array( 'label' => 'countTest' ) );
+		$actual		= $this->reader->count( ['label' => 'countTest'] );
 		self::assertEquals( 1, $actual );
 
-		$actual		= $this->reader->count( array( 'label' => 'not_existing' ) );
+		$actual		= $this->reader->count( ['label' => 'not_existing'] );
 		self::assertEquals( 0, $actual );
 	}
 
@@ -148,7 +123,7 @@ class ReaderTest extends TestCase
 		$this->reader->focusIndex( 'topic', 'test' );
 		$this->reader->defocus( TRUE );
 
-		$expected	= array( 'topic' => 'test' );
+		$expected	= ['topic' => 'test'];
 		$actual		= $this->reader->getFocus();
 		self::assertEquals( $expected, $actual );
 
@@ -169,14 +144,8 @@ class ReaderTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find();
-
-		$expected	= 2;
-		$actual		= count( $result );
-		self::assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		self::assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -188,15 +157,9 @@ class ReaderTest extends TestCase
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( "*" ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		self::assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		self::assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ["*"] );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -209,14 +172,8 @@ class ReaderTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( "*" );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		self::assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		self::assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -228,19 +185,10 @@ class ReaderTest extends TestCase
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( "id" ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		self::assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		self::assertEquals( $expected, $actual );
-
-		$expected	= array( 'id' );
-		$actual		= array_keys( $result[0] );
-		self::assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ["id"] );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( ['id'], array_keys( $result[0] ) );
 	}
 
 	/**
@@ -253,7 +201,6 @@ class ReaderTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( "id" );
-
 		self::assertCount( 2, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( ['id'], array_keys( $result[0] ) );
@@ -268,15 +215,10 @@ class ReaderTest extends TestCase
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( 'id' ), [], array( 'id' => 'ASC' ) );
+		$result		= $this->reader->find( ['id'], [], ['id' => 'ASC'] );
 
-		$expected	= 2;
-		$actual		= count( $result );
-		self::assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		self::assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
 
 		$expected	= array(
 			array( 'id' => 1 ),
@@ -295,8 +237,7 @@ class ReaderTest extends TestCase
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( 'id' ), [], array( 'id' => 'DESC' ), array( 0, 1 ) );
-
+		$result		= $this->reader->find( ['id'], [], ['id' => 'DESC'], [0, 1] );
 		self::assertCount( 1, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( [['id' => 2]], $result );
@@ -312,8 +253,7 @@ class ReaderTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 		//  will be ignored
 		$this->reader->focusIndex( 'topic', 'start' );
-		$result		= $this->reader->find( array( 'id' ) );
-
+		$result		= $this->reader->find( ['id'] );
 		self::assertCount( 2, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( 1, $result[0]['id'] );
@@ -329,8 +269,7 @@ class ReaderTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 		//  will be ignored
 		$this->reader->focusPrimary( 1 );
-		$result		= $this->reader->find( array( 'id' ) );
-
+		$result		= $this->reader->find( ['id'] );
 		self::assertCount( 2, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( 1, $result[0]['id'] );
@@ -349,8 +288,7 @@ class ReaderTest extends TestCase
 		$this->reader->focusIndex( 'topic', 'test' );
 		//  will be ignored
 		$this->reader->focusPrimary( 1, FALSE );
-		$result		= $this->reader->find( array( 'id' ) );
-
+		$result		= $this->reader->find( ['id'] );
 		self::assertCount( 2, $result );
 	}
 
@@ -363,13 +301,13 @@ class ReaderTest extends TestCase
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInTest');" );
 
-		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'start', 'test' ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereIn( ['id'], "topic", ['start', 'test'], ['id' => 'ASC'] );
 
 		self::assertCount( 2, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( 1, $result[0]['id'] );
 
-		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'test' ) );
+		$result		= $this->reader->findWhereIn( ['id'], "topic", ['test'] );
 		self::assertCount( 1, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( 2, $result[0]['id'] );
@@ -384,7 +322,7 @@ class ReaderTest extends TestCase
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInTest');" );
 
-		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'start', 'test' ), array( 'id' => "DESC" ), array( 0, 1 ) );
+		$result		= $this->reader->findWhereIn( ['id'], "topic", ['start', 'test'], ['id' => "DESC"], [0, 1] );
 
 		self::assertCount( 1, $result );
 		self::assertCount( 1, $result[0] );
@@ -399,7 +337,7 @@ class ReaderTest extends TestCase
 	public function testFindWhereInException1()
 	{
 		$this->expectException( 'TypeError' );
-		$this->reader->findWhereIn( array( 'not_valid' ), "id", 1 );
+		$this->reader->findWhereIn( ['not_valid'], "id", 1 );
 	}
 
 	/**
@@ -410,6 +348,7 @@ class ReaderTest extends TestCase
 	public function testFindWhereInException2()
 	{
 		$this->expectException( 'TypeError' );
+		/** @noinspection PhpParamsInspection */
 		$this->reader->findWhereIn( "*", "not_valid", 1 );
 	}
 
@@ -421,13 +360,13 @@ class ReaderTest extends TestCase
 	public function testFindWhereInAnd()
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'test' ), array( "label" => "findWhereInAndTest" ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['test'], ["label" => "findWhereInAndTest"] );
 
 		self::assertCount( 1, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( 2, $result[0]['id'] );
 
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start' ), array( "label" => "findWhereInAndTest" ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start'], ["label" => "findWhereInAndTest"] );
 		self::assertCount( 0, $result );
 	}
 
@@ -442,21 +381,21 @@ class ReaderTest extends TestCase
 
 		//  will be ignored
 		$this->reader->focusIndex( 'topic', 'test' );
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start', 'test'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
 		self::assertCount( 1, $result );
 		self::assertCount( 1, $result[0] );
 		self::assertEquals( 2, $result[0]['id'] );
 
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start', 'test'] );
 		self::assertCount( 2, $result );
 
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start', 'test'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
 		self::assertCount( 1, $result );
 
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['test'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
 		self::assertCount( 1, $result );
 
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
 		self::assertCount( 0, $result );
 	}
 
@@ -511,12 +450,12 @@ class ReaderTest extends TestCase
 	public function testFocusPrimary()
 	{
 		$this->reader->focusPrimary( 2 );
-		$expected	= array( 'id' => 2 );
+		$expected	= ['id' => 2];
 		$actual		= $this->reader->getFocus();
 		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusPrimary( 1 );
-		$expected	= array( 'id' => 1 );
+		$expected	= ['id' => 1];
 		$actual		= $this->reader->getFocus();
 		self::assertEquals( $expected, $actual );
 	}
@@ -603,14 +542,14 @@ class ReaderTest extends TestCase
 		$this->reader->focusIndex( 'topic', 'start' );
 
 		/** @var array $result */
-		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ) );
+		$result		= $this->reader->get( FALSE, ['id' => "ASC"] );
 		self::assertCount( 2, $result );
 		self::assertCount( 4, $result[0] );
 		self::assertEquals( 1, $result[0]['id'] );
 		self::assertEquals( 2, $result[1]['id'] );
 
 		/** @var array $result */
-		$result		= $this->reader->get( FALSE, array( 'id' => "DESC" ) );
+		$result		= $this->reader->get( FALSE, ['id' => "DESC"] );
 		self::assertCount( 2, $result );
 		self::assertCount( 4, $result[0] );
 		self::assertEquals( 2, $result[0]['id'] );
@@ -628,12 +567,12 @@ class ReaderTest extends TestCase
 		$this->reader->focusIndex( 'topic', 'start' );
 
 		/** @var array $result */
-		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ), array( 0, 1 ) );
+		$result		= $this->reader->get( FALSE, ['id' => "ASC"], [0, 1] );
 		self::assertCount( 1, $result );
 		self::assertEquals( 1, $result[0]['id'] );
 
 		/** @var array $result */
-		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ), array( 1, 1 ) );
+		$result		= $this->reader->get( FALSE, ['id' => "ASC"], [1, 1] );
 		self::assertCount( 1, $result );
 		self::assertEquals( 2, $result[0]['id'] );
 	}
@@ -716,14 +655,14 @@ class ReaderTest extends TestCase
 	 */
 	public function testGetIndices()
 	{
-		$indices	= array( 'topic', 'timestamp' );
+		$indices	= ['topic', 'timestamp'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
 		self::assertEquals( $expected, $actual );
 
-		$indices	= array( 'topic' );
+		$indices	= ['topic'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
@@ -802,7 +741,7 @@ class ReaderTest extends TestCase
 	 */
 	public function testSetColumns()
 	{
-		$columns	= array( 'col1', 'col2', 'col3' );
+		$columns	= ['col1', 'col2', 'col3'];
 
 		$this->reader->setColumns( $columns );
 
@@ -844,14 +783,14 @@ class ReaderTest extends TestCase
 	 */
 	public function testSetIndices()
 	{
-		$indices	= array( 'topic', 'timestamp' );
+		$indices	= ['topic', 'timestamp'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
 		self::assertEquals( $expected, $actual );
 
-		$indices	= array( 'topic' );
+		$indices	= ['topic'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
@@ -874,7 +813,7 @@ class ReaderTest extends TestCase
 	public function testSetIndicesException1()
 	{
 		$this->expectException( 'DomainException' );
-		$this->reader->setIndices( array( 'not_existing' ) );
+		$this->reader->setIndices( ['not_existing'] );
 	}
 
 	/**
@@ -885,7 +824,7 @@ class ReaderTest extends TestCase
 	public function testSetIndicesException2()
 	{
 		$this->expectException( 'DomainException' );
-		$this->reader->setIndices( array( 'id' ) );
+		$this->reader->setIndices( ['id'] );
 	}
 
 	/**
@@ -926,5 +865,32 @@ class ReaderTest extends TestCase
 		$expected	= $tableName;
 		$actual		= $this->reader->getTableName();
 		self::assertEquals( $expected, $actual );
+	}
+
+	//  --  PROTECTED  --  //
+
+	/**
+	 *	Setup for every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function setUp(): void
+	{
+		parent::setUp();
+		$this->createTransactionsTableFromFileOnDirectConnection();
+
+		$this->reader	= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
+		$this->reader->setIndices( $this->indices );
+	}
+
+	/**
+	 *	Cleanup after every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function tearDown(): void
+	{
+		$this->dropTransactionsTable();
+		parent::tearDown();
 	}
 }

@@ -2,8 +2,8 @@
 
 use CeusMedia\DatabaseTest\TestCase;
 
-if( !file_exists( dirname( __DIR__ ).'/vendor/autoload.php' ) )
-	die( 'Please install libraries with composer, first!' );
+//if( !file_exists( dirname( __DIR__ ).'/vendor/autoload.php' ) )
+//	die( 'Please install libraries with composer, first!' );
 
 $pathTest	= __DIR__.'/';
 
@@ -19,7 +19,7 @@ $loaderTest->setPrefix( 'CeusMedia_Database_Test_' );
 $loaderTest->registerAutoloader();
 
 /** @var array $__config */
-$__config	= parse_ini_file( $pathTest.'/test.ini', TRUE );
+$__config	= parse_ini_file( $pathTest.'config/test.ini', TRUE );
 //new UI_DevOutput;
 //print_m( $__config );die;
 

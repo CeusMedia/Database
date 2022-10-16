@@ -1,4 +1,7 @@
-<?php
+<?php /** @noinspection ALL */
+/** @noinspection SqlResolve */
+/** @noinspection SqlNoDataSourceInspection */
+
 /**
  *	TestUnit of DB_PDO_Connection.
  *	@package		Tests.database.pdo
@@ -8,8 +11,8 @@
 namespace CeusMedia\DatabaseTest\PDO;
 
 use CeusMedia\Common\Exception\SQL as SqlException;
-use CeusMedia\Database\PDO\Connection as PdoConnection;
-use CeusMedia\DatabaseTest\TestCase;
+use Exception;
+use PDOStatement;
 
 /**
  *	TestUnit of DB_PDO_Connection.
@@ -18,94 +21,10 @@ use CeusMedia\DatabaseTest\TestCase;
  */
 class ConnectionTest extends TestCase
 {
-	protected $directDbc;
-
-	protected string $host;
-	protected string $port;
-	protected string $username;
-	protected string $password;
-	protected string $database;
-	protected string $path;
-	protected string $errorLog;
-	protected string $queryLog;
 	protected array $columns;
 	protected string $tableName;
 	protected array $indices;
 	protected string $primaryKey;
-
-	/**
-	 *	Constructor.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function __construct()
-	{
-		parent::__construct();
-		$this->host		= self::$config['unitTest-Database']['host'];
-		$this->port		= self::$config['unitTest-Database']['port'];
-		$this->username	= self::$config['unitTest-Database']['username'];
-		$this->password	= self::$config['unitTest-Database']['password'];
-		$this->database	= self::$config['unitTest-Database']['database'];
-		$this->path		= dirname( __FILE__ )."/";
-		$this->errorLog	= $this->path."errors.log";
-		$this->queryLog	= $this->path."queries.log";
-	}
-
-	/**
-	 *	Setup for every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function setUp(): void
-	{
-		if( !extension_loaded( 'pdo_mysql' ) )
-			$this->markTestSkipped( "PDO driver for MySQL not supported" );
-		$dsn 		= "mysql:host=".$this->host.";dbname=".$this->database;
-		$options	= array();
-		$this->connection	= new PdoConnection( $dsn, $this->username, $this->password, $options );
-		$this->connection->setAttribute( PDO::ATTR_CASE, PDO::CASE_NATURAL );
-		$this->connection->setAttribute( PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, TRUE );
-		$this->connection->setErrorLogFile( $this->errorLog );
-		$this->connection->setStatementLogFile( $this->queryLog );
-		if( extension_loaded( 'mysql' ) ){
-			$this->directDbc	= mysql_connect( $this->host, $this->username, $this->password ) or die( mysql_error() );
-			mysql_select_db( $this->database );
-			$sql	= file_get_contents( $this->path."createTable.sql" );
-			foreach( explode( ";", $sql ) as $part )
-				if( trim( $part ) )
-					mysql_query( $part ) or die( mysql_error() );
-		}
-		else if( extension_loaded( 'mysqli' ) ){
-			$this->directDbc	= new mysqli( $this->host, $this->username, $this->password ) or die( mysqli_error() );
-			mysqli_select_db( $this->directDbc, $this->database );
-			$sql	= file_get_contents( $this->path."createTable.sql" );
-			foreach( explode( ";", $sql ) as $part )
-				if( trim( $part ) )
-					mysqli_query( $this->directDbc, $part ) or die( mysqli_error() );
-		}
-		else{
-			throw new RuntimeException( 'No suitable MySQL connector found' );
-		}
-	}
-
-	/**
-	 *	Cleanup after every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function tearDown(): void
-	{
-		@unlink( $this->errorLog );
-		@unlink( $this->queryLog );
-		if( extension_loaded( 'mysql' ) ){
-			mysql_query( "DROP TABLE transactions" );
-			mysql_close( $this->directDbc );
-		}
-		else if( extension_loaded( 'mysqli' ) ){
-			mysqli_query( $this->directDbc, "DROP TABLE transactions" );
-			mysqli_close( $this->directDbc );
-		}
-	}
 
 	/**
 	 *	Tests Method 'beginTransaction'.
@@ -114,18 +33,15 @@ class ConnectionTest extends TestCase
 	 */
 	public function testBeginTransaction()
 	{
-//		$expected	= $this->connection;
-		$actual		= $this->connection->beginTransaction();
-		$this->assertEquals( TRUE, $actual );
+		self::assertTrue( $this->connection->beginTransaction() );
 
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
 		$this->connection->rollBack();
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
-
-		$expected	= 1;
-		$actual		= $result->rowCount();
-		$this->assertEquals( $expected, $actual );
+		self::assertInstanceOf( 'PDOStatement', $result );
+		/** @var PDOStatement $result */
+		self::assertEquals( 1, $result->rowCount() );
 	}
 
 	/**
@@ -138,15 +54,13 @@ class ConnectionTest extends TestCase
 		$this->connection->beginTransaction();
 
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
-		$expected	= TRUE;
-		$actual		= $this->connection->commit();
-		$this->assertEquals( $expected, $actual );
+		self::assertTrue( $this->connection->commit() );
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
-
-		$expected	= 2;
+		self::assertInstanceOf( 'PDOStatement', $result );
+		/** @var PDOStatement $result */
 		$actual		= $result->rowCount();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 2, $actual );
 	}
 
 	/**
@@ -161,19 +75,19 @@ class ConnectionTest extends TestCase
 
 		$expected	= 11;
 		$actual		= $this->connection->exec( "UPDATE transactions SET topic='exec' WHERE topic!='exec'" );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$expected	= 0;
 		$actual		= $this->connection->exec( "UPDATE transactions SET topic='exec' WHERE topic!='exec'" );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$expected	= 11;
 		$actual		= $this->connection->exec( "DELETE FROM transactions WHERE topic='exec'" );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$expected	= 0;
 		$actual		= $this->connection->exec( "DELETE FROM transactions WHERE topic='exec'" );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -184,28 +98,13 @@ class ConnectionTest extends TestCase
 	public function testPrepare()
 	{
 		$statement	= $this->connection->prepare( "SELECT * FROM transactions" );
+		self::assertIsObject( $statement );
+		self::assertInstanceOf( 'PDOStatement', $statement );
+		self::assertFileExists( $this->queryLog );
+		self::assertEquals( 1, $this->connection->numberStatements );
 
-		$expected	= TRUE;
-		$actual		= is_object( $statement );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= TRUE;
-		$actual		= is_a( $statement, 'PDOStatement' );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= TRUE;
-		$actual		= file_exists( $this->queryLog );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $this->connection->numberStatements;
-		$this->assertEquals( $expected, $actual );
-
-		$statement	= $this->connection->prepare( "SELECT * FROM transactions" );
-
-		$expected	= 2;
-		$actual		= $this->connection->numberStatements;
-		$this->assertEquals( $expected, $actual );
+		$this->connection->prepare( "SELECT * FROM transactions" );
+		self::assertEquals( 2, $this->connection->numberStatements );
 	}
 
 	/**
@@ -215,32 +114,21 @@ class ConnectionTest extends TestCase
 	 */
 	public function testQuery()
 	{
-		$expected	= FALSE;
-		$actual		= NULL;
-		try
-		{
+		try{
 			$actual		= $this->connection->query( "SELECT none FROM nowhere" );
 		}
-		catch( Exception $e ){}
-		$this->assertEquals( $expected, $actual );
+		catch( Exception $e ){
+			$actual		= FALSE;
+		}
+		self::assertFalse( $actual );
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
-
-		$expected	= TRUE;
-		$actual		= is_object( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result->rowCount();
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= $result->columnCount();
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $this->connection->numberStatements;
-		$this->assertEquals( $expected, $actual );
+		self::assertIsObject( $result );
+		self::assertInstanceOf( 'PDOStatement', $result );
+		/** @var PDOStatement $result */
+		self::assertEquals( 1, $result->rowCount() );
+		self::assertEquals( 4, $result->columnCount() );
+		self::assertEquals( 2, $this->connection->numberStatements );
 	}
 
 	/**
@@ -253,15 +141,13 @@ class ConnectionTest extends TestCase
 		$this->connection->beginTransaction();
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('begin','beginTransactionTest');" );
 
-		$expected	= TRUE;
 		$actual		= $this->connection->rollBack();
-		$this->assertEquals( $expected, $actual );
+		self::assertTrue( $actual );
 
 		$result		= $this->connection->query( "SELECT * FROM transactions" );
-
-		$expected	= 1;
-		$actual		= $result->rowCount();
-		$this->assertEquals( $expected, $actual );
+		self::assertInstanceOf( 'PDOStatement', $result );
+		/** @var PDOStatement $result */
+		self::assertEquals( 1, $result->rowCount() );
 	}
 
 
@@ -278,9 +164,7 @@ class ConnectionTest extends TestCase
 			$this->connection->query( "SELECT none FROM nowhere" );
 		}catch( SqlException $e ){}
 
-		$expected	= TRUE;
-		$actual		= file_exists( $logFile );
-		$this->assertEquals( $expected, $actual );
+		self::assertFileExists( $logFile );
 		@unlink( $logFile );
 	}
 
@@ -299,9 +183,31 @@ class ConnectionTest extends TestCase
 		catch( SqlException $e ){
 		}
 
-		$expected	= TRUE;
-		$actual		= file_exists( $logFile );
-		$this->assertEquals( $expected, $actual );
+		self::assertFileExists( $logFile );
 		@unlink( $logFile );
+	}
+
+	//  --  PROTECTED  --  //
+
+	/**
+	 *	Setup for every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function setUp(): void
+	{
+		parent::setUp();
+		$this->createTransactionsTableFromFileOnDirectConnection();
+	}
+
+	/**
+	 *	Cleanup after every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function tearDown(): void
+	{
+		$this->dropTransactionsTable();
+		parent::tearDown();
 	}
 }
