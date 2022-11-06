@@ -32,7 +32,6 @@ namespace CeusMedia\Database\PDO\Table;
 
 use CeusMedia\Database\PDO\Connection;
 use DomainException;
-use Exception;
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
@@ -385,7 +384,7 @@ class Reader
 	 */
 	public function getDistinctColumnValues( string $column, array $conditions = [], array $orders = [], array $limits = [] ): array
 	{
-		$this->validateColumns( $columns );
+		$this->validateColumns( $column );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$orders		= $this->getOrderCondition( $orders );
@@ -724,7 +723,7 @@ class Reader
 	 *	@param		string|int|float	$value			...
 	 *	@param		boolean				$maskColumn		...
 	 *	@return		string				...
-	 *	@throws		Exception
+	 *	@throws		InvalidArgumentException	if whitespace is missing after an operator
 	 */
 	protected function realizeConditionQueryPart( string $column, $value, bool $maskColumn = TRUE ): string
 	{
@@ -744,7 +743,7 @@ class Reader
 			$operation		= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
 			$valueString	= $this->secureValue( $matches[3][0] ).' AND '.$this->secureValue( $matches[6][0] );
 			if( strlen( $matches[2][0] ) === 0 || strlen( $matches[4][0] ) === 0 || strlen( $matches[5][0] ) === 0 )
-				throw new Exception( 'Missing whitespace between operator and value' );
+				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
 		}
 		else if( preg_match( $patternBitwise, $valueString, $result ) === 1 ){
@@ -753,7 +752,7 @@ class Reader
 			$operation	= ' '.$matches[1][0].' ';
 			$valueString		= $this->secureValue( $matches[3][0] );
 			if( strlen( $matches[2][0] ) === 0 )
-				throw new Exception( 'Missing whitespace between operator and value' );
+				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
 		else if( preg_match( $patternOperators, $valueString, $result ) === 1 ){
@@ -762,7 +761,7 @@ class Reader
 			$operation	= ' '.$matches[1][0].' ';
 			$valueString		= $this->secureValue( $matches[3][0] );
 			if( strlen( $matches[2][0] ) === 0 )
-				throw new Exception( 'Missing whitespace between operator and value' );
+				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
 		else{
@@ -818,11 +817,11 @@ class Reader
 	protected function validateColumns( &$columns ): void
 	{
 		if( is_string( $columns ) && strlen( trim( $columns ) ) > 0 )
-			$columns	= array( $columns );
+			$columns	= [$columns];
 		else if( is_array( $columns ) && count( $columns ) === 0 )
-			$columns	= array( '*' );
-		else if( $columns === NULL || $columns == FALSE )
-			$columns	= array( '*' );
+			$columns	= ['*'];
+		else if( $columns === NULL || $columns === FALSE )
+			$columns	= ['*'];
 
 		if( !is_array( $columns ) )
 			throw new InvalidArgumentException( 'Column keys must be an array of column names, a column name string or "*"' );

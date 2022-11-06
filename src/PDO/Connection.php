@@ -238,8 +238,9 @@ class Connection extends PDO
 		if( $this->logFileErrors === NULL )
 			return;
 //			throw $exception;
+
 		$info		= $exception->errorInfo;
-		$sqlError	= $info[2] ?? NULL;
+		$sqlError	= $info[2] ?? '';
 		$sqlCode	= $info[1];
 		$pdoCode	= $info[0];
 		$message	= $exception->getMessage();
@@ -257,7 +258,7 @@ class Connection extends PDO
 		$note	= str_replace( "{statement}", $statement, $note );
 
 		error_log( $note, 3, $this->logFileErrors );
-		throw new SqlException( $sqlError, $sqlCode, $pdoCode );
+		throw new SqlException( $message, $sqlCode, $pdoCode );
 	}
 
 	/**
@@ -278,30 +279,30 @@ class Connection extends PDO
 	/**
 	 *	Prepare statement.
 	 *	@access		public
-	 *	@param		string		$statement		SQL Statement to prepare
-	 *	@param		array		$driverOptions	Map of additional driver options
+	 *	@param		string		$statement			SQL Statement to prepare
+	 *	@param		array		$options		Map of additional driver options
 	 *	@return		PDOStatement
 	 */
-	public function prepare( $statement, $driverOptions = NULL ): PDOStatement
+	public function prepare( $statement, $options = NULL ): PDOStatement
 	{
 		$this->numberStatements++;
 		$this->logStatement( $statement );
-		return parent::prepare( $statement, $driverOptions ?? [] );
+		return parent::prepare( $statement, $options ?? [] );
 	}
 
 	/**
 	 *	@inheritDoc
 	 *	@param		string		$statement
-	 *	@param		int			$fetchMode
+	 *	@param		int			$mode			Fetch mode
 	 *	@return		PDOStatement|FALSE
 	 */
-	public function query( string $statement, int $fetchMode = PDO::FETCH_ASSOC, $arg3 = NULL, array $ctorargs = [] )
+	public function query( $statement, int $mode = PDO::FETCH_ASSOC, $arg3 = NULL, array $ctorargs = [] )
 	{
 		$this->logStatement( $statement );
 		$this->lastQuery	= $statement;
 		$this->numberStatements++;
 		try{
-			return parent::query( $statement, $fetchMode );
+			return parent::query( $statement, $mode );
 		}
 		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception

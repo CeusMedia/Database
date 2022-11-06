@@ -48,7 +48,7 @@
     ],
     "dev:phpunit": [
       "@dev:install",
-      "php vendor/bin/phpunit --configuration util/phpunit9.xml --testsuite units"
+      "php vendor/bin/phpunit --configuration util/phpunit9.xml"
     ],
     "dev:phpstan": [
       "@dev:install",

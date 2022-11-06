@@ -64,7 +64,7 @@ class Writer extends Reader
 	public function deleteByConditions( array $where = [] ): int
 	{
 		//  render WHERE conditions, uncursored, without functions
-		$conditions		= $this->getConditionQuery( $where, FALSE, FALSE, FALSE );
+		$conditions		= $this->getConditionQuery( $where, FALSE, FALSE );
 		$query			= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
 		$affectedRows	= $this->dbc->exec( $query );
 		$this->defocus();
@@ -171,7 +171,7 @@ class Writer extends Reader
 
 		$updates	= [];
 		//  render WHERE conditions, uncursored, without functions
-		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, FALSE );
+		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		foreach( $this->columns as $column ){
 			if( isset( $data[$column] ) ){
 				if( $stripTags )
