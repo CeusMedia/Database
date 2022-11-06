@@ -1,3 +1,13 @@
+
+
+## Version 0.5.0
+- Fully typed (class members and method arguments).
+- Reach PHPStan level 9 (max!) PLUS extra strict rules (for PDO).
+- Add composer scripts.
+- Short array syntax.
+- Constants visibility.
+- Refactored, updated unit tests.
+
 ## Version 0.4.4
 - General: Support PHP 8.
 

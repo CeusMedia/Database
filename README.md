@@ -39,18 +39,19 @@ Existing database tables can be declared as tables:
 #### Table class
 
 ```php
-class MyFirstTable extends \CeusMedia\Database\PDO\Table{
-	protected $name			= "my_first_table";
-	protected $columns		= array(
+class MyFirstTable extends \CeusMedia\Database\PDO\Table
+{
+	protected string $name			= "my_first_table";
+	protected array $columns		= [
 		'id',
 		'maybeSomeForeignId',
 		'content',
-	);
-	protected $primaryKey		= 'id';
-	protected $indices		= array(
+	];
+	protected string $primaryKey	= 'id';
+	protected array $indices		= [
 		'maybeSomeForeignId',
-	);
-	protected $fetchMode		= \PDO::FETCH_OBJ;
+	];
+	protected int $fetchMode		= \PDO::FETCH_OBJ;
 }
 ```
 #### Table instance
@@ -96,10 +97,10 @@ $someEntries	= $table->getAllByIndex( 'maybeSomeForeignId', 123 );
 A group of entries, filtered by several foreign keys:
 
 ```php
-$indices		= array(
+$indices		= [
 	'maybeSomeForeignId'	=> 123,
 	'notExistingKey'		=> 'will result in an exception',
-);
+];
 $someEntries	= $table->getAllByIndices( $indices );
 ```
 To get **all entries**, call:
@@ -110,9 +111,9 @@ $allEntries	= $table->getAll();
 which may be bad in scaling, so reduce the result set by defining limits and conditions:
 
 ```php
-$conditions	= array( 'content' => '%test%' );
-$orders		= array();
-$limits		= array( $offset = 0, $limit = 10 );
+$conditions	= ['content' => '%test%'];
+$orders		= [];
+$limits		= [$offset = 0, $limit = 10];
 
 $allEntries	= $table->getAll( $conditions, $orders, $limits );
 ```
@@ -121,10 +122,10 @@ Conditions can be indices or any other column.
 Orders are pairs of columns and directions, like:
 
 ```php
-$orders	= array(
+$orders	= [
 	'maybeSomeForeignId'	=> 'DESC',
 	'content'		=> 'ASC',
-);
+];
 ```
 There are more parameters possible for each of this indexing methods, which allow:
 
@@ -143,10 +144,10 @@ $number	= $table->countByIndex( 'maybeSomeForeignId', 123 );
 To count entries, filtered by several foreign keys:
 
 ```php
-$number	= $table->countByIndices( array(
+$number	= $table->countByIndices( [
 	'maybeSomeForeignId'	=> 123,
 	'notExistingKey'		=> 'will result in an exception',
-);
+] );
 ```
 To get **all entries**, call:
 
@@ -156,10 +157,10 @@ $number	= $table->count();
 which may be bad in scaling, so reduce the result set by defining conditions:
 
 ```php
-$Conditions	= array(
+$Conditions	= [
 	'maybeSomeForeignId'	=> 123,
 	'content'		=> '%test%',
-);
+];
 $number	= $table->count( $conditions );
 ```
 **Hint:** Counting having really large MySQL tables may be slow.
@@ -168,10 +169,10 @@ There is a method to count in large tables in a faster way. You will find it.
 #### Adding an entry
 
 ```php
-$data		= array(
+$data		= [
 	'maybeSomeForeignId'	=> 123,
 	'content'				=> 'Second entry.',
-);
+];
 $entryId	= $table->add( $data );
 ```
 **Attention:** For security reasons, all HTML tags will be striped. Set second parameter to FALSE to avoid that, if needed. Make sure to strip HTML tags of none-HTML columns manually!
@@ -181,10 +182,10 @@ $entryId	= $table->add( $data );
 
 ```php
 $primaryKey	= 2;
-$data		= array(
+$data		= [
 	'maybeSomeForeignId'	=> 124,
 	'content'				=> 'Second entry - changed.',
-);
+];
 $result	= $table->edit( $primaryKey, $data );
 ```
 where the result will be the number of changed entries.
@@ -194,12 +195,12 @@ where the result will be the number of changed entries.
 #### Updating several entries
 
 ```php
-$indices	= array(
+$indices	= [
 	'maybeSomeForeignId'	=> 123,
-);
-$data		= array(
+];
+$data		= [
 	'maybeSomeForeignId'	=> 124,
-);
+];
 $result	= $table->editByIndices( $indices, $data );
 ```
 where the result will be the number of changed entries.
@@ -217,9 +218,9 @@ where the result will be the number of removed entries.
 #### Removing several entry
 
 ```php
-$indices	= array(
+$indices	= [
 	'maybeSomeForeignId'	=> 123,
-);
+];
 $result	= $table->removeByIndices( $indices );
 ```
 where the result will be the number of removed entries.
@@ -229,7 +230,7 @@ where the result will be the number of removed entries.
 In your table structure class, set:
 
 ```php
-	protected $fetchMode			= \PDO::[YOUR_FETCH_MODE];
+	protected int $fetchMode		= \PDO::[YOUR_FETCH_MODE];
 ```
 where YOUR_FETCH_MODE is one of these standard PDO fetch modes:
 
