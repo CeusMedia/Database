@@ -384,12 +384,13 @@ class Reader
 	 */
 	public function getDistinctColumnValues( string $column, array $conditions = [], array $orders = [], array $limits = [] ): array
 	{
-		$this->validateColumns( $column );
+		$columns	= [$column];
+		$this->validateColumns( $columns );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
-		$query		= 'SELECT DISTINCT('.$column.') FROM '.$this->getTableName().$conditions.$orders.$limits;
+		$query		= 'SELECT DISTINCT('.reset( $columns ).') FROM '.$this->getTableName().$conditions.$orders.$limits;
 		$list		= [];
 		$resultSet	= $this->dbc->query( $query );
 		if( $resultSet instanceof PDOStatement ){
