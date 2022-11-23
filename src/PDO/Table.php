@@ -138,10 +138,10 @@ abstract class Table
 	 *	Returns number of entries within an index.
 	 *	@access		public
 	 *	@param		string			$key			Index Key
-	 *	@param		string			$value			Value of Index
+	 *	@param		string|array	$value			Value(s) of Index
 	 *	@return		integer			Number of entries within this index
 	 */
-	public function countByIndex( string $key, string $value ): int
+	public function countByIndex( string $key, $value ): int
 	{
 		return $this->table->count( [$key => $value] );
 	}
@@ -261,14 +261,14 @@ abstract class Table
 	 *	Returns Data of all Lines selected by Index.
 	 *	@access		public
 	 *	@param		string			$key			Key of Index
-	 *	@param		string			$value			Value of Index
+	 *	@param		string|array	$value			Value(s) of Index
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
 	 *	@param		array			$limits			List of Limits to include in SQL Query
 	 *	@param		array			$fields			List of fields or one field to return from result
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex( string $key, string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
+	public function getAllByIndex( string $key, $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
 		if( !in_array( $key, $this->table->getIndices(), TRUE ) )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
@@ -308,7 +308,7 @@ abstract class Table
 	 *	Returns data of first entry selected by index.
 	 *	@access		public
 	 *	@param		string				$key			Key of Index
-	 *	@param		string				$value			Value of Index
+	 *	@param		string|array		$value			Value(s) of Index
 	 *	@param		array				$orders			Map of Orders to include in SQL Query
 	 *	@param		array|string		$fields			List of fields or one field to return from result
 	 *	@param		boolean				$strict			Flag: throw exception if result is empty (default: FALSE)
@@ -316,7 +316,7 @@ abstract class Table
 	 *	@todo		change argument order: move fields to end
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 */
-	public function getByIndex( string $key, string $value, array $orders = [], $fields = [], bool $strict = FALSE )
+	public function getByIndex( string $key, $value, array $orders = [], $fields = [], bool $strict = FALSE )
 	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
@@ -433,10 +433,10 @@ abstract class Table
 	 *	Indicates whether a table row is existing by index.
 	 *	@access		public
 	 *	@param		string			$key			Key of Index
-	 *	@param		string			$value			Value of Index
+	 *	@param		string|array	$value			Value(s) of Index
 	 *	@return		boolean
 	 */
-	public function hasByIndex( string $key, string $value ): bool
+	public function hasByIndex( string $key, $value ): bool
 	{
 		return (bool) $this->getByIndex( $key, $value );
 	}
@@ -478,11 +478,11 @@ abstract class Table
 	 *	Removes entries selected by index.
 	 *	@access		public
 	 *	@param		string			$key			Key of Index
-	 *	@param		string			$value			Value of Index
+	 *	@param		string|array	$value			Value(s) of Index
 	 *	@return		integer
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function removeByIndex( string $key, string $value ): int
+	public function removeByIndex( string $key, $value ): int
 	{
 		$this->table->focusIndex( $key, $value );
 		$number	= $this->removeBySetFocus();
