@@ -52,23 +52,23 @@
     ],
     "dev:phpstan": [
       "@dev:install",
-      "vendor/bin/phpstan analyze --configuration=util/phpstan.neon --memory-limit=1G --xdebug --verbose"
+      "XDEBUG_MODE=off vendor/bin/phpstan analyze --configuration=util/phpstan.neon --memory-limit=1G --verbose"
     ],
     "dev:phpstan-clear": [
       "@dev:install",
-      "vendor/bin/phpstan clear-result-cache --verbose"
+      "XDEBUG_MODE=off vendor/bin/phpstan clear-result-cache --verbose"
     ],
     "dev:phpstan-save": [
       "@dev:install",
-      "vendor/bin/phpstan analyse --configuration util/phpstan.neon --generate-baseline util/phpstan-baseline.neon --verbose"
+      "XDEBUG_MODE=off vendor/bin/phpstan analyse --configuration util/phpstan.neon --generate-baseline util/phpstan-baseline.neon --verbose"
     ],
     "dev:rector": [
       "@dev:install",
-      "vendor/bin/rector process --config=util/rector.php --dry-run"
+      "XDEBUG_MODE=off vendor/bin/rector process --config=util/rector.php --dry-run"
     ],
     "dev:rector-fix": [
       "@dev:install",
-      "vendor/bin/rector process --config=util/rector.php"
+      "XDEBUG_MODE=off vendor/bin/rector process --config=util/rector.php"
     ],
     "dev:test-syntax": [
       "@dev:install",

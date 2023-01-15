@@ -44,7 +44,7 @@ use PDOStatement;
  *	@link			https://github.com/CeusMedia/Database
  *	@todo			Code Documentation
  */
-class Connection extends PDO
+class ConnectionBase extends PDO
 {
 	/**	@var	string|NULL					$driver					PDO driver */
 	protected ?string $driver				= NULL;
@@ -151,30 +151,6 @@ class Connection extends PDO
 		//  decrease Transaction Counter
 		$this->openTransactions--;
 		return TRUE;
-	}
-
-	/**
-	 *	Executes a Statement and returns Number of affected Rows.
-	 *	@access		public
-	 *	@param		string		$statement			SQL Statement to execute
-	 *	@return		integer
-	 */
-	public function exec( $statement ): int
-	{
-		$affectedRows   = 0;
-		$this->logStatement( $statement );
-		try{
-			$this->numberExecutes++;
-			$this->numberStatements++;
-			$result	= parent::exec( $statement );
-			if( $result !== FALSE )
-				$affectedRows = $result;
-		}
-		catch( PDOException $e ){
-			//  logs Error and throws SQL Exception
-			$this->logError( $e, $statement );
-		}
-		return $affectedRows;
 	}
 
 	/**
@@ -291,27 +267,6 @@ class Connection extends PDO
 	}
 
 	/**
-	 *	@inheritDoc
-	 *	@param		string		$statement
-	 *	@param		int			$mode			Fetch mode
-	 *	@return		PDOStatement|FALSE
-	 */
-	public function query( $statement, int $mode = PDO::FETCH_ASSOC, $arg3 = NULL, array $ctorargs = [] )
-	{
-		$this->logStatement( $statement );
-		$this->lastQuery	= $statement;
-		$this->numberStatements++;
-		try{
-			return parent::query( $statement, $mode );
-		}
-		catch( PDOException $e ){
-			//  logs Error and throws SQL Exception
-			$this->logError( $e, $statement );
-		}
-		return FALSE;
-	}
-
-	/**
 	 *	Rolls back a Transaction.
 	 *	@access		public
 	 *	@return		boolean
@@ -364,4 +319,166 @@ class Connection extends PDO
 			mkdir( dirname( $fileName ), 0700, TRUE );
 		return $this;
 	}
+}
+
+
+if( version_compare( PHP_VERSION, '8.1.0', '>=' ) ){
+	class ConnectionPHP81 extends ConnectionBase
+	{
+		/**
+		 *	Wrapper for PDO::exec to support lazy connection mode.
+		 *	Tries to connect database if not connected yet (lazy mode).
+		 *	@access		public
+		 *	@param		string		$statement		SQL statement to execute
+		 *	@return		integer		Number of affected rows
+		 */
+		public function exec( string $statement ): int
+		{
+			$affectedRows   = 0;
+			$this->logStatement( $statement );
+			try{
+				$this->numberExecutes++;
+				$this->numberStatements++;
+				$result	= parent::exec( $statement );
+				if( $result !== FALSE )
+					$affectedRows = $result;
+			}
+			catch( PDOException $e ){
+				//  logs Error and throws SQL Exception
+				$this->logError( $e, $statement );
+			}
+			return $affectedRows;
+		}
+
+		/**
+		 *	Wrapper for PDO::query to support lazy connection mode.
+		 *	Tries to connect database if not connected yet (lazy mode).
+		 *	@access		public
+		 *	@param		string		$statement		SQL statement to query
+		 *	@param		integer		$fetchMode		... (default: 2)
+		 *	@return		PDOStatement				PDO statement containing fetchable results
+		 */
+		public function query( string $statement, ?int $fetchMode = null, mixed ...$fetchModeArgs ): PDOStatement|false
+		{
+			$this->logStatement( $statement );
+			$this->lastQuery	= $statement;
+			$this->numberStatements++;
+			try{
+				return parent::query( $statement, $fetchMode );
+			}
+			catch( PDOException $e ){
+				//  logs Error and throws SQL Exception
+				$this->logError( $e, $statement );
+			}
+			return FALSE;
+		}
+	}
+	class Connection extends ConnectionPHP81 {}
+}
+else if( version_compare( PHP_VERSION, '8.0.0', '>=' ) ){
+	class ConnectionPHP80 extends ConnectionBase
+	{
+		/**
+		 *	Wrapper for PDO::exec to support lazy connection mode.
+		 *	Tries to connect database if not connected yet (lazy mode).
+		 *	@access		public
+		 *	@param		string		$statement		SQL statement to execute
+		 *	@return		integer		Number of affected rows
+		 */
+		public function exec( string $statement ): int
+		{
+			$affectedRows   = 0;
+			$this->logStatement( $statement );
+			try{
+				$this->numberExecutes++;
+				$this->numberStatements++;
+				$result	= parent::exec( $statement );
+				if( $result !== FALSE )
+					$affectedRows = $result;
+			}
+			catch( PDOException $e ){
+				//  logs Error and throws SQL Exception
+				$this->logError( $e, $statement );
+			}
+			return $affectedRows;
+		}
+
+		/**
+		 *	Wrapper for PDO::query to support lazy connection mode.
+		 *	Tries to connect database if not connected yet (lazy mode).
+		 *	@access		public
+		 *	@param		string		$statement		SQL statement to query
+		 *	@param		integer		$fetchMode		... (default: 2)
+		 *	@return		PDOStatement|FALSE			PDO statement containing fetchable results
+		 */
+		public function query( string $statement, int $fetchMode = 2 )
+		{
+			$this->logStatement( $statement );
+			$this->lastQuery	= $statement;
+			$this->numberStatements++;
+			try{
+				return parent::query( $statement, $fetchMode );
+			}
+			catch( PDOException $e ){
+				//  logs Error and throws SQL Exception
+				$this->logError( $e, $statement );
+			}
+			return FALSE;
+		}
+	}
+	class Connection extends ConnectionPHP80 {}
+}
+else{
+	class ConnectionPHP7 extends ConnectionBase
+	{
+		/**
+		 *	Wrapper for PDO::exec to support lazy connection mode.
+		 *	Tries to connect database if not connected yet (lazy mode).
+		 *	@access		public
+		 *	@param		string		$statement		SQL statement to execute
+		 *	@return		integer		Number of affected rows
+		 */
+		public function exec( $statement ): int
+		{
+			$affectedRows   = 0;
+			$this->logStatement( $statement );
+			try{
+				$this->numberExecutes++;
+				$this->numberStatements++;
+				$result	= parent::exec( $statement );
+				if( $result !== FALSE )
+					$affectedRows = $result;
+			}
+			catch( PDOException $e ){
+				//  logs Error and throws SQL Exception
+				$this->logError( $e, $statement );
+			}
+			return $affectedRows;
+		}
+
+		/**
+		 *	Wrapper for PDO::query to support lazy connection mode.
+		 *	Tries to connect database if not connected yet (lazy mode).
+		 *	@access		public
+		 *	@param		string		$statement		SQL statement to query
+		 *	@param		integer		$mode			Fetch mode, default: 2 (FETCH_ASSOC)
+		 *	@return		PDOStatement|FALSE			PDO statement containing fetchable results
+		 *	@noinspection PhpComposerExtensionStubsInspection
+		 */
+		public function query( $statement, int $mode = PDO::FETCH_ASSOC, $arg3 = NULL, array $ctorargs = [] )
+		{
+			$this->logStatement( $statement );
+			$this->lastQuery	= $statement;
+			$this->numberStatements++;
+			try{
+				return parent::query( $statement, $mode );
+			}
+			catch( PDOException $e ){
+				//  logs Error and throws SQL Exception
+				$this->logError( $e, $statement );
+			}
+			return FALSE;
+		}
+	}
+	class Connection extends ConnectionPHP7 {}
 }
