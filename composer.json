@@ -17,7 +17,7 @@
     "jabber": "cwuerker@ceusmedia.de"
   },
   "require": {
-    "php": "^7.4 | ^8",
+    "php": "^7.4",
     "ext-pdo": "*",
     "ceus-media/common": "^0.9 | 0.9.x@dev",
     "ceus-media/cache": "^0.4 | dev-0.4-dev"
