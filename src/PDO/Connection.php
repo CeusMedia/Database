@@ -321,61 +321,7 @@ class ConnectionBase extends PDO
 	}
 }
 
-
-if( version_compare( PHP_VERSION, '8.1.0', '>=' ) ){
-	class ConnectionPHP81 extends ConnectionBase
-	{
-		/**
-		 *	Wrapper for PDO::exec to support lazy connection mode.
-		 *	Tries to connect database if not connected yet (lazy mode).
-		 *	@access		public
-		 *	@param		string		$statement		SQL statement to execute
-		 *	@return		integer		Number of affected rows
-		 */
-		public function exec( string $statement ): int
-		{
-			$affectedRows   = 0;
-			$this->logStatement( $statement );
-			try{
-				$this->numberExecutes++;
-				$this->numberStatements++;
-				$result	= parent::exec( $statement );
-				if( $result !== FALSE )
-					$affectedRows = $result;
-			}
-			catch( PDOException $e ){
-				//  logs Error and throws SQL Exception
-				$this->logError( $e, $statement );
-			}
-			return $affectedRows;
-		}
-
-		/**
-		 *	Wrapper for PDO::query to support lazy connection mode.
-		 *	Tries to connect database if not connected yet (lazy mode).
-		 *	@access		public
-		 *	@param		string		$statement		SQL statement to query
-		 *	@param		integer		$fetchMode		... (default: 2)
-		 *	@return		PDOStatement				PDO statement containing fetchable results
-		 */
-		public function query( string $statement, ?int $fetchMode = null, mixed ...$fetchModeArgs ): PDOStatement|false
-		{
-			$this->logStatement( $statement );
-			$this->lastQuery	= $statement;
-			$this->numberStatements++;
-			try{
-				return parent::query( $statement, $fetchMode );
-			}
-			catch( PDOException $e ){
-				//  logs Error and throws SQL Exception
-				$this->logError( $e, $statement );
-			}
-			return FALSE;
-		}
-	}
-	class Connection extends ConnectionPHP81 {}
-}
-else if( version_compare( PHP_VERSION, '8.0.0', '>=' ) ){
+if( version_compare( PHP_VERSION, '8.0.0', '>=' ) ){
 	class ConnectionPHP80 extends ConnectionBase
 	{
 		/**
