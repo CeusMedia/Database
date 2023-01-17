@@ -91,10 +91,10 @@ class Update extends AbstractQuery implements QueryInterface
 		$offset		= $this->renderOffset( $parameters );
 		$query		= 'UPDATE '.$table.$fields.$conditions.$limit.$offset;
 //		$this->timeRender	= $clock->stop( 6, 0 );
-		return (object) array(
+		return (object) [
 			'query'			=> $query,
 			'parameters'	=> $parameters,
-		);
+		];
 	}
 
 	/**

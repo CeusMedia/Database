@@ -104,11 +104,11 @@ class TableTest extends TestCase
 		/** @var object|NULL $data */
 		$data	= $this->table->get( 2 );
 		unset( $data->timestamp );
-		self::assertEquals( $data, (object) array(
+		self::assertEquals( $data, (object) [
 			'id'	=> '2',
 			'topic'	=> 'start',
 			'label'	=> 'label1'
-		) );
+		] );
 
 		$data	= $this->table->get( 2, 'label' );
 		self::assertEquals( 'label1', $data );
