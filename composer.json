@@ -19,8 +19,8 @@
   "require": {
     "php": "^8",
     "ext-pdo": "*",
-    "ceus-media/common": "^0.9 | 0.9.x@dev",
-    "ceus-media/cache": "^0.4 | dev-0.4-dev"
+    "ceus-media/common": "^1.0 | 1.0.x-dev",
+    "ceus-media/cache": "^0.5 | 0.5.x-dev| ^0.4 | dev-0.4-dev"
   },
   "require-dev": {
     "ext-mysqli": "*",
