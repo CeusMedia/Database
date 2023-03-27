@@ -226,7 +226,7 @@ abstract class Table
 			$this->table->defocus();
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
-		if( strlen( trim( $field ) ) !== 0 )
+		if( NULL !== $field && strlen( trim( $field ) ) !== 0 )
 			return $this->getFieldFromResult( $data, $field );
 		return $data;
 	}
