@@ -261,7 +261,7 @@ abstract class Table
 	 *	Returns Data of all Lines selected by Index.
 	 *	@access		public
 	 *	@param		string			$key			Key of Index
-	 *	@param		string|array	$value			Value(s) of Index
+	 *	@param		string|int|float|bool|array	$value			Value(s) of Index
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
 	 *	@param		array			$limits			List of Limits to include in SQL Query
 	 *	@param		array			$fields			List of fields or one field to return from result

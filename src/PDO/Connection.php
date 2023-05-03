@@ -217,8 +217,8 @@ class ConnectionBase extends PDO
 
 		$info		= $exception->errorInfo;
 		$sqlError	= $info[2] ?? '';
-		$sqlCode	= $info[1];
-		$pdoCode	= $info[0];
+		$sqlCode	= $info[1] ?? NULL;
+		$pdoCode	= $info[0] ?? NULL;
 		$message	= $exception->getMessage();
 		/** @var string $statement */
 		$statement	= preg_replace( "@\r?\n@", " ", $statement );
@@ -355,7 +355,7 @@ if( version_compare( PHP_VERSION, '8.1.0', '>=' ) ){
 		 *	Tries to connect database if not connected yet (lazy mode).
 		 *	@access		public
 		 *	@param		string		$statement		SQL statement to query
-		 *	@param		integer		$fetchMode		... (default: 2)
+		 *	@param		int|NULL	$fetchMode		... (default: 2)
 		 *	@return		PDOStatement				PDO statement containing fetchable results
 		 */
 		public function query( string $statement, ?int $fetchMode = null, mixed ...$fetchModeArgs ): PDOStatement|false
@@ -364,7 +364,9 @@ if( version_compare( PHP_VERSION, '8.1.0', '>=' ) ){
 			$this->lastQuery	= $statement;
 			$this->numberStatements++;
 			try{
-				return parent::query( $statement, $fetchMode );
+				if( NULL !== $fetchMode )
+					return parent::query( $statement, $fetchMode );
+				return parent::query( $statement );
 			}
 			catch( PDOException $e ){
 				//  logs Error and throws SQL Exception
