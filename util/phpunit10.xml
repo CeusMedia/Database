@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" bootstrap="../test/initLoaders.php" colors="true" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.1/phpunit.xsd" cacheDirectory=".phpunit.cache">
+  <coverage>
+    <report>
+      <clover outputFile="../doc/Test/coverage.clover.xml"/>
+      <html outputDirectory="../doc/Test/Coverage" lowUpperBound="35" highLowerBound="70"/>
+      <php outputFile="../doc/Test/coverage.php.serialized"/>
+    </report>
+  </coverage>
+  <testsuites>
+    <testsuite name="CeusMedia/Database">
+      <directory>../test</directory>
+    </testsuite>
+  </testsuites>
+  <logging>
+    <junit outputFile="../doc/Test/logfile.xml"/>
+    <testdoxHtml outputFile="../doc/Test/testdox.html"/>
+    <testdoxText outputFile="../doc/Test/testdox.txt"/>
+  </logging>
+  <source>
+    <include>
+      <directory>../src</directory>
+    </include>
+  </source>
+</phpunit>

@@ -6,3 +6,4 @@
 /.phpunit.result.cache
 /.php_cs.cache
 /util/.phpunit.result.cache
+/util/.phpunit.cache/test-results

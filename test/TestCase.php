@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection ALL */
 /** @noinspection PhpComposerExtensionStubsInspection */
 declare(strict_types=1);
 

@@ -34,9 +34,9 @@ class ReaderTest extends TestCase
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function __construct()
+	public function __construct( string $name = '' )
 	{
-		parent::__construct();
+		parent::__construct( $name );
 
 		$this->tableName	= "transactions";
 		$this->columns		= array(
@@ -878,7 +878,6 @@ class ReaderTest extends TestCase
 	 */
 	protected function tearDown(): void
 	{
-		$this->dropTransactionsTable();
 		parent::tearDown();
 	}
 }
