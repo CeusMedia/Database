@@ -17,17 +17,17 @@
     "jabber": "cwuerker@ceusmedia.de"
   },
   "require": {
-    "php": "^8",
+    "php": "^8.1",
     "ext-pdo": "*",
     "ceus-media/common": "^1.0 | 1.0.x-dev",
-    "ceus-media/cache": "^0.5 | 0.5.x-dev| ^0.4 | dev-0.4-dev"
+    "ceus-media/cache": "^0.5 | 0.5.x-dev"
   },
   "require-dev": {
     "ext-mysqli": "*",
     "ceus-media/doc-creator": "*",
-    "phpunit/phpunit": "^10",
+    "phpunit/phpunit": "^9.5 | ^10.1",
     "phpstan/phpstan": "^1",
-    "phpstan/phpstan-strict-rules": "*",
+    "phpstan/phpstan-strict-rules": "^1",
     "friendsofphp/php-cs-fixer": "*",
     "php-parallel-lint/php-parallel-lint": "^1.3 | dev-master",
     "rector/rector": "*"
@@ -39,6 +39,11 @@
     }
   },
   "scripts": {
+    "dev:all": [
+      "@dev:test-syntax",
+      "@dev:phpstan",
+      "@dev:phpunit"
+    ],
     "dev:install": "composer install --quiet",
     "dev:update": "composer update --quiet",
     "incomplete:dev:create-docs": [
@@ -47,7 +52,7 @@
     ],
     "dev:phpunit": [
       "@dev:install",
-      "php vendor/bin/phpunit --configuration util/phpunit10.xml"
+      "XDEBUG_MODE=coverage php vendor/bin/phpunit --configuration util/phpunit10.xml"
     ],
     "dev:phpstan": [
       "@dev:install",
@@ -75,12 +80,13 @@
     ]
   },
   "scripts-descriptions": {
+    "dev:all": "Install, test syntax, run PHPStan and PHPUnit",
     "dev:install": "Installs project dependencies for Development stage",
     "dev:update": "Updates project dependencies for Development stage",
-    "dev:unit": "Run unit tests",
     "dev:phpstan": "Validate codebase with PHPStan",
     "dev:phpstan-clear": "Clear PHPStan cache",
     "dev:phpstan-save": "Store current results in ignore list",
+    "dev:phpunit": "Run unit tests",
     "dev:rector": "Shows suggestions of configured Rector rules",
     "dev:rector-fix": "Apply currently configured Rector rules to codebase",
     "dev:test-syntax": "Validate code base syntax using PHP linter"
