@@ -18,8 +18,11 @@ $loaderTest->setPrefix( 'CeusMedia_Database_Test_' );
 //  apply this autoloader
 $loaderTest->registerAutoloader();
 
+$configFile	= $pathTest.'config/test.ini';
+if( !file_exists( $configFile ) )
+	throw new RuntimeException( 'Missing config file test/config/test.ini' );
 /** @var array $__config */
-$__config	= parse_ini_file( $pathTest.'config/test.ini', TRUE );
+$__config	= parse_ini_file( $configFile, TRUE );
 //new UI_DevOutput;
 //print_m( $__config );die;
 
