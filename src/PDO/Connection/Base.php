@@ -88,7 +88,7 @@ abstract class Base extends PDO
 	 *	@return		void
 	 *	@see		http://php.net/manual/en/pdo.drivers.php
 	 */
-	final public function __construct( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] )
+	public function __construct( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] )
 	{
 		//  extend given options by default options
 		$options	= $driverOptions + self::$defaultOptions;
@@ -198,10 +198,10 @@ abstract class Base extends PDO
 	 *	@return		self
 	 *	@see		http://php.net/manual/en/pdo.drivers.php
 	 */
-	public static function getInstance( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] ): self
+/*	public static function getInstance( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] ): self
 	{
 		return new static( $dsn, $username, $password, $driverOptions );
-	}
+	}*/
 
 	/**
 	 *	@return		int		Number of open nested transactions
