@@ -148,7 +148,7 @@ class Writer extends Reader
 		$affectedRows   = 0;
 		if( count( $updates ) > 0 ){
 			$updates	= implode( ', ', $updates );
-			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery( [] );
+			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery();
 			$affectedRows	= $this->dbc->exec( $query );
 		}
 		return $affectedRows;

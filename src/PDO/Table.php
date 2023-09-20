@@ -53,44 +53,44 @@ use RuntimeException;
  */
 abstract class Table
 {
-	/**	@var	Connection|NULL					$dbc			PDO database connection object */
+	/**	@var	Connection|NULL								$dbc			PDO database connection object */
 	protected ?Connection $dbc;
 
-	/**	@var	string							$name			Name of Database Table without Prefix */
-	protected string $name						= '';
+	/**	@var	string										$name			Name of Database Table without Prefix */
+	protected string $name									= '';
 
-	/**	@var	array							$columns		List of Database Table Columns */
-	protected array $columns					= [];
+	/**	@var	array										$columns		List of Database Table Columns */
+	protected array $columns								= [];
 
-	/**	@var	array							$indices		List of foreign Keys of Database Table */
-	protected array $indices					= [];
+	/**	@var	array										$indices		List of foreign Keys of Database Table */
+	protected array $indices								= [];
 
-	/**	@var	string							$primaryKey		Primary Key of Database Table */
-	protected string $primaryKey				= '';
+	/**	@var	string										$primaryKey		Primary Key of Database Table */
+	protected string $primaryKey							= '';
 
-	/**	@var	TableWriter						$table			Database Table Writer Object for reading from and writing to Database Table */
+	/**	@var	TableWriter									$table			Database Table Writer Object for reading from and writing to Database Table */
 	protected TableWriter $table;
 
-	/**	@var	string							$prefix			Database Table Prefix */
-	protected string $prefix					= '';
+	/**	@var	string										$prefix			Database Table Prefix */
+	protected string $prefix								= '';
 
-	/**	@var	SimpleCacheInterface			$cache			Model data cache */
+	/**	@var	SimpleCacheInterface						$cache			Model data cache */
 	protected SimpleCacheInterface $cache;
 
-	/**	@var	SimpleCacheInterface|null		$cacheInstance	Cache adapter instance to use as cache by default */
+	/**	@var	SimpleCacheInterface|null					$cacheInstance	Cache adapter instance to use as cache by default */
 	public static ?SimpleCacheInterface $cacheInstance		= NULL;
 
-	/** @var	string							$cacheClass		Name of default cache adapter class */
-	public static string $cacheClass			= NoopCache::class;
+	/** @var	string										$cacheClass		Name of default cache adapter class */
+	public static string $cacheClass						= NoopCache::class;
 
-	/** @var	mixed							$cacheResource	Resource to connect to by cache adapter */
-	public static $cacheResource				= NULL;
+	/** @var	mixed										$cacheResource	Resource to connect to by cache adapter */
+	public static mixed $cacheResource						= NULL;
 
-	/** @var	string							$cacheKey		Prefix of cache key */
-	protected string $cacheKey					= '';
+	/** @var	string										$cacheKey		Prefix of cache key */
+	protected string $cacheKey								= '';
 
-	/**	@var	integer							$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
-	protected int $fetchMode					= PDO::FETCH_OBJ;
+	/**	@var	integer										$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
+	protected int $fetchMode								= PDO::FETCH_OBJ;
 
 	/**
 	 *	Constructor.
@@ -137,11 +137,11 @@ abstract class Table
 	/**
 	 *	Returns number of entries within an index.
 	 *	@access		public
-	 *	@param		string			$key			Index Key
-	 *	@param		string|array	$value			Value(s) of Index
-	 *	@return		integer			Number of entries within this index
+	 *	@param		string					$key			Index Key
+	 *	@param		float|array|int|string	$value			Value(s) of Index
+	 *	@return		integer					Number of entries within this index
 	 */
-	public function countByIndex( string $key, $value ): int
+	public function countByIndex(string $key, float|array|int|string $value ): int
 	{
 		return $this->table->count( [$key => $value] );
 	}
@@ -206,12 +206,12 @@ abstract class Table
 	/**
 	 *	Returns Data of single Line by ID.
 	 *	@access		public
-	 *	@param		integer			$id				ID to focus on
+	 *	@param		integer|string	$id				ID to focus on
 	 *	@param		string			$field			Single Field to return
 	 *	@return		object|array|string|int|float|bool|NULL
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function get( int $id, string $field = '' )
+	public function get( int|string $id, string $field = '' ): float|object|array|bool|int|string|null
 	{
 		/** @var string $field */
 		$field		= $this->checkField( $field );
@@ -260,15 +260,15 @@ abstract class Table
 	/**
 	 *	Returns Data of all Lines selected by Index.
 	 *	@access		public
-	 *	@param		string			$key			Key of Index
-	 *	@param		string|int|float|bool|array	$value			Value(s) of Index
-	 *	@param		array			$orders			Map of Orders to include in SQL Query
-	 *	@param		array			$limits			List of Limits to include in SQL Query
-	 *	@param		array			$fields			List of fields or one field to return from result
-	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
+	 *	@param		string						$key		Key of Index
+	 *	@param		float|array|bool|int|string	$value		Value(s) of Index
+	 *	@param		array						$orders		Map of Orders to include in SQL Query
+	 *	@param		array						$limits		List of Limits to include in SQL Query
+	 *	@param		array						$fields		List of fields or one field to return from result
+	 *	@param		boolean						$strict		Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex( string $key, $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
+	public function getAllByIndex(string $key, float|array|bool|int|string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
 		if( !in_array( $key, $this->table->getIndices(), TRUE ) )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
@@ -307,21 +307,18 @@ abstract class Table
 	/**
 	 *	Returns data of first entry selected by index.
 	 *	@access		public
-	 *	@param		string				$key			Key of Index
-	 *	@param		string|array		$value			Value(s) of Index
-	 *	@param		array				$orders			Map of Orders to include in SQL Query
-	 *	@param		array|string		$fields			List of fields or one field to return from result
-	 *	@param		boolean				$strict			Flag: throw exception if result is empty (default: FALSE)
+	 *	@param		string					$key			Key of Index
+	 *	@param		float|array|int|string	$value			Value(s) of Index
+	 *	@param		array					$orders			Map of Orders to include in SQL Query
+	 *	@param		array|string			$fields			List of fields or one field to return from result
+	 *	@param		boolean					$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		object|array|string|int|float|bool|NULL	Structure depending on fetch type, string if field selected, NULL if field selected and no entries
 	 *	@todo		change argument order: move fields to end
-	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 */
-	public function getByIndex( string $key, $value, array $orders = [], $fields = [], bool $strict = FALSE )
+	public function getByIndex( string $key, float|array|int|string $value, array $orders = [], array|string $fields = [], bool $strict = FALSE ): float|object|array|bool|int|string|null
 	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
-		if( !is_array( $fields ) )
-			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $field )
 			$this->checkField( $field );
 		$this->table->focusIndex( $key, $value );
@@ -344,12 +341,10 @@ abstract class Table
 	 *	@throws		InvalidArgumentException		If given fields list is neither a list nor a string
 	 *	@todo  		change default value of argument 'strict' to TRUE
 	 */
-	public function getByIndices( array $indices, array $orders = [], $fields = [], bool $strict = FALSE )
+	public function getByIndices( array $indices, array $orders = [], array|string $fields = [], bool $strict = FALSE ): float|object|array|bool|int|string|null
 	{
 		if( is_string( $fields ) )
 			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
-		if( !is_array( $fields ) )
-			throw new InvalidArgumentException( 'Fields must be of array or string' );
 		foreach( $fields as $nr => $field )
 			$fields[$nr]	= $this->checkField( $field );
 		$this->checkIndices( $indices, TRUE );
@@ -432,11 +427,11 @@ abstract class Table
 	/**
 	 *	Indicates whether a table row is existing by index.
 	 *	@access		public
-	 *	@param		string			$key			Key of Index
-	 *	@param		string|array	$value			Value(s) of Index
+	 *	@param		string					$key			Key of Index
+	 *	@param		float|array|int|string	$value			Value(s) of Index
 	 *	@return		boolean
 	 */
-	public function hasByIndex( string $key, $value ): bool
+	public function hasByIndex( string $key, float|array|int|string $value ): bool
 	{
 		return (bool) $this->getByIndex( $key, $value );
 	}
@@ -477,12 +472,12 @@ abstract class Table
 	/**
 	 *	Removes entries selected by index.
 	 *	@access		public
-	 *	@param		string			$key			Key of Index
-	 *	@param		string|array	$value			Value(s) of Index
+	 *	@param		string					$key			Key of Index
+	 *	@param		float|array|int|string	$value			Value(s) of Index
 	 *	@return		integer
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function removeByIndex( string $key, $value ): int
+	public function removeByIndex( string $key, float|array|int|string $value ): int
 	{
 		$this->table->focusIndex( $key, $value );
 		$number	= $this->removeBySetFocus();
@@ -523,12 +518,13 @@ abstract class Table
 	 *	Removes all data and resets incremental counter.
 	 *	Note: This method does not return the number of removed rows.
 	 *	@access		public
-	 *	@return		void
+	 *	@return		self
 	 *	@see		http://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
-	public function truncate()
+	public function truncate(): self
 	{
 		$this->table->truncate();
+		return $this;
 	}
 
 	//  --  PROTECTED  --  //
@@ -547,7 +543,7 @@ abstract class Table
 	 *	@throws		RangeException					in strict mode if field is empty but mandatory
 	 *	@throws		DomainException					in strict mode if field is not a table column
 	 */
-	protected function checkField( string $field, bool $mandatory = FALSE, bool $strict = TRUE )
+	protected function checkField( string $field, bool $mandatory = FALSE, bool $strict = TRUE ): bool|string|null
 	{
 		$field	= trim( $field );
 		if( strlen( $field ) === 0 ){
@@ -582,7 +578,7 @@ abstract class Table
 	 *	@throws		RangeException					in strict mode if field is empty but mandatory
 	 *	@throws		DomainException					in strict mode if field is not an index
 	 */
-	protected function checkIndices( array $indices, bool $mandatory = FALSE, bool $strict = TRUE, bool $withPrimaryKey = FALSE )
+	protected function checkIndices( array $indices, bool $mandatory = FALSE, bool $strict = TRUE, bool $withPrimaryKey = FALSE ): bool|array
 	{
 		if( count( $indices ) === 0 ){
 			if( $mandatory ){
@@ -608,7 +604,7 @@ abstract class Table
 	/**
 	 *	Returns any fields or one field from a query result.
 	 *	@access		protected
-	 *	@param		object|array				$result			Query result as array or object
+	 *	@param		object|array|null			$result			Query result as array or object
 	 *	@param		string						$field			Field to return value of
 	 *	@param		boolean						$strict			Flag: throw exception if result is empty
 	 *	@return		string|int|float|bool|NULL	Structure depending on result and field list length
@@ -616,7 +612,7 @@ abstract class Table
 	 *	@throws		DomainException				If requested field is not a table column
 	 *	@throws		RangeException				If requested field is not within result fields
 	 */
-	protected function getFieldFromResult( $result, string $field, bool $strict = TRUE )
+	protected function getFieldFromResult( object|array|null $result, string $field, bool $strict = TRUE ): float|bool|int|string|NULL
 	{
 		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
 			if( $strict )
@@ -650,7 +646,7 @@ abstract class Table
 	/**
 	 *	Returns any fields from a query result.
 	 *	@access		protected
-	 *	@param		object|array				$result			Query result as array or object
+	 *	@param		object|array|null			$result			Query result as array or object
 	 *	@param		string[]					$fields			List of fields
 	 *	@param		boolean						$strict			Flag: throw exception if result is empty
 	 *	@return		string|int|float|bool|array|object|NULL	Structure depending on result and field list length
@@ -659,7 +655,7 @@ abstract class Table
 	 *	@throws		DomainException					If requested field is not a table column
 	 *	@throws		RangeException					If requested field is not within result fields
 	 */
-	protected function getFieldsFromResult( $result, array $fields = [], bool $strict = TRUE )
+	protected function getFieldsFromResult( object|array|null $result, array $fields = [], bool $strict = TRUE ): float|object|int|bool|array|string|NULL
 	{
 		if( count( $fields ) === 0 )
 			return $result;
@@ -774,15 +770,10 @@ abstract class Table
 			return 0;
 		$number = $this->table->delete();
 		foreach( $rows as $row ){
-			switch( $this->fetchMode ){
-				case PDO::FETCH_CLASS:
-				case PDO::FETCH_OBJ:
-//						$id	= $row->{$this->primaryKey};
-					$id	= get_object_vars( $row )[$this->primaryKey];
-					break;
-				default:
-					$id	= $row[$this->primaryKey];
-			}
+			$id		= match( $this->fetchMode ){
+				PDO::FETCH_CLASS, PDO::FETCH_OBJ	=> get_object_vars( $row )[$this->primaryKey],
+				default								=> $row[$this->primaryKey],
+			};
 			$this->cache->delete( $this->cacheKey.$id );
 		}
 		return $number;

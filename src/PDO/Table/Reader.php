@@ -169,7 +169,7 @@ class Reader
 	/**
 	 *	Returns all entries of this table in an array.
 	 *	@access		public
-	 *	@param		mixed		$columns		List of columns to deliver
+	 *	@param		array|string|null	$columns		List of columns to deliver
 	 *	@param		array		$conditions		Map of condition pairs additional to focuses indices
 	 *	@param		array		$orders			Map of order relations
 	 *	@param		array		$limits			Array of limit conditions
@@ -177,7 +177,7 @@ class Reader
 	 *	@param		array		$havings		List of conditions to apply after grouping
 	 *	@return		array		List of fetched table rows
 	 */
-	public function find( $columns = [], array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $havings = [] ): array
+	public function find( array|string|null $columns = [], array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $havings = [] ): array
 	{
 		$this->validateColumns( $columns );
 		//  render WHERE clause if needed, uncursored, allow functions
@@ -210,14 +210,14 @@ class Reader
 	/**
 	 *	Returns all entries of this table in an array.
 	 *	@access		public
-	 *	@param		mixed		$columns		List of columns to deliver
-	 *	@param		string		$column			Column to match with values
-	 *	@param		array		$values			List of possible values of column
-	 *	@param		array		$orders			Map of order relations
-	 *	@param		array		$limits			Array of limit conditions
+	 *	@param		array|string|null	$columns		List of columns to deliver
+	 *	@param		string				$column			Column to match with values
+	 *	@param		array				$values			List of possible values of column
+	 *	@param		array				$orders			Map of order relations
+	 *	@param		array				$limits			Array of limit conditions
 	 *	@throws		DomainException				if column is not an index
 	 */
-	public function findWhereIn( $columns, string $column, array $values, array $orders = [], array $limits = [] ): array
+	public function findWhereIn( array|string|null $columns, string $column, array $values, array $orders = [], array $limits = [] ): array
 	{
 		//  columns attribute needs to of string or array
 		if( !is_string( $columns ) && !is_array( $columns ) )
@@ -247,15 +247,15 @@ class Reader
 
 	/**
 	 *	@access		public
-	 *	@param		mixed		$columns		List of columns to deliver
-	 *	@param		string		$column			Column to match with values
-	 *	@param		array		$values			List of possible values of column
-	 *	@param		array		$conditions		Additional AND-related conditions
-	 *	@param		array		$orders			Map of order relations
-	 *	@param		array		$limits			Array of limit conditions
-	 *	@throws		RangeException			if column is not an index
+	 *	@param		array|string|null	$columns		List of columns to deliver
+	 *	@param		string				$column			Column to match with values
+	 *	@param		array				$values			List of possible values of column
+	 *	@param		array				$conditions		Additional AND-related conditions
+	 *	@param		array				$orders			Map of order relations
+	 *	@param		array				$limits			Array of limit conditions
+	 *	@throws		RangeException		if column is not an index
 	 */
-	public function findWhereInAnd( $columns, string $column, array $values, array $conditions = [], array $orders = [], array $limits = [] ): array
+	public function findWhereInAnd( array|string|null $columns, string $column, array $values, array $conditions = [], array $orders = [], array $limits = [] ): array
 	{
 		//  columns attribute needs to of string or array
 		if( !is_string( $columns ) && !is_array( $columns ) )
@@ -290,12 +290,12 @@ class Reader
 	/**
 	 *	Setting focus on an index.
 	 *	@access		public
-	 *	@param		string		$column			Index column name
-	 *	@param		mixed		$value			Index to focus on
+	 *	@param		string					$column			Index column name
+	 *	@param		string|int|float|array	$value			Index to focus on
 	 *	@return		self
 	 *	@throws		DomainException				if given column is not a defined column
 	 */
-	public function focusIndex( string $column, $value ): self
+	public function focusIndex( string $column, string|int|float|array $value ): self
 	{
 		//  check column name
 		if( !in_array( $column, $this->indices, TRUE ) && $column != $this->primaryKey )
@@ -308,11 +308,11 @@ class Reader
 	/**
 	 *	Setting focus on a primary key ID.
 	 *	@access		public
-	 *	@param		int			$id				Primary key ID to focus on
+	 *	@param		int|string	$id				Primary key ID to focus on
 	 *	@param		bool		$clearIndices	Flag: clear all previously focuses indices
 	 *	@return		self
 	 */
-	public function focusPrimary( int $id, bool $clearIndices = TRUE ): self
+	public function focusPrimary( int|string $id, bool $clearIndices = TRUE ): self
 	{
 		if( $clearIndices )
 			$this->focusedIndices	= [];
@@ -330,7 +330,7 @@ class Reader
 	 *	@return		array|object|NULL
 	 *	@todo		implement using given fields
 	 */
-	public function get( bool $first = TRUE, array $orders = [], array $limits = [], array $fields = [] )
+	public function get( bool $first = TRUE, array $orders = [], array $limits = [], array $fields = [] ): object|array|null
 	{
 		$this->validateFocus();
 
@@ -720,13 +720,13 @@ class Reader
 	/**
 	 *	...
 	 *	@access		protected
-	 *	@param		string				$column			...
-	 *	@param		string|int|float	$value			...
-	 *	@param		boolean				$maskColumn		...
-	 *	@return		string				...
+	 *	@param		string					$column			...
+	 *	@param		string|int|float|null	$value			...
+	 *	@param		boolean					$maskColumn		...
+	 *	@return		string					...
 	 *	@throws		InvalidArgumentException	if whitespace is missing after an operator
 	 */
-	protected function realizeConditionQueryPart( string $column, $value, bool $maskColumn = TRUE ): string
+	protected function realizeConditionQueryPart( string $column, string|int|float|null $value, bool $maskColumn = TRUE ): string
 	{
 		$patternBetween		= '/^(><|!><)( ?)(\d+)( ?)&( ?)(\d+)$/';
 		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)(\d+)$/';
@@ -786,23 +786,20 @@ class Reader
 	/**
 	 *	Secures Conditions Value by adding slashes or quoting.
 	 *	@access		protected
-	 *	@param		string|int|float	$value		String, integer, float or NULL to be secured
+	 *	@param		string|int|float|null	$value		String, integer, float or NULL to be secured
 	 *	@return		string
 	 */
-	protected function secureValue( $value ): string
+	protected function secureValue( string|int|float|null $value ): string
 	{
 #		if( !ini_get( 'magic_quotes_gpc' ) )
 #			$value = addslashes( $value );
 #		$value	= htmlentities( $value );
-		if ( $value === NULL )
+		if( NULL === $value )
 			return "NULL";
-		if( is_string( $value ) )
-			return $this->dbc->quote( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
-		/** @var string|FALSE $result */
-		$result	= $this->dbc->quote( (string) $value );
-        if( $result === FALSE )
+		$result	= $this->dbc->quote( $value );
+        if( FALSE === $result )
 			throw new RuntimeException( 'Securing value failed' );
 		return $result;
 	}
@@ -810,18 +807,18 @@ class Reader
 	/**
 	 *	Checks columns names for querying methods (find,get), sets wildcard if empty or throws an exception if unacceptable.
 	 *	@access		protected
-	 *	@param		mixed		$columns		String or array of column names to validate
+	 *	@param		array|string|null		$columns		String or array of column names to validate
 	 *	@return		void
 	 *	@throws		InvalidArgumentException	if columns is neither a list of columns nor *
 	 *	@throws		DomainException				if column is neither a defined column nor *
 	 */
-	protected function validateColumns( &$columns ): void
+	protected function validateColumns( array|string|null &$columns ): void
 	{
 		if( is_string( $columns ) && strlen( trim( $columns ) ) > 0 )
 			$columns	= [$columns];
 		else if( is_array( $columns ) && count( $columns ) === 0 )
 			$columns	= ['*'];
-		else if( $columns === NULL || $columns === FALSE )
+		else if( $columns === NULL )
 			$columns	= ['*'];
 
 		if( !is_array( $columns ) )

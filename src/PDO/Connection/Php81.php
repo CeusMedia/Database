@@ -47,7 +47,7 @@ class Php81 extends Base
 	 *	Wrapper for PDO::query to support lazy connection mode.
 	 *	Tries to connect database if not connected yet (lazy mode).
 	 *	@access		public
-	 *	@param		string		$query		SQL statement to query
+	 *	@param		string		$query			SQL statement to query
 	 *	@param		int|NULL	$fetchMode		... (default: 2)
 	 *	@param		mixed		$fetchModeArgs	Arguments of custom class constructor when the mode parameter is set to PDO::FETCH_CLASS.
 	 *	@return		PDOStatement|false			PDO statement containing fetchable results

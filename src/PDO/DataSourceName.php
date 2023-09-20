@@ -148,23 +148,15 @@ class DataSourceName
 	public function render(): string
 	{
 		$prefix	= $this->driver.':';
-		switch( $this->driver ){
-			case 'firebird':
-				return $prefix.$this->renderDsnForFirebird();
-			case 'informix':
-				return $prefix.$this->renderDsnForInformix();
-			case 'oci':
-				return $prefix.$this->renderDsnForOci();
-			case 'odbc':
-				return $prefix.$this->renderDsnForOdbc();
-			case 'pgsql':
-				return $prefix.$this->renderDsnForPgsql();
-			case 'sqlite':
-				return $prefix.$this->renderDsnForSqlite();
-			//  cubrid, dblib, mssql, mysql, sybase
-			default:
-				return $prefix.$this->renderDsnForDefault();
-		}
+		return match( $this->driver ){
+			'firebird'	=> $prefix.$this->renderDsnForFirebird(),
+			'informix'	=> $prefix.$this->renderDsnForInformix(),
+			'oci'		=> $prefix.$this->renderDsnForOci(),
+			'odbc'		=> $prefix.$this->renderDsnForOdbc(),
+			'pgsql'		=> $prefix.$this->renderDsnForPgsql(),
+			'sqlite'	=> $prefix.$this->renderDsnForSqlite(),
+			default		=> $prefix.$this->renderDsnForDefault(),
+		};
 	}
 
 	/**
