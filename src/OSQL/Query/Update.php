@@ -27,8 +27,6 @@
 namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Common\Alg\Time\Clock;
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
 use PDO as Pdo;
 use RuntimeException;
@@ -55,14 +53,14 @@ class Update extends AbstractQuery implements QueryInterface
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
 		if( $this->table === NULL )
 			throw new RuntimeException( 'No table clause set' );
 	}
 
 	/**
-	 *	Sets table to update in and returns query object for chainability.
+	 *	Sets table to update in and returns query object for method chaining.
 	 *	@access		public
 	 *	@param		Table		$table	Table to update in
 	 *	@return		self
@@ -103,7 +101,7 @@ class Update extends AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderFields( & $parameters ): string
+	protected function renderFields( array &$parameters ): string
 	{
 		if( count( $this->fields ) === 0 )
 			return '';
@@ -119,13 +117,13 @@ class Update extends AbstractQuery implements QueryInterface
 	}
 
 	/**
-	 *	Sets pair to update and returns query object for chainability.
+	 *	Sets pair to update and returns query object for method chaining.
 	 *	@access		public
-	 *	@param		string		$name		Column key
-	 *	@param		mixed		$value		Value to set
+	 *	@param		string					$name		Column key
+	 *	@param		string|int|float|null	$value		Value to set
 	 *	@return		self
 	 */
-	public function set( string $name, $value ): self
+	public function set( string $name, string|int|float|null $value ): self
 	{
 		$this->fields[$name]	 = $value;
 		return $this;

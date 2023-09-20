@@ -27,6 +27,8 @@
 
 namespace CeusMedia\Database\OSQL;
 
+use InvalidArgumentException;
+
 /**
  *	...
  *	@category		Library
@@ -182,7 +184,7 @@ class Condition
 	{
 		$type	= gettype( $value );
 		if( in_array( $type, ['object', 'resource', 'resource (closed)'], TRUE ) )
-			throw new \InvalidArgumentException( 'Value of type "'.$type.'" is not allowed' );
+			throw new InvalidArgumentException( 'Value of type "'.$type.'" is not allowed' );
 		$this->value	= $value;
 		$this->type		= $type;
 		return $this;

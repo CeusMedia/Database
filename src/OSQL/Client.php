@@ -89,9 +89,9 @@ class Client
 	 *	Executes query and returns result.
 	 *	@access		public
 	 *	@param		QueryInterface		$query
-	 *	@return		object|array|int|float|string|bool
+	 *	@return		object|array|int|float|string|bool|null
 	 */
-	public function execute( QueryInterface $query )
+	public function execute( QueryInterface $query ): float|object|int|bool|array|string|null
 	{
 		$clock		= new Clock();
 		$queryParts	= $query->render();

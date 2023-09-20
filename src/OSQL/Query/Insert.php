@@ -28,6 +28,7 @@
 namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Database\OSQL\Table;
+use PDO;
 use RuntimeException;
 
 /**
@@ -51,7 +52,7 @@ class Insert extends AbstractQuery implements QueryInterface
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
 		if( $this->table === NULL )
 			throw new RuntimeException( 'No table clause set' );
@@ -69,22 +70,25 @@ class Insert extends AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderFields( & $parameters ): string
+	protected function renderFields( array &$parameters ): string
 	{
 		if( count( $this->fields ) === 0 )
 			return '';
 		$listKeys	= [];
-		$listVals	= [];
+		$listValues	= [];
 		foreach( $this->fields as $name => $value ){
 			$key	= 'value_'.str_replace( '.', '_', $name );
-			$listKeys[]	= $name;
-			$listVals[]	= ':'.$key;
+			$listKeys[]		= $name;
+			$listValues[]	= ':'.$key;
 			$parameters[$key]	= array(
-				'type'	=> \PDO::PARAM_STR,
+				'type'	=> PDO::PARAM_STR,
 				'value'	=> $value
 			);
 		}
-		return '( '.implode( ', ', $listKeys ).' ) VALUE ( '.implode( ', ', $listVals ).' )';
+		return vsprintf( '( %s ) VALUE ( %s )', [
+			implode( ', ', $listKeys ),
+			implode( ', ', $listValues ),
+		] );
 	}
 
 	/**
@@ -111,13 +115,13 @@ class Insert extends AbstractQuery implements QueryInterface
 	}
 
 	/**
-	 *	Add pair to insert and returns query object for chainability.
+	 *	Add pair to insert and returns query object for method chaining.
 	 *	@access		public
-	 *	@param		string		$name
-	 *	@param		mixed		$value
+	 *	@param		string					$name
+	 *	@param		string|int|float|null	$value
 	 *	@return		self
 	 */
-	public function set( string $name, $value ): self
+	public function set( string $name, string|int|float|null $value ): self
 	{
 		$this->fields[$name]	 = $value;
 		return $this;

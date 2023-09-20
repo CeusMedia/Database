@@ -34,7 +34,6 @@ use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Condition;
 use CeusMedia\Database\OSQL\Condition\Group;
 use CeusMedia\Database\OSQL\Table;
-use Exception;
 use InvalidArgumentException;
 use PDO as Pdo;
 use RuntimeException;
@@ -111,7 +110,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function where( $condition ): self
+	public function where( Condition|Group $condition ): self
 	{
 		return $this->and( $condition );
 	}
@@ -122,7 +121,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function and( $condition ): self
+	public function and( Condition|Group $condition ): self
 	{
 		$this->conditions[]	= [
 			'operation'	=> Group::OPERATION_AND,
@@ -138,7 +137,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@return		self
 	 *	@throws		RuntimeException				if no conditions are set before
 	 */
-	 public function or( $condition ): self
+	 public function or( Condition|Group $condition ): self
 	 {
 		if( count( $this->conditions ) === 0 )
 			throw new RuntimeException( 'No condition set yet' );
@@ -252,7 +251,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderConditions( & $parameters ): string
+	protected function renderConditions( array &$parameters ): string
 	{
 		if( count( $this->conditions ) === 0 )
 			return '';
@@ -271,7 +270,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderLimit( & $parameters ): string
+	protected function renderLimit( array &$parameters ): string
 	{
 		if( $this->limit === NULL )
 			return '';
@@ -289,7 +288,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderOffset( & $parameters ): string
+	protected function renderOffset( array &$parameters ): string
 	{
 		if( $this->offset === NULL )
 			return '';

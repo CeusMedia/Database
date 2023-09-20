@@ -65,17 +65,16 @@ class Select extends AbstractQuery implements QueryInterface
 	}
 
 	/**
-	 *	Adds fields to select and returns query object for chainability.
+	 *	Adds fields to select and returns query object for method chaining.
 	 *	@access		public
 	 *	@param		array|string	$fields		List of fields to select or one field name or asterisk
 	 *	@return		self
 	 */
-	public function get( $fields ): self
+	public function get( array|string $fields ): self
 	{
 		if( is_string( $fields ) )
-			$fields	= array( $fields );
-		if( !is_array( $fields ) )
-			throw new InvalidArgumentException( 'Must be array or string' );
+			$fields	= [$fields];
+		$this->fields	= $fields;
 		return $this;
 	}
 
@@ -84,14 +83,14 @@ class Select extends AbstractQuery implements QueryInterface
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
 		if( count( $this->tables ) === 0 )
 			throw new RuntimeException( 'No from clause set' );
 	}
 
 	/**
-	 *	Sets table to select in and returns query object for chainability.
+	 *	Sets table to select in and returns query object for method chaining.
 	 *	@access		public
 	 *	@param		Table	$table		Table to select in
 	 *	@return		self

@@ -27,8 +27,6 @@
 namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Common\Alg\Time\Clock;
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
 use RuntimeException;
 
@@ -59,7 +57,7 @@ class Delete extends AbstractQuery implements QueryInterface
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
 		if( $this->table === NULL )
 			throw new RuntimeException( 'No table clause set' );
