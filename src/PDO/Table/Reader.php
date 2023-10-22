@@ -731,14 +731,10 @@ class Reader
 		$patternBetween		= '/^(><|!><)( ?)(\d+)( ?)&( ?)(\d+)$/';
 		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)(\d+)$/';
 		$patternOperators	= '/^(<=|>=|<|>|!=)( ?)(.+)$/';
+		$patternLike		= '/^(%|!%) (.+)$/';
 
 		$valueString	= (string) $value;
-		if( preg_match( '/^%/', $valueString ) === 1 || preg_match( '/%$/', $valueString ) === 1 ){
-			$operation	= ' LIKE ';
-			$valueString	= $this->secureValue( $value );
-
-		}
-		else if( preg_match( $patternBetween, trim( $valueString ), $result ) === 1 ){
+		if( preg_match( $patternBetween, trim( $valueString ), $result ) === 1 ){
 			$matches	= [];
 			preg_match_all( $patternBetween, $valueString, $matches );
 			$operation		= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
@@ -764,6 +760,16 @@ class Reader
 			if( strlen( $matches[2][0] ) === 0 )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
+		}
+		else if( preg_match( $patternLike, $valueString, $result ) === 1 ){
+			$matches	= [];
+			preg_match_all( $patternLike, $valueString, $matches );
+			$operation	= ( $matches[1][0] === '!%' ? 'NOT ' : '' ).'LIKE';
+			$value		= $this->secureValue( $matches[2][0] );
+		}
+		else if( preg_match( '/^%/', $valueString ) === 1 || preg_match( '/%$/', $valueString ) === 1 ){
+			$operation	= ' LIKE ';
+			$value		= $this->secureValue( $valueString );
 		}
 		else{
 			if( strtolower( $valueString ) == 'is null' || strtolower( $valueString ) == 'is not null'){
