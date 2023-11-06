@@ -194,7 +194,7 @@ class WriterTest extends TestCase
 	public function testUpdateException1()
 	{
 		$this->expectException( 'InvalidArgumentException' );
-		$this->writer->updateByConditions( [] );
+		$this->writer->update( [] );
 	}
 
 	/**

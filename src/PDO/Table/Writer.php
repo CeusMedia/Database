@@ -176,8 +176,6 @@ class Writer extends Reader
 			if( isset( $data[$column] ) ){
 				if( $stripTags )
 					$data[$column]	= strip_tags( $data[$column] );
-				if( $data[$column] == 'on' )
-					$data[$column] = 1;
 				$data[$column]	= $this->secureValue( $data[$column] );
 				$updates[] = '`'.$column.'`='.$data[$column];
 			}

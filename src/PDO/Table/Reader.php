@@ -49,31 +49,37 @@ use RuntimeException;
  */
 class Reader
 {
-	/**	@var	Connection		$dbc				Database connection resource object */
+	/**	@var	Connection			$dbc				Database connection resource object */
 	protected Connection $dbc;
 
-	/**	@var	array			$columns			List of table columns */
+	/**	@var	array				$columns			List of table columns */
 	protected array $columns;
 
-	/**	@var	array			$indices			List of indices of table */
+	/**	@var	array				$indices			List of indices of table */
 	protected array $indices			= [];
 
-	/**	@var	array			$focusedIndices		List of focused indices */
+	/**	@var	array				$focusedIndices		List of focused indices */
 	protected array $focusedIndices	= [];
 
-	/**	@var	string			$primaryKey			Primary key of this table */
+	/**	@var	string				$primaryKey			Primary key of this table */
 	protected string $primaryKey;
 
-	/**	@var	string			$tableName			Name of this table */
+	/**	@var	string				$tableName			Name of this table */
 	protected string $tableName;
 
-	/**	@var	int				$fetchMode			Name of this table */
+	/**	@var	int					$fetchMode			Name of this table */
 	protected int $fetchMode;
 
-	/**	@var	int				$defaultFetchMode	Default fetch mode, can be set statically */
+	/**	@var	int					$defaultFetchMode	Default fetch mode, can be set statically */
 	public static int $defaultFetchMode	= PDO::FETCH_ASSOC;
 
-//	public $undoStorage;
+	/**	@var	string|NULL			$fetchEntityClass	Entity class name for PDO fetch mode FETCH_CLASS */
+	protected ?string $fetchEntityClass					= NULL;
+
+	/**	@var	object|NULL			$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
+	protected ?object $fetchEntityObject				= NULL;
+
+	//	public $undoStorage;
 
 	/**
 	 *	Constructor.
@@ -198,9 +204,10 @@ class Reader
 
 		//  append rendered conditions, orders, limits, groupings and havings
 		$query		= $query.$conditions.$groupings.$havings.$orders.$limits;
-		$resultSet	= $this->dbc->query( $query );
-		if( $resultSet instanceof PDOStatement ){
-			$resultList	= $resultSet->fetchAll( $this->getFetchMode() );
+		$statement	= $this->dbc->prepare( $query );
+		if( $statement->execute() ){
+			$this->applyFetchModeOnStatement( $statement );
+			$resultList	= $this->applyFetchModeOnResultSet( $statement );
 			if( $resultList !== FALSE )
 				return $resultList;
 		}
@@ -236,9 +243,10 @@ class Reader
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$column.' IN ('.implode( ', ', $values ).') '.$orders.$limits;
-		$resultSet	= $this->dbc->query( $query );
-		if( $resultSet instanceof PDOStatement ){
-			$resultList	= $resultSet->fetchAll( $this->getFetchMode() );
+		$statement	= $this->dbc->prepare( $query );
+		if( $statement->execute() ){
+			$this->applyFetchModeOnStatement( $statement );
+			$resultList	= $this->applyFetchModeOnResultSet( $statement );
 			if( $resultList !== FALSE )
 				return $resultList;
 		}
@@ -278,9 +286,10 @@ class Reader
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$column.' IN ('.implode( ', ', $values ).') '.$orders.$limits;
-		$resultSet	= $this->dbc->query( $query );
-		if( $resultSet instanceof PDOStatement ){
-			$resultList	= $resultSet->fetchAll( $this->getFetchMode() );
+		$statement	= $this->dbc->prepare( $query );
+		if( $statement->execute() ){
+			$this->applyFetchModeOnStatement( $statement );
+			$resultList	= $this->applyFetchModeOnResultSet( $statement );
 			if( $resultList !== FALSE )
 				return $resultList;
 		}
@@ -341,9 +350,10 @@ class Reader
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( 0 !== count( $fields ) ? $fields : $this->columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$orders.$limits;
-		$resultSet	= $this->dbc->query( $query );
-		if( $resultSet instanceof PDOStatement ){
-			$resultList = $resultSet->fetchAll($this->getFetchMode());
+		$statement	= $this->dbc->prepare( $query );
+		if( $statement->execute() ){
+			$this->applyFetchModeOnStatement( $statement );
+			$resultList = $this->applyFetchModeOnResultSet( $statement );
 			if( $resultList !== FALSE ){
 				if( $first )
 					return count( $resultList ) !== 0 ? $resultList[0] : NULL;
@@ -407,9 +417,25 @@ class Reader
 	 *	@access		public
 	 *	@return		integer		$fetchMode		Currently set fetch mode
 	 */
-	protected function getFetchMode(): int
+	public function getFetchMode(): int
 	{
 		return $this->fetchMode;
+	}
+
+	/**
+	 *	@return		string|NULL
+	 */
+	public function getFetchEntityClass(): ?string
+	{
+		return $this->fetchEntityClass;
+	}
+
+	/**
+	 *	@return		object|NULL
+	 */
+	public function getFetchEntityObject(): ?object
+	{
+		return $this->fetchEntityObject;
 	}
 
 	/**
@@ -526,6 +552,28 @@ class Reader
 	}
 
 	/**
+	 *	@access		public
+	 * 	@param		string|NULL		$className
+	 *	@return		self
+	 */
+	public function setFetchEntityClass( ?string $className ): self
+	{
+		$this->fetchEntityClass	= $className;
+		return $this;
+	}
+
+	/**
+	 *	@access		public
+	 *	@param		object|NULL		$object
+	 *	@return		self
+	 */
+	public function setFetchEntityObject( ?object $object ): self
+	{
+		$this->fetchEntityObject	= $object;
+		return $this;
+	}
+
+	/**
 	 *	Setting all indices of this table.
 	 *	@access		public
 	 *	@param		array		$indices		List of table indices
@@ -592,6 +640,31 @@ class Reader
 	}*/
 
 	//  --  PROTECTED  --  //
+
+	/**
+	 *	@param		PDOStatement	$resultSet
+	 *	@return		array|FALSE
+	 */
+	protected function applyFetchModeOnResultSet( PDOStatement $resultSet )
+	{
+		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass )
+			return $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
+		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
+			return $resultSet->fetchAll( $this->fetchMode );
+		return $resultSet->fetchAll( $this->fetchMode );
+	}
+
+	/**
+	 *	@param		PDOStatement		$statement
+	 *	@return		bool
+	 */
+	protected function applyFetchModeOnStatement( PDOStatement $statement ): bool
+	{
+		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
+			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityObject );
+		return $statement->setFetchMode( $this->fetchMode );
+	}
+
 
 	/**
 	 *	Returns a list of comma separated and masked columns.

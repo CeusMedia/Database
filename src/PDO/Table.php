@@ -80,17 +80,23 @@ abstract class Table
 	/**	@var	SimpleCacheInterface|null					$cacheInstance	Cache adapter instance to use as cache by default */
 	public static ?SimpleCacheInterface $cacheInstance		= NULL;
 
-	/** @var	string										$cacheClass		Name of default cache adapter class */
+	/**	@var	string										$cacheClass		Name of default cache adapter class */
 	public static string $cacheClass						= NoopCache::class;
 
-	/** @var	mixed										$cacheResource	Resource to connect to by cache adapter */
+	/**	@var	mixed										$cacheResource	Resource to connect to by cache adapter */
 	public static mixed $cacheResource						= NULL;
 
-	/** @var	string										$cacheKey		Prefix of cache key */
+	/**	@var	string										$cacheKey		Prefix of cache key */
 	protected string $cacheKey								= '';
 
 	/**	@var	integer										$fetchMode		PDO fetch mode, default: PDO::FETCH_OBJ */
 	protected int $fetchMode								= PDO::FETCH_OBJ;
+
+	/**	@var	string|NULL									$fetchEntityClass	Entity class name for PDO fetch mode FETCH_CLASS */
+	protected ?string $fetchEntityClass						= NULL;
+
+	/**	@var	object|NULL									$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
+	protected ?object $fetchEntityObject					= NULL;
 
 	/**
 	 *	Constructor.
@@ -742,9 +748,13 @@ abstract class Table
 			$this->primaryKey,
 			$id
 		);
-		if ($this->fetchMode > 0)
+		if( 0 !== $this->fetchMode )
 			$this->table->setFetchMode($this->fetchMode);
 		$this->table->setIndices( $this->indices );
+		if( NULL !== $this->fetchEntityClass )
+			$this->table->setFetchEntityClass( $this->fetchEntityClass );
+		if( NULL !== $this->fetchEntityObject )
+			$this->table->setFetchEntityObject( $this->fetchEntityObject );
 		return $this;
 	}
 
