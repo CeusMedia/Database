@@ -26,16 +26,17 @@
  */
 namespace CeusMedia\Database\OSQL\Query;
 
+use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Database\OSQL\Query\AbstractQuery;
 use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
+use PDO as Pdo;
+use RuntimeException;
 
 /**
  *	Builder for UPDATE statements.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
- *	@extends		\CeusMedia\Database\OSQL\QueryAbstract
- *	@implements		\CeusMedia\Database\OSQL\QueryInterface
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -43,11 +44,11 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Update extends AbstractQuery implements QueryInterface
 {
-	protected $conditions	= array();
-	protected $fields		= array();
-	protected $table		= NULL;
+	public ?int $rowCount;
 
-	public $affectedRows;
+	protected array $conditions	= [];
+	protected array $fields		= [];
+	protected ?Table $table		= NULL;
 
 	/**
 	 *	...
@@ -56,8 +57,8 @@ class Update extends AbstractQuery implements QueryInterface
 	 */
 	protected function checkSetup()
 	{
-		if( !$this->table )
-			throw new \Exception( 'No table clause set' );
+		if( $this->table === NULL )
+			throw new RuntimeException( 'No table clause set' );
 	}
 
 	/**
@@ -75,24 +76,25 @@ class Update extends AbstractQuery implements QueryInterface
 	/**
 	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		object
 	 */
 	public function render(): object
 	{
-		$clock	= new \Alg_Time_Clock();
+//		$clock	= new Clock();
 		$this->checkSetup();
-		$parameters	= array();
+		$parameters	= [];
 		$fields		= $this->renderFields( $parameters );
+		/** @phpstan-ignore-next-line  */
 		$table		= $this->table->render();
 		$conditions	= $this->renderConditions( $parameters );
 		$limit		= $this->renderLimit( $parameters );
 		$offset		= $this->renderOffset( $parameters );
 		$query		= 'UPDATE '.$table.$fields.$conditions.$limit.$offset;
-		$this->timeRender	= $clock->stop( 6, 0 );
-		return (object) array(
+//		$this->timeRender	= $clock->stop( 6, 0 );
+		return (object) [
 			'query'			=> $query,
 			'parameters'	=> $parameters,
-		);
+		];
 	}
 
 	/**
@@ -103,15 +105,16 @@ class Update extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderFields( & $parameters ): string
 	{
-		if( !$this->fields )
+		if( count( $this->fields ) === 0 )
 			return '';
-		$list	= array();
-		foreach( $this->fields as $name => $value )
-			$list[]	= $name.' = :'.$name;
-		$parameters[$name]	= array(
-			'type'	=> \PDO::PARAM_STR,
-			'value'	=> $value
-		);
+		$list	= [];
+		foreach( $this->fields as $name => $value ){
+			$list[]				= $name.' = :'.$name;
+			$parameters[$name]	= [
+				'type'	=> Pdo::PARAM_STR,
+				'value'	=> $value
+			];
+		}
 		return ' SET '.implode( ', ', $list );
 	}
 
@@ -122,7 +125,7 @@ class Update extends AbstractQuery implements QueryInterface
 	 *	@param		mixed		$value		Value to set
 	 *	@return		self
 	 */
-	public function set( $name, $value ): self
+	public function set( string $name, $value ): self
 	{
 		$this->fields[$name]	 = $value;
 		return $this;

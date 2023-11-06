@@ -1,28 +1,33 @@
-<?php
+<?php /** @noinspection ALL */
+/** @noinspection SqlResolve */
+/** @noinspection SqlNoDataSourceInspection */
+
 /**
  *	TestUnit of PDO Table Reader.
  *	@package		Tests.database.pdo
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@since			02.07.2008
- *	@version		0.1
  */
 
-use CeusMedia\Database\PDO\Connection;
+namespace CeusMedia\DatabaseTest\PDO\Table;
 
-require_once 'test/initLoaders.php';
+use CeusMedia\Database\PDO\Connection as PdoConnection;
+use CeusMedia\Database\PDO\Table\Reader as PdoTableReader;
+use CeusMedia\DatabaseTest\PDO\TestCase;
+use mysqli;
+
+
 /**
  *	TestUnit of PDO Table Reader.
  *	@package		Tests.database.pdo
- *	@extends		Test_Case
- *	@uses			DB_PDO_Connection
- *	@uses			\CeusMedia\Database\PDO\Table\Reader
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@since			02.07.2008
- *	@version		0.1
  */
-class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Test_Case
+class ReaderTest extends TestCase
 {
-	protected $directDbc;
+	protected array $columns;
+	protected string $tableName;
+	protected array $indices;
+	protected string $primaryKey;
+	protected PdoTableReader $reader;
 
 	/**
 	 *	Constructor.
@@ -32,89 +37,19 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function __construct()
 	{
 		parent::__construct();
-		$this->host		= self::$config['unitTest-Database']['host'];
-		$this->port		= self::$config['unitTest-Database']['port'];
-		$this->username	= self::$config['unitTest-Database']['username'];
-		$this->password	= self::$config['unitTest-Database']['password'];
-		$this->database	= self::$config['unitTest-Database']['database'];
-		$this->path		= dirname( dirname( __FILE__ ) )."/";
-		$this->errorLog	= $this->path."errors.log";
-		$this->queryLog	= $this->path."queries.log";
-
-		$this->dsn		= "mysql:host=".$this->host.";dbname=".$this->database;
-		$this->options	= array();
 
 		$this->tableName	= "transactions";
-		$this->columns		= array(
+		$this->columns		= [
 			'id',
 			'topic',
 			'label',
 			'timestamp',
-		);
+		];
 		$this->primaryKey	= $this->columns[0];
-		$this->indices	= array(
+		$this->indices		= [
 			'topic',
 			'label'
-		);
-	}
-
-	/**
-	 *	Setup for every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function setUp(): void
-	{
-		if( !extension_loaded( 'pdo_mysql' ) )
-			$this->markTestSkipped( "PDO driver for MySQL not supported" );
-
-		$options	= array();
-		$this->connection	= new \CeusMedia\Database\PDO\Connection( $this->dsn, $this->username, $this->password, $this->options );
-		$this->connection->setAttribute( \PDO::ATTR_CASE, \PDO::CASE_NATURAL );
-		$this->connection->setAttribute( \PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, TRUE );
-		$this->connection->setErrorLogFile( $this->errorLog );
-		$this->connection->setStatementLogFile( $this->queryLog );
-		if( extension_loaded( 'mysql' ) ){
-			$this->directDbc	= mysql_connect( $this->host, $this->username, $this->password ) or die( mysql_error() );
-			mysql_select_db( $this->database );
-			$sql	= file_get_contents( $this->path."createTable.sql" );
-			foreach( explode( ";", $sql ) as $part )
-				if( trim( $part ) )
-					mysql_query( $part ) or die( mysql_error() );
-		}
-		else if( extension_loaded( 'mysqli' ) ){
-			$this->directDbc	= new mysqli( $this->host, $this->username, $this->password ) or die( mysqli_error() );
-			mysqli_select_db( $this->directDbc, $this->database );
-			$sql	= file_get_contents( $this->path."createTable.sql" );
-			foreach( explode( ";", $sql ) as $part )
-				if( trim( $part ) )
-					mysqli_query( $this->directDbc, $part ) or die( mysqli_error() );
-		}
-		else{
-			$this->markTestSkipped( "Support for MySQL is missing" );
-		}
-
-		$this->reader	= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
-		$this->reader->setIndices( $this->indices );
-	}
-
-	/**
-	 *	Cleanup after every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function tearDown(): void
-	{
-		@unlink( $this->errorLog );
-		@unlink( $this->queryLog );
-		if( extension_loaded( 'mysql' ) ){
-			mysql_query( "DROP TABLE transactions" );
-			mysql_close();
-		}
-		else if( extension_loaded( 'mysqli' ) ){
-			mysqli_query( $this->directDbc, "DROP TABLE transactions" );
-			mysqli_close( $this->directDbc );
-		}
+		];
 	}
 
 	/**
@@ -124,23 +59,23 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testConstruct1()
 	{
-		$reader		= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, "table", array( 'col1', 'col2' ), 'col2', 1 );
+		$reader		= new PdoTableReader( $this->connection, "table", ['col1', 'col2'], 'col2', 1 );
 
 		$expected	= 'table';
 		$actual		= $reader->getTableName();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
-		$expected	= array( 'col1', 'col2' );
+		$expected	= ['col1', 'col2'];
 		$actual		= $reader->getColumns();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$expected	= 'col2';
 		$actual		= $reader->getPrimaryKey();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
-		$expected	= array( 'col2' => 1 );
+		$expected	= ['col2' => 1];
 		$actual		= $reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -150,11 +85,11 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testConstruct2()
 	{
-		$reader		= new \CeusMedia\Database\PDO\Table\Reader( $this->connection, $this->tableName, $this->columns, $this->primaryKey, 1 );
+		$reader		= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey, 1 );
 
-		$expected	= array( 'id' => 1 );
+		$expected	= ['id' => 1];
 		$actual		= array_slice( $reader->get(), 0, 1 );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -164,23 +99,17 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testCount()
 	{
-		$expected	= 1;
-		$actual		= $this->reader->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 1, $this->reader->count() );
 
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'countTest');" );
 
-		$expected	= 2;
-		$actual		= $this->reader->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 2, $this->reader->count() );
 
-		$expected	= 1;
-		$actual		= $this->reader->count( array( 'label' => 'countTest' ) );
-		$this->assertEquals( $expected, $actual );
+		$actual		= $this->reader->count( ['label' => 'countTest'] );
+		self::assertEquals( 1, $actual );
 
-		$expected	= 0;
-		$actual		= $this->reader->count( array( 'label' => 'not_existing' ) );
-		$this->assertEquals( $expected, $actual );
+		$actual		= $this->reader->count( ['label' => 'not_existing'] );
+		self::assertEquals( 0, $actual );
 	}
 
 	/**
@@ -194,15 +123,15 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->reader->focusIndex( 'topic', 'test' );
 		$this->reader->defocus( TRUE );
 
-		$expected	= array( 'topic' => 'test' );
+		$expected	= ['topic' => 'test'];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->defocus();
 
-		$expected	= array();
+		$expected	= [];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -215,14 +144,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find();
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -234,15 +157,9 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( "*" ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ["*"] );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -255,14 +172,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( "*" );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -274,19 +185,10 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( "id" ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= array( 'id' );
-		$actual		= array_keys( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ["id"] );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( ['id'], array_keys( $result[0] ) );
 	}
 
 	/**
@@ -299,18 +201,9 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
 		$result		= $this->reader->find( "id" );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= array( 'id' );
-		$actual		= array_keys( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( ['id'], array_keys( $result[0] ) );
 	}
 
 	/**
@@ -322,22 +215,17 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( 'id' ), array(), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->find( ['id'], [], ['id' => 'ASC'] );
 
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
 
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= array(
-			array( 'id' => 1 ),
-			array( 'id' => 2 ),
-		);
+		$expected	= [
+			['id' => 1],
+			['id' => 2],
+		];
 		$actual		= $result;
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -349,19 +237,10 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 
-		$result		= $this->reader->find( array( 'id' ), array(), array( 'id' => 'DESC' ), array( 0, 1 ) );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= array( array( 'id' => 2 ) );
-		$actual		= $result;
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ['id'], [], ['id' => 'DESC'], [0, 1] );
+		self::assertCount( 1, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( [['id' => 2]], $result );
 	}
 
 	/**
@@ -374,19 +253,10 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 		//  will be ignored
 		$this->reader->focusIndex( 'topic', 'start' );
-		$result		= $this->reader->find( array( 'id' ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ['id'] );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 1, $result[0]['id'] );
 	}
 
 	/**
@@ -399,19 +269,10 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findTest');" );
 		//  will be ignored
 		$this->reader->focusPrimary( 1 );
-		$result		= $this->reader->find( array( 'id' ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ['id'] );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 1, $result[0]['id'] );
 	}
 
 	/**
@@ -427,11 +288,8 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 		$this->reader->focusIndex( 'topic', 'test' );
 		//  will be ignored
 		$this->reader->focusPrimary( 1, FALSE );
-		$result		= $this->reader->find( array( 'id' ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->find( ['id'] );
+		self::assertCount( 2, $result );
 	}
 
 	/**
@@ -443,33 +301,16 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInTest');" );
 
-		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'start', 'test' ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereIn( ['id'], "topic", ['start', 'test'], ['id' => 'ASC'] );
 
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 1, $result[0]['id'] );
 
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'test' ) );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->findWhereIn( ['id'], "topic", ['test'] );
+		self::assertCount( 1, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 2, $result[0]['id'] );
 	}
 
 	/**
@@ -481,19 +322,11 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInTest');" );
 
-		$result		= $this->reader->findWhereIn( array( 'id' ), "topic", array( 'start', 'test' ), array( 'id' => "DESC" ), array( 0, 1 ) );
+		$result		= $this->reader->findWhereIn( ['id'], "topic", ['start', 'test'], ['id' => "DESC"], [0, 1] );
 
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 1, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 2, $result[0]['id'] );
 	}
 
 	/**
@@ -504,7 +337,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFindWhereInException1()
 	{
 		$this->expectException( 'TypeError' );
-		$this->reader->findWhereIn( array( 'not_valid' ), "id", 1 );
+		$this->reader->findWhereIn( ['not_valid'], "id", 1 );
 	}
 
 	/**
@@ -515,6 +348,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFindWhereInException2()
 	{
 		$this->expectException( 'TypeError' );
+		/** @noinspection PhpParamsInspection */
 		$this->reader->findWhereIn( "*", "not_valid", 1 );
 	}
 
@@ -526,25 +360,14 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFindWhereInAnd()
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'test' ), array( "label" => "findWhereInAndTest" ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['test'], ["label" => "findWhereInAndTest"] );
 
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 1, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 2, $result[0]['id'] );
 
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start' ), array( "label" => "findWhereInAndTest" ) );
-
-		$expected	= 0;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start'], ["label" => "findWhereInAndTest"] );
+		self::assertCount( 0, $result );
 	}
 
 	/**
@@ -558,43 +381,22 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 
 		//  will be ignored
 		$this->reader->focusIndex( 'topic', 'test' );
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start', 'test'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
+		self::assertCount( 1, $result );
+		self::assertCount( 1, $result[0] );
+		self::assertEquals( 2, $result[0]['id'] );
 
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start', 'test'] );
+		self::assertCount( 2, $result );
 
-		$expected	= 1;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start', 'test'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
+		self::assertCount( 1, $result );
 
-		$expected	= 2;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['test'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
+		self::assertCount( 1, $result );
 
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start', 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'test' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->findWhereInAnd( array( 'id' ), "topic", array( 'start' ), array( "label" => "findWhereInAndTest" ), array( 'id' => 'ASC' ) );
-
-		$expected	= 0;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
+		self::assertCount( 0, $result );
 	}
 
 	/**
@@ -605,28 +407,16 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFocusIndex()
 	{
 		$this->reader->focusIndex( 'topic', 'test' );
-		$expected	= array(
-			'topic' => 'test'
-			);
-		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		$expected	= ['topic' => 'test'];
+		self::assertEquals( $expected, $this->reader->getFocus() );
 
 		$this->reader->focusIndex( 'label', 'text' );
-		$expected	= array(
-			'topic' => 'test',
-			'label'	=> 'text'
-		);
-		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		$expected	= ['topic' => 'test', 'label'	=> 'text'];
+		self::assertEquals( $expected, $this->reader->getFocus() );
 
 		$this->reader->focusIndex( 'id', 1 );
-		$expected	= array(
-			'topic' => 'test',
-			'label'	=> 'text',
-			'id'	=> 1
-		);
-		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		$expected	= ['topic' => 'test', 'label'	=> 'text', 'id'	=> 1];
+		self::assertEquals( $expected, $this->reader->getFocus() );
 	}
 
 	/**
@@ -648,14 +438,14 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testFocusPrimary()
 	{
 		$this->reader->focusPrimary( 2 );
-		$expected	= array( 'id' => 2 );
+		$expected	= ['id' => 2];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusPrimary( 1 );
-		$expected	= array( 'id' => 1 );
+		$expected	= ['id' => 1];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -667,30 +457,18 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 		$this->reader->focusPrimary( 1 );
+
+		/** @var array $result */
 		$result		= $this->reader->get( FALSE );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 1, $result );
+		self::assertCount( 4, $result[0] );
+		self::assertEquals( 1, $result[0]['id'] );
 
 		$this->reader->focusPrimary( 2 );
+		/** @var array $result */
 		$result		= $this->reader->get();
-
-		$expected	= 4;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result['id'];
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 4, $result );
+		self::assertEquals( 2, $result['id'] );
 	}
 
 	/**
@@ -702,30 +480,17 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndTest');" );
 		$this->reader->focusIndex( $this->primaryKey, 1 );
+
+		/** @var array $result */
 		$result		= $this->reader->get( FALSE );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 1, $result );
+		self::assertCount( 4, $result[0] );
+		self::assertEquals( 1, $result[0]['id'] );
 
 		$this->reader->focusPrimary( 2 );
 		$result		= $this->reader->get();
-
-		$expected	= 4;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result['id'];
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 4, $result );
+		self::assertEquals( 2, $result['id'] );
 	}
 
 	/**
@@ -737,32 +502,21 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithIndexTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
+
+		/** @var array $result */
 		$result		= $this->reader->get();
+		self::assertCount( 4, $result );
 
-		$expected	= 4;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
+		/** @var array $result */
 		$result		= $this->reader->get( FALSE );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
 
 		$this->reader->focusIndex( 'label', 'getWithIndexTest' );
+		/** @var array $result */
 		$result		= $this->reader->get( FALSE );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
+		self::assertCount( 1, $result );
+		self::assertCount( 4, $result[0] );
 	}
 
 	/**
@@ -774,41 +528,20 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithOrderTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
-		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ) );
 
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE, ['id' => "ASC"] );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
+		self::assertEquals( 1, $result[0]['id'] );
+		self::assertEquals( 2, $result[1]['id'] );
 
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result[1]['id'];
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->get( FALSE, array( 'id' => "DESC" ) );
-
-		$expected	= 2;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 4;
-		$actual		= count( $result[0] );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 1;
-		$actual		= $result[1]['id'];
-		$this->assertEquals( $expected, $actual );
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE, ['id' => "DESC"] );
+		self::assertCount( 2, $result );
+		self::assertCount( 4, $result[0] );
+		self::assertEquals( 2, $result[0]['id'] );
+		self::assertEquals( 1, $result[1]['id'] );
 	}
 
 	/**
@@ -820,25 +553,16 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithLimitTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
-		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ), array( 0, 1 ) );
 
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE, ['id' => "ASC"], [0, 1] );
+		self::assertCount( 1, $result );
+		self::assertEquals( 1, $result[0]['id'] );
 
-		$expected	= 1;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
-
-		$result		= $this->reader->get( FALSE, array( 'id' => "ASC" ), array( 1, 1 ) );
-
-		$expected	= 1;
-		$actual		= count( $result );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $result[0]['id'];
-		$this->assertEquals( $expected, $actual );
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE, ['id' => "ASC"], [1, 1] );
+		self::assertCount( 1, $result );
+		self::assertEquals( 2, $result[0]['id'] );
 	}
 
 	/**
@@ -861,19 +585,19 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$expected	= $this->columns;
 		$actual		= $this->reader->getColumns();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
 	 *	Tests Method 'getDBConnection'.
 	 *	@access		public
-	 *	@return		void->fetchMode
+	 *	@return		void
 	 */
 	public function testGetDBConnection()
 	{
 		$expected	= $this->connection;
 		$actual		= $this->reader->getDBConnection();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -884,34 +608,32 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testGetFocus()
 	{
 		$this->reader->focusPrimary( 1 );
-		$expected	= array(
-			'id' => 1
-		);
+		$expected	= ['id' => 1];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusIndex( 'topic', 'start' );
-		$expected	= array(
+		$expected	= [
 			'id'	=> 1,
 			'topic' => 'start'
-		);
+		];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusPrimary( 2, FALSE );
-		$expected	= array(
+		$expected	= [
 			'topic' => 'start',
 			'id' => 2
-		);
+		];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusPrimary( 2, TRUE );
-		$expected	= array(
+		$expected	= [
 			'id' => 2
-		);
+		];
 		$actual		= $this->reader->getFocus();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -921,26 +643,26 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testGetIndices()
 	{
-		$indices	= array( 'topic', 'timestamp' );
+		$indices	= ['topic', 'timestamp'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
-		$indices	= array( 'topic' );
+		$indices	= ['topic'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
-		$indices	= array();
+		$indices	= [];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -952,12 +674,12 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$expected	= 'id';
 		$actual		= $this->reader->getPrimaryKey();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->setPrimaryKey( 'timestamp' );
 		$expected	= 'timestamp';
 		$actual		= $this->reader->getPrimaryKey();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -969,13 +691,13 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	{
 		$expected	= "transactions";
 		$actual		= $this->reader->getTableName();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
 		$this->reader->setTableName( "other_table" );
 
 		$expected	= "other_table";
 		$actual		= $this->reader->getTableName();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -985,29 +707,19 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testIsFocused()
 	{
-		$expected	= FALSE;
-		$actual		= $this->reader->isFocused();
-		$this->assertEquals( $expected, $actual );
+		self::assertFalse( $this->reader->isFocused() );
 
 		$this->reader->focusPrimary( 2 );
-		$expected	= TRUE;
-		$actual		= $this->reader->isFocused();
-		$this->assertEquals( $expected, $actual );
+		self::assertTrue( $this->reader->isFocused() );
 
 		$this->reader->focusIndex( 'topic', 'start' );
-		$expected	= TRUE;
-		$actual		= $this->reader->isFocused();
-		$this->assertEquals( $expected, $actual );
+		self::assertTrue( $this->reader->isFocused() );
 
 		$this->reader->focusPrimary( 1, FALSE );
-		$expected	= TRUE;
-		$actual		= $this->reader->isFocused();
-		$this->assertEquals( $expected, $actual );
+		self::assertTrue( $this->reader->isFocused() );
 
 		$this->reader->focusPrimary( 1 );
-		$expected	= TRUE;
-		$actual		= $this->reader->isFocused();
-		$this->assertEquals( $expected, $actual );
+		self::assertTrue( $this->reader->isFocused() );
 	}
 
 	/**
@@ -1017,13 +729,13 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testSetColumns()
 	{
-		$columns	= array( 'col1', 'col2', 'col3' );
+		$columns	= ['col1', 'col2', 'col3'];
 
 		$this->reader->setColumns( $columns );
 
 		$expected	= $columns;
 		$actual		= $this->reader->getColumns();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -1034,7 +746,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testSetColumnsException1()
 	{
 		$this->expectException( 'RangeException' );
-		$this->reader->setColumns( array() );
+		$this->reader->setColumns( [] );
 	}
 
 	/**
@@ -1044,12 +756,12 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testSetDbConnection()
 	{
-		$dbc		= new Connection( $this->dsn, $this->username, $this->password );
+		$dbc		= new PdoConnection( $this->dsn, $this->username, $this->password );
 		$this->reader->setDBConnection( $dbc );
 
 		$expected	= $dbc;
 		$actual		= $this->reader->getDBConnection();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -1059,26 +771,26 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	 */
 	public function testSetIndices()
 	{
-		$indices	= array( 'topic', 'timestamp' );
+		$indices	= ['topic', 'timestamp'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
-		$indices	= array( 'topic' );
+		$indices	= ['topic'];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 
-		$indices	= array();
+		$indices	= [];
 		$this->reader->setIndices( $indices );
 
 		$expected	= $indices;
 		$actual		= $this->reader->getIndices();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -1089,7 +801,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testSetIndicesException1()
 	{
 		$this->expectException( 'DomainException' );
-		$this->reader->setIndices( array( 'not_existing' ) );
+		$this->reader->setIndices( ['not_existing'] );
 	}
 
 	/**
@@ -1100,7 +812,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 	public function testSetIndicesException2()
 	{
 		$this->expectException( 'DomainException' );
-		$this->reader->setIndices( array( 'id' ) );
+		$this->reader->setIndices( ['id'] );
 	}
 
 	/**
@@ -1114,7 +826,7 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 
 		$expected	= 'topic';
 		$actual		= $this->reader->getPrimaryKey();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -1140,6 +852,33 @@ class CeusMedia_Database_Test_PDO_Table_ReaderTest extends CeusMedia_Database_Te
 
 		$expected	= $tableName;
 		$actual		= $this->reader->getTableName();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
+	}
+
+	//  --  PROTECTED  --  //
+
+	/**
+	 *	Setup for every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function setUp(): void
+	{
+		parent::setUp();
+		$this->createTransactionsTableFromFileOnDirectConnection();
+
+		$this->reader	= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
+		$this->reader->setIndices( $this->indices );
+	}
+
+	/**
+	 *	Cleanup after every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function tearDown(): void
+	{
+		$this->dropTransactionsTable();
+		parent::tearDown();
 	}
 }

@@ -37,12 +37,12 @@ try{
 	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
 	$client	= new Client( $dbc );
 	$select	= Select::create( $client )
-		->get( array(
+		->get( [
 			'g.galleryId',
 			'g.title AS galleryTitle',
 			'gi.title AS imageTitle',
 			'gi.filename AS imageFilename',
-		) )
+		] )
 		->from( $tableGallery )
 		->join( $tableImage, 'g.galleryId', 'gi.galleryId' )
 		->countRows( TRUE );

@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 /**
  *	Builder for SELECT statements.
  *
@@ -26,16 +27,15 @@
  */
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
+use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Database\OSQL\Table;
+use InvalidArgumentException;
+use RuntimeException;
 
 /**
  *	Builder for SELECT statements.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
- *	@extends		\CeusMedia\Database\OSQL\QueryAbstract
- *	@implements		\CeusMedia\Database\OSQL\QueryInterface
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -43,23 +43,22 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Select extends AbstractQuery implements QueryInterface
 {
-	protected $countRows	= FALSE;
-	protected $conditions	= array();
-	protected $orders		= array();
-	protected $fields		= '*';
-	protected $tables		= array();
-	protected $groupBy		= NULL;
+	public int $foundRows		= 0;
 
-	public $foundRows		= 0;
-	public $finalQuery;
+	protected bool $countRows	= FALSE;
+	protected array $conditions	= [];
+	protected array $orders		= [];
+	protected array $fields		= ['*'];
+	protected array $tables		= [];
+	protected ?string $groupBy	= NULL;
 
 	/**
 	 *	Enable/disable counting of all rows ignoring limits.
 	 *	The result can be read later by in query member "foundRows".
 	 *	@access		public
-	 *	@param		bool		Flag: enable or disable counting
+	 *	@param		bool		$count		Flag: enable or disable counting
 	 */
-	public function countRows( ?bool $count = TRUE ): self
+	public function countRows( bool $count = TRUE ): self
 	{
 		$this->countRows	= $count;
 		return $this;
@@ -76,15 +75,7 @@ class Select extends AbstractQuery implements QueryInterface
 		if( is_string( $fields ) )
 			$fields	= array( $fields );
 		if( !is_array( $fields ) )
-			throw new \InvalidArgumentException( 'Must be array or string' );
-		foreach( $fields as $field ){
-			if( trim( $field ) === '*' )
-				$this->fields	= '*';
-			else if( $this->fields	== '*' )
-				$this->fields	= array( '*', trim( $field ) );
-			else
-				$this->fields[]	= trim( $field );
-		}
+			throw new InvalidArgumentException( 'Must be array or string' );
 		return $this;
 	}
 
@@ -95,8 +86,8 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function checkSetup()
 	{
-		if( !$this->tables )
-			throw new \Exception( 'No from clause set' );
+		if( count( $this->tables ) === 0 )
+			throw new RuntimeException( 'No from clause set' );
 	}
 
 	/**
@@ -119,13 +110,13 @@ class Select extends AbstractQuery implements QueryInterface
 
 	public function order( string $field, ?string $direction = 'ASC' ): self
 	{
-		$direction	= strtoupper( $direction );
-		if( !in_array( $direction, ['ASC', 'DESC'] ) )
-			throw new \InvalidArgumentException( 'Direction must be ASC or DESC' );
-		$this->orders[]	= (object) array(
+		$direction	= strtoupper( $direction ?? 'ASC' );
+		if( !in_array( $direction, ['ASC', 'DESC'], TRUE ) )
+			throw new InvalidArgumentException( 'Direction must be ASC or DESC' );
+		$this->orders[]	= (object) [
 			'field'		=> $field,
 			'direction'	=> $direction,
-		);
+		];
 		return $this;
 	}
 
@@ -136,9 +127,9 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderFrom(): string
 	{
-		if( !$this->tables )
-			throw new \RuntimeException( 'No table set' );
-		$list	= array();
+		if( count( $this->tables ) === 0 )
+			throw new RuntimeException( 'No table set' );
+		$list	= [];
 		foreach( $this->tables as $table )
 			$list[]	= $table->render();
 		return ' FROM '.implode( ', ', $list );
@@ -151,14 +142,14 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderGrouping(): string
 	{
-		if( !$this->groupBy )
+		if( $this->groupBy === NULL )
 			return '';
 		return ' GROUP BY '.$this->groupBy;
 	}
 
 	protected function renderOrders(): string
 	{
-		if( !$this->orders )
+		if( count( $this->orders ) === 0 )
 			return '';
 		$list	= [];
 		foreach( $this->orders as $order ){
@@ -170,14 +161,14 @@ class Select extends AbstractQuery implements QueryInterface
 	/**
 	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		object
 	 */
 	public function render(): object
 	{
-		$clock		= new \Alg_Time_Clock();
+//		$clock		= new Clock();
 		$this->checkSetup();
-		$parameters	= array();
-		$fields		= is_array( $this->fields ) ? implode( ', ', $this->fields ) : $this->fields;
+		$parameters	= [];
+		$fields		= implode( ', ', $this->fields );
 		$from		= $this->renderFrom();
 		$joins		= $this->renderJoins();
 		$conditions	= $this->renderConditions( $parameters );
@@ -188,20 +179,21 @@ class Select extends AbstractQuery implements QueryInterface
 		$options	= $this->renderOptions();
 		$query		= 'SELECT '.$options.$fields.$from.$joins.$conditions.$group.$orders.$limit.$offset;
 		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE|ORDER|LIMIT|GROUP|HAVING)/', PHP_EOL.'\\1', $query );
-		return (object) array(
+		return (object) [
 			'query'			=> $query,
 			'parameters'	=> $parameters,
-		);
+		];
 	}
 
-	protected function renderOptions()
+	protected function renderOptions(): string
 	{
 		$options	= [];
 		if( $this->countRows )
 			$options[]	= 'SQL_CALC_FOUND_ROWS';
-		return $options ? join( $options ).' ' : '';
+		if( count( $options ) === 0 )
+			return '';
+		return join( $options ).' ';
 	}
-
 }
 
 /*

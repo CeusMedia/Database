@@ -16,23 +16,74 @@
     "email": "office@ceusmedia.de",
     "jabber": "cwuerker@ceusmedia.de"
   },
-  "minimum-stability": "dev",
   "require": {
-    "php": ">=7.2",
+    "php": "^7.4 | ^8",
     "ext-pdo": "*",
-    "ceus-media/common": "^0.9 | 0.9.x@dev | >= 0.8.5.8 | dev-master",
-    "ceus-media/cache": "dev-master"
+    "ceus-media/common": "^1.0 | 1.0.x-dev | ^0.9 | 0.9.x@dev",
+    "ceus-media/cache": "^0.5 | 0.5.x-dev | ^0.4 | dev-0.4-dev"
   },
   "require-dev": {
-    "ceus-media/doc-creator": "dev-master",
+    "ext-mysqli": "*",
+    "ceus-media/doc-creator": "*",
     "phpunit/phpunit": "*",
     "phpstan/phpstan": "*",
     "phpstan/phpstan-strict-rules": "*",
-    "friendsofphp/php-cs-fixer": "*"
+    "friendsofphp/php-cs-fixer": "*",
+    "php-parallel-lint/php-parallel-lint": "^1.3 | dev-master",
+    "rector/rector": "*"
   },
   "autoload": {
     "psr-4": {
-        "CeusMedia\\Database\\": ["src/"]
+      "CeusMedia\\Database\\": ["src/"],
+      "CeusMedia\\DatabaseTest\\": ["test/"]
     }
+  },
+  "minimum-stability": "dev",
+  "scripts": {
+    "dev:install": "composer install --quiet",
+    "dev:update": "composer update --quiet",
+    "incomplete:dev:create-docs": [
+      "@dev:install",
+      "php vendor/ceus-media/doc-creator/doc-creator.php --config-file=util/doc.xml"
+    ],
+    "dev:phpunit": [
+      "@dev:install",
+      "php vendor/bin/phpunit --configuration util/phpunit9.xml"
+    ],
+    "dev:phpstan": [
+      "@dev:install",
+      "XDEBUG_MODE=off vendor/bin/phpstan analyze --configuration=util/phpstan.neon --memory-limit=1G --verbose"
+    ],
+    "dev:phpstan-clear": [
+      "@dev:install",
+      "XDEBUG_MODE=off vendor/bin/phpstan clear-result-cache --verbose"
+    ],
+    "dev:phpstan-save": [
+      "@dev:install",
+      "XDEBUG_MODE=off vendor/bin/phpstan analyse --configuration util/phpstan.neon --generate-baseline util/phpstan-baseline.neon --verbose"
+    ],
+    "dev:rector": [
+      "@dev:install",
+      "XDEBUG_MODE=off vendor/bin/rector process --config=util/rector.php --dry-run"
+    ],
+    "dev:rector-fix": [
+      "@dev:install",
+      "XDEBUG_MODE=off vendor/bin/rector process --config=util/rector.php"
+    ],
+    "dev:test-syntax": [
+      "@dev:install",
+      "vendor/bin/parallel-lint . -j 10 --colors --exclude vendor"
+    ]
+  },
+  "scripts-descriptions": {
+    "dev:install": "Installs project dependencies for Development stage",
+    "dev:update": "Updates project dependencies for Development stage",
+    "dev:unit": "Run unit tests",
+    "dev:phpstan": "Validate codebase with PHPStan",
+    "dev:phpstan-clear": "Clear PHPStan cache",
+    "dev:phpstan-save": "Store current results in ignore list",
+    "dev:rector": "Shows suggestions of configured Rector rules",
+    "dev:rector-fix": "Apply currently configured Rector rules to codebase",
+    "dev:test-syntax": "Validate code base syntax using PHP linter"
   }
 }

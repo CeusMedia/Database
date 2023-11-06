@@ -26,6 +26,8 @@
  */
 namespace CeusMedia\Database\OSQL;
 
+use RuntimeException;
+
 /**
  *	...
  *	@category		Library
@@ -37,29 +39,29 @@ namespace CeusMedia\Database\OSQL;
  */
 class Table
 {
-	protected $name;
-	protected $alias;
-	protected $joins	= array();
+	protected ?string $name		= NULL;
+	protected ?string $alias	= NULL;
+	protected array $joins		= [];
 
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		string		$name		Table name
-	 *	@param		string		$alias		Alias name
+	 *	@param		string|NULL		$name		Table name
+	 *	@param		string|NULL		$alias		Alias name
 	 *	@return		void
 	 */
 	public function __construct( ?string $name = NULL, ?string $alias = NULL )
 	{
-		if( $name )
+		if( $name !== NULL )
 			$this->setName( $name );
-		if( $alias )
+		if( $alias !== NULL )
 			$this->setAlias( $alias );
 	}
 
 	/**
 	 *	Return alias name.
 	 *	@access		public
-	 *	@return		string
+	 *	@return		string|NULL
 	 */
 	public function getAlias(): ?string
 	{
@@ -69,7 +71,7 @@ class Table
 	/**
 	 *	Return table name.
 	 *	@access		public
-	 *	@return		string
+	 *	@return		string|NULL
 	 */
 	public function getName(): ?string
 	{
@@ -78,21 +80,19 @@ class Table
 
 	public function render(): string
 	{
-		if( !$this->name )
-			throw new \Exception( 'No table name set' );
+		if( $this->name === NULL )
+			throw new RuntimeException( 'No table name set' );
 		$joins	= '';
-		if( $this->joins )
-		{
-			$joins	= array();
-			foreach( $this->joins as $join )
-			{
+		if( count( $this->joins ) !== 0 ){
+			$joins	= [];
+			foreach( $this->joins as $join ){
 				$tableName	= $join['table']->render();
 				$equiJoin	= $join['left'].' = '.$join['right'];
 				$joins[]	= ' LEFT OUTER JOIN '.$tableName.' ON ( '.$equiJoin.' )';
 			}
 			$joins	= join( $joins );
 		}
-		if( $this->alias && $this->alias !== $this->name )
+		if( $this->alias !== NULL && $this->alias !== $this->name )
 			return $this->name.' AS '.$this->alias.$joins;
 		return $this->name.$joins;
 	}
@@ -103,7 +103,7 @@ class Table
 	 *	@param		string		$alias		Alias name
 	 *	@return		self
 	 */
-	public function setAlias( $alias ): self
+	public function setAlias( string $alias ): self
 	{
 		$this->alias	= $alias;
 		return $this;
@@ -115,7 +115,7 @@ class Table
 	 *	@param		string		$name		Table name
 	 *	@return		self
 	 */
-	public function setName( $name ): self
+	public function setName( string $name ): self
 	{
 		$this->name	= $name;
 		return $this;
@@ -131,11 +131,11 @@ class Table
 	 */
 	public function join( Table $table, string $keyLeft, string $keyRight ): self
 	{
-		$this->joins[]	= array(
+		$this->joins[]	= [
 			'table'	=> $table,
 			'left'	=> $keyLeft,
 			'right'	=> $keyRight
-		);
+		];
 		return $this;
 	}
 }

@@ -40,11 +40,11 @@ use DomainException;
  */
 class Pool
 {
-	/** @var		?string		$default		Name of default connection */
-	protected $default;
+	/** @var		string|NULL		$default		Name of default connection */
+	protected ?string $default;
 
 	/** @var		array		$connections	Map of connections by name */
-	protected $connections		= array();
+	protected array $connections		= [];
 
 	/**
 	 *	Add a connection by a name.

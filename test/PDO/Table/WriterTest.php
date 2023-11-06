@@ -1,25 +1,29 @@
-<?php
+<?php /** @noinspection SqlResolve */
+/** @noinspection SqlNoDataSourceInspection */
+
 /**
  *	TestUnit of DB_PDO_TableWriter.
  *	@package		Tests.{classPackage}
- *	@author			Christian WÃ¼rker <christian.wuerker@ceusmedia.de>
- *	@since			02.05.2008
- *	@version		0.1
+ *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
-require_once 'test/initLoaders.php';
+
+namespace CeusMedia\DatabaseTest\PDO\Table;
+
+use CeusMedia\Database\PDO\Table\Writer as PdoTableWriter;
+use CeusMedia\DatabaseTest\PDO\TestCase;
+
 /**
  *	TestUnit of DB_PDO_TableWriter.
  *	@package		Tests.{classPackage}
- *	@extends		Test_Case
- *	@uses			DB_PDO_Connection
- *	@uses			DB_PDO_TableWriter
- *	@author			Christian WÃ¼rker <christian.wuerker@ceusmedia.de>
- *	@since			02.05.2008
- *	@version		0.1
+ *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  */
-class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Test_Case
+class WriterTest extends TestCase
 {
-	protected $directDbc;
+	protected array $columns;
+	protected string $tableName;
+	protected array $indices;
+	protected string $primaryKey;
+	protected PdoTableWriter $writer;
 
 	/**
 	 *	Constructor.
@@ -29,89 +33,19 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	public function __construct()
 	{
 		parent::__construct();
-		$this->host		= self::$config['unitTest-Database']['host'];
-		$this->port		= self::$config['unitTest-Database']['port'];
-		$this->username	= self::$config['unitTest-Database']['username'];
-		$this->password	= self::$config['unitTest-Database']['password'];
-		$this->database	= self::$config['unitTest-Database']['database'];
-		$this->path		= dirname( dirname( __FILE__ ) )."/";
-		$this->errorLog	= $this->path."errors.log";
-		$this->queryLog	= $this->path."queries.log";
-
-		$this->dsn		= "mysql:host=".$this->host.";dbname=".$this->database;
-		$this->options	= array();
 
 		$this->tableName	= "transactions";
-		$this->columns		= array(
+		$this->columns		= [
 			'id',
 			'topic',
 			'label',
 			'timestamp',
-		);
+		];
 		$this->primaryKey	= $this->columns[0];
-		$this->indices	= array(
+		$this->indices		= [
 			'topic',
 			'label'
-		);
-	}
-
-	/**
-	 *	Setup for every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function setUp(): void
-	{
-		if( !extension_loaded( 'pdo_mysql' ) )
-			$this->markTestSkipped( "PDO driver for MySQL not supported" );
-
-		$this->connection	= new \CeusMedia\Database\PDO\Connection( $this->dsn, $this->username, $this->password, $this->options );
-		$this->connection->setAttribute( \PDO::ATTR_CASE, \PDO::CASE_NATURAL );
-		$this->connection->setAttribute( \PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, TRUE );
-		$this->connection->setErrorLogFile( $this->errorLog );
-		$this->connection->setStatementLogFile( $this->queryLog );
-
-		if( extension_loaded( 'mysql' ) ){
-			$this->directDbc	= mysql_connect( $this->host, $this->username, $this->password ) or die( mysql_error() );
-			mysql_select_db( $this->database );
-			$sql	= file_get_contents( $this->path."createTable.sql" );
-			foreach( explode( ";", $sql ) as $part )
-				if( trim( $part ) )
-					mysql_query( $part ) or die( mysql_error() );
-		}
-		else if( extension_loaded( 'mysqli' ) ){
-			$this->directDbc	= new mysqli( $this->host, $this->username, $this->password ) or die( mysqli_error() );
-			mysqli_select_db( $this->directDbc, $this->database );
-			$sql	= file_get_contents( $this->path."createTable.sql" );
-			foreach( explode( ";", $sql ) as $part )
-				if( trim( $part ) )
-					mysqli_query( $this->directDbc, $part ) or die( mysqli_error() );
-		}
-		else{
-			$this->markTestSkipped( "Support for MySQL is missing" );
-		}
-
-		$this->writer	= new \CeusMedia\Database\PDO\Table\Writer( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
-		$this->writer->setIndices( $this->indices );
-	}
-
-	/**
-	 *	Cleanup after every Test.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function tearDown(): void
-	{
-		@unlink( $this->errorLog );
-		@unlink( $this->queryLog );
-		if( extension_loaded( 'mysql' ) ){
-			mysql_query( "DROP TABLE transactions" );
-			mysql_close();
-		}
-		else if( extension_loaded( 'mysqli' ) ){
-			mysqli_query( $this->directDbc, "DROP TABLE transactions" );
-			mysqli_close( $this->directDbc );
-		}
+		];
 	}
 
 	/**
@@ -125,39 +59,26 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 
-		$expected	= 4;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 4, $this->writer->count() );
 
 		$this->writer->focusPrimary( 4 );
-		$expected	= 1;
-		$actual		= $this->writer->delete();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 1, $this->writer->delete() );
 
 		$this->writer->defocus();
-		$expected	= 3;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 3, $this->writer->count() );
 
-		$expected	= 2;
-		$actual		= count( $this->writer->find( array(), array( 'label' => 'deleteTest' ) ) );
-		$this->assertEquals( $expected, $actual );
+		$actual		= $this->writer->find( [], ['label' => 'deleteTest'] );
+		self::assertCount( 2, $actual );
 
 		$this->writer->focusIndex( 'label', 'deleteTest' );
-		$expected	= 2;
-		$actual		= $this->writer->delete();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 2, $this->writer->delete() );
 
 		$this->writer->defocus();
-		$expected	= 1;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 1, $this->writer->count() );
 
 		$this->writer->defocus();
 		$this->writer->focusPrimary( 999999 );
-		$expected	= 0;
-		$actual		= $this->writer->delete();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 0, $this->writer->delete() );
 	}
 
 	/**
@@ -182,17 +103,12 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'deleteTest');" );
 
-		$expected	= 4;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 4, $this->writer->count() );
 
-		$expected	= 3;
-		$actual		= $this->writer->deleteByConditions( array( 'label' => 'deleteTest' ) );
-		$this->assertEquals( $expected, $actual );
+		$actual		= $this->writer->deleteByConditions( ['label' => 'deleteTest'] );
+		self::assertEquals( 3, $actual );
 
-		$expected	= 1;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 1, $this->writer->count() );
 	}
 
 	/**
@@ -202,38 +118,31 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	 */
 	public function testInsert()
 	{
-		$data	= array(
-			'topic'	=> 'insert',
-			'label'	=> 'insertTest',
-		);
+		$data	= ['topic' => 'insert', 'label' => 'insertTest'];
 
-		$expected	= 2;
-		$actual		= $this->writer->insert( $data );
-		$this->assertEquals( $expected, $actual );
-
-		$expected	= 2;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 2, $this->writer->insert( $data ) );
+		self::assertEquals( 2, $this->writer->count() );
 
 		$this->writer->focusPrimary( 2 );
-		$expected	= $data;
-		$actual		= array_slice( $this->writer->get( TRUE ), 1, 2 );
-		$this->assertEquals( $expected, $actual );
+		/** @var array|NULL $result */
+		$result		= $this->writer->get();
+		self::assertNotNull( $result );
+
+		/** @var array $result */
+		$actual		= array_slice( $result, 1, 2 );
+		self::assertEquals( $data, $actual );
 
 		$this->writer->focusIndex( 'topic', 'insert' );
-		$expected	= 3;
-		$actual		= $this->writer->insert( array( 'label' => 'insertTest2' ) );
-		$this->assertEquals( $expected, $actual );
+		$actual		= $this->writer->insert( ['label' => 'insertTest2'] );
+		self::assertEquals( 3, $actual );
 
 		$this->writer->defocus();
-		$expected	= 3;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 3, $this->writer->count() );
 
-		$results	= $this->writer->find( array( 'label' ) );
-		$expected	= array( 'label' => 'insertTest2' );
+		$results	= $this->writer->find( ['label'] );
+		$expected	= ['label' => 'insertTest2'];
 		$actual		= array_pop( $results );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( $expected, $actual );
 	}
 
 	/**
@@ -247,16 +156,13 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 		$this->writer->focusPrimary( 2 );
 
-		$data		= array(
-			'label'	=> "updateTest1-changed"
-		);
-		$expected	= 1;
-		$actual		= $this->writer->update( $data );
-		$this->assertEquals( $expected, $actual );
+		$data		= ['label' => "updateTest1-changed"];
 
-		$expected	= array( 'label' => "updateTest1-changed" );
-		$actual		= $this->writer->find( array( 'label' ), array( 'id' => 2 ) );
-		$this->assertEquals( $expected, end( $actual ) );
+		self::assertEquals( 1, $this->writer->update( $data ) );
+
+		$expected	= ['label' => "updateTest1-changed"];
+		$actual		= $this->writer->find( ['label'], ['id' => 2] );
+		self::assertEquals( $expected, end( $actual ) );
 	}
 
 	/**
@@ -270,17 +176,14 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 		$this->writer->focusIndex( 'topic', 'update' );
 
-		$data		= array(
-			'label'	=> "changed"
-		);
-		$expected	= 2;
-		$actual		= $this->writer->update( $data );
-		$this->assertEquals( $expected, $actual );
+		$data		= ['label' => "changed"];
+
+		self::assertEquals( 2, $this->writer->update( $data ) );
 
 		$this->writer->focusIndex( 'label', 'changed' );
-		$expected	= 2;
-		$actual		= count( $this->writer->get( FALSE ) );
-		$this->assertEquals( $expected, $actual );
+		/** @var array $result */
+		$result		= $this->writer->get( FALSE );
+		self::assertCount( 2, $result );
 	}
 
 	/**
@@ -291,7 +194,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	public function testUpdateException1()
 	{
 		$this->expectException( 'InvalidArgumentException' );
-		$this->writer->updateByConditions( array() );
+		$this->writer->updateByConditions( [] );
 	}
 
 	/**
@@ -303,7 +206,7 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	{
 		$this->expectException( 'InvalidArgumentException' );
 		$this->writer->focusPrimary( 9999 );
-		$this->writer->update( array( 'label' => 'not_relevant' ));
+		$this->writer->update( ['label' => 'not_relevant'] );
 	}
 
 	/**
@@ -316,63 +219,52 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest1');" );
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('update','updateTest2');" );
 
-		$conditions	= array(
-			'label' => "updateTest1"
-		);
-		$data		= array(
-			'label'	=> "updateTest1-changed"
-		);
+		$conditions	= ['label' => "updateTest1"];
+		$data		= ['label' => "updateTest1-changed"];
 
-		$expected	= 0;
-		$wrongData	= array( 'invalid_column' => 'not_important' );
+		$wrongData	= ['invalid_column' => 'not_important'];
 		$actual		= $this->writer->updateByConditions( $wrongData, $conditions );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 0, $actual );
 
-		$expected	= 1;
 		$actual		= $this->writer->updateByConditions( $data, $conditions );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 1, $actual );
 
-		$expected	= array( 'label' => "updateTest1-changed" );
-		$actual		= $this->writer->find( array( 'label' ), array( 'id' => 2 ) );
-		$this->assertEquals( $expected, end( $actual ) );
+		$expected	= ['label' => "updateTest1-changed"];
+		$actual		= $this->writer->find( ['label'], ['id' => 2] );
+		self::assertEquals( $expected, end( $actual ) );
 
-		$conditions	= array(
-			'topic' => "update"
-		);
-		$data		= array(
-			'label'	=> "changed"
-		);
+		$conditions	= ['topic' => "update"];
+		$data		= ['label' => "changed"];
 
-		$expected	= 2;
 		$actual		= $this->writer->updateByConditions( $data, $conditions );
-		$this->assertEquals( $expected, $actual );
+		self::assertEquals( 2, $actual );
 
 		$this->writer->focusIndex( 'label', 'changed' );
-		$expected	= 2;
-		$actual		= count( $this->writer->get( FALSE ) );
-		$this->assertEquals( $expected, $actual );
+		/** @var array $result */
+		$result		= $this->writer->get( FALSE );
+		self::assertCount( 2, $result );
 	}
 
 	/**
-	 *	Tests Exception of Method 'updateByConditions'.
+	 *	Tests Exception on Method 'updateByConditions'.
 	 *	@access		public
 	 *	@return		void
 	 */
 	public function testUpdateByConditionsException1()
 	{
 		$this->expectException( 'InvalidArgumentException' );
-		$this->writer->updateByConditions( array(), array( 'label' => 'not_relevant' ) );
+		$this->writer->updateByConditions( [], ['label' => 'not_relevant'] );
 	}
 
 	/**
-	 *	Tests Exception of Method 'updateByConditions'.
+	 *	Tests Exception on Method 'updateByConditions'.
 	 *	@access		public
 	 *	@return		void
 	 */
 	public function testUpdateByConditionsException2()
 	{
 		$this->expectException( 'InvalidArgumentException' );
-		$this->writer->updateByConditions( array( 'label' => 'not_relevant' ), array() );
+		$this->writer->updateByConditions( ['label' => 'not_relevant'], [] );
 	}
 
 	/**
@@ -383,17 +275,35 @@ class CeusMedia_Database_Test_PDO_Table_WriterTest extends CeusMedia_Database_Te
 	public function testTruncate()
 	{
 		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'truncateTest');" );
+		self::assertEquals( 2, $this->writer->count() );
+		self::assertEquals( $this->writer, $this->writer->truncate() );
+		self::assertEquals( 0, $this->writer->count() );
+	}
 
-		$expected	= 2;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+	//  --  PROTECTED  --  //
 
-		$expected	= $this->writer;
-		$actual		= $this->writer->truncate();
-		$this->assertEquals( $expected, $actual );
+	/**
+	 *	Setup for every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function setUp(): void
+	{
+		parent::setUp();
+		$this->createTransactionsTableFromFileOnDirectConnection();
 
-		$expected	= 0;
-		$actual		= $this->writer->count();
-		$this->assertEquals( $expected, $actual );
+		$this->writer	= new PdoTableWriter( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
+		$this->writer->setIndices( $this->indices );
+	}
+
+	/**
+	 *	Cleanup after every Test.
+	 *	@access		protected
+	 *	@return		void
+	 */
+	protected function tearDown(): void
+	{
+		$this->dropTransactionsTable();
+		parent::tearDown();
 	}
 }

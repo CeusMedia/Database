@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
  *
@@ -24,9 +25,14 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL;
 
+use CeusMedia\Common\Alg\Time\Clock;
+use CeusMedia\Common\Exception\SQL as SqlException;
 use CeusMedia\Database\OSQL\Query\QueryInterface;
+use InvalidArgumentException;
+use PDO;
 
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
@@ -39,8 +45,10 @@ use CeusMedia\Database\OSQL\Query\QueryInterface;
  */
 class Client
 {
-	protected $fetchMode;
-	public static $defaultFetchMode	= \PDO::FETCH_OBJ;
+	public static int $defaultFetchMode	= PDO::FETCH_OBJ;
+
+	protected PDO $dbc;
+	protected int $fetchMode;
 
 	/**
 	 *	Constructor.
@@ -48,7 +56,7 @@ class Client
 	 *	@param		PDO		$dbc		Database connection using PDO
 	 *	@return		void
 	 */
-	public function __construct( \PDO $dbc )
+	public function __construct( PDO $dbc )
 	{
 		$this->dbc	= $dbc;
 		$this->setFetchMode( self::$defaultFetchMode );
@@ -80,12 +88,12 @@ class Client
 	/**
 	 *	Executes query and returns result.
 	 *	@access		public
-	 *	@param		QueryInterface
-	 *	@param		array
+	 *	@param		QueryInterface		$query
+	 *	@return		object|array|int|float|string|bool
 	 */
 	public function execute( QueryInterface $query )
 	{
-		$clock		= new \Alg_Time_Clock();
+		$clock		= new Clock();
 		$queryParts	= $query->render();
 		$query->timing['render']	= $clock->stop( 0, 6 );
 		$query->statement			= $queryParts->query;
@@ -103,7 +111,7 @@ class Client
 		$result	= $stmt->execute();
 		if( !$result ){
 			$info	= $stmt->errorInfo();
-			throw new \Exception( $info[2], $info[1] );
+			throw new SqlException( $info[2] ?? NULL, $info[1], $info[0] );
 		}
 		$query->timing['execute']	= $clock->stop( 0, 6 );
 		$query->timing['total']		= array_sum( $query->timing );
@@ -118,7 +126,7 @@ class Client
 		}
 		else if( $query instanceof Query\Insert ){
 			$query->rowCount		= $stmt->rowCount();
-			$query->lastInsertId	= $this->dbc->lastInsertId();
+			$query->lastInsertId	= $this->dbc->lastInsertId() ?: NULL;
 			return $query->lastInsertId;
 		}
 		else if( $query instanceof Query\Update || $query instanceof Query\Delete ){
@@ -128,27 +136,34 @@ class Client
 		return $result;
 	}
 
-	protected function getPdoTypeFromValue( $value )
+	/**
+	 *	@param		mixed		$value
+	 *	@return		int
+	 */
+	protected function getPdoTypeFromValue( $value ): int
 	{
 		$typeMap	= [
-			'boolean'	=> \PDO::PARAM_BOOL,
-			'integer'	=> \PDO::PARAM_INT,
-			'double'	=> \PDO::PARAM_BOOL,
-			'string'	=> \PDO::PARAM_STR,
-			'NULL'		=> \PDO::PARAM_NULL,
+			'boolean'	=> PDO::PARAM_BOOL,
+			'integer'	=> PDO::PARAM_INT,
+			'double'	=> PDO::PARAM_STR,
+			'string'	=> PDO::PARAM_STR,
+			'NULL'		=> PDO::PARAM_NULL,
 		];
 		$type		= gettype( $value );
 		if( !array_key_exists( $type, $typeMap ) )
-			throw new \InvalidArgumentException( 'Value of type "'.$type.'" is not supported' );
+			throw new InvalidArgumentException( 'Value of type "'.$type.'" is not supported' );
 	 	return $typeMap[$type];
 	}
 
+	/**
+	 *	@return		string|FALSE
+	 */
 	public function getLastInsertId()
 	{
 		return $this->dbc->lastInsertId();
 	}
 
-	public function setFetchMode( $mode ): self
+	public function setFetchMode( int $mode ): self
 	{
 		$this->fetchMode	= $mode;
 		return $this;

@@ -39,8 +39,8 @@ use CeusMedia\Database\PDO\Connection as PdoConnection;
  */
 class Connection extends PdoConnection
 {
-
-	public function select( $fields = NULL ){
-		return new Query\Select( $fields );
-	}
+/*	public function select( $fields = NULL )
+	{
+		return new Query\Select( $this, fields );
+	}*/
 }

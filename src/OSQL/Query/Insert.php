@@ -24,18 +24,16 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
+use RuntimeException;
 
 /**
  *	Builder for INSERT statements.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
- *	@extends		\CeusMedia\Database\OSQL\QueryAbstract
- *	@implements		\CeusMedia\Database\OSQL\QueryInterface
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2020 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -43,10 +41,10 @@ use CeusMedia\Database\OSQL\Table;
  */
 class Insert extends AbstractQuery implements QueryInterface
 {
-	protected $fields;
-	protected $table		= NULL;
+	public ?string $lastInsertId		= NULL;
 
-	public $lastInsertId;
+	protected array $fields;
+	protected ?Table $table		= NULL;
 
 	/**
 	 *	...
@@ -55,8 +53,8 @@ class Insert extends AbstractQuery implements QueryInterface
 	 */
 	protected function checkSetup()
 	{
-		if( !$this->table )
-			throw new \Exception( 'No table clause set' );
+		if( $this->table === NULL )
+			throw new RuntimeException( 'No table clause set' );
 	}
 
 	public function into( Table $table ): self
@@ -73,18 +71,18 @@ class Insert extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderFields( & $parameters ): string
 	{
-		if( !$this->fields )
+		if( count( $this->fields ) === 0 )
 			return '';
-		$listKeys	= array();
-		$listVals	= array();
+		$listKeys	= [];
+		$listVals	= [];
 		foreach( $this->fields as $name => $value ){
 			$key	= 'value_'.str_replace( '.', '_', $name );
 			$listKeys[]	= $name;
 			$listVals[]	= ':'.$key;
-			$parameters[$key]	= array(
+			$parameters[$key]	= [
 				'type'	=> \PDO::PARAM_STR,
 				'value'	=> $value
-			);
+			];
 		}
 		return '( '.implode( ', ', $listKeys ).' ) VALUE ( '.implode( ', ', $listVals ).' )';
 	}
@@ -92,27 +90,31 @@ class Insert extends AbstractQuery implements QueryInterface
 	/**
 	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		object
 	 */
 	public function render(): object
 	{
 		$this->checkSetup();
-		$parameters	= array();
+		$parameters	= [];
+		/** @phpstan-ignore-next-line  */
 		$table		= $this->table->render();
 		$fields		= $this->renderFields( $parameters );
 		$conditions	= $this->renderConditions( $parameters );
 		$limit		= $this->renderLimit( $parameters );
 		$offset		= $this->renderOffset( $parameters );
+		/** @noinspection SqlNoDataSourceInspection */
 		$query		= 'INSERT INTO '.$table.$fields.$conditions.$limit.$offset;
-		return (object) array(
+		return (object) [
 			'query'			=> $query,
 			'parameters'	=> $parameters,
-		);
+		];
 	}
 
 	/**
 	 *	Add pair to insert and returns query object for chainability.
 	 *	@access		public
+	 *	@param		string		$name
+	 *	@param		mixed		$value
 	 *	@return		self
 	 */
 	public function set( string $name, $value ): self

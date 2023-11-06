@@ -24,6 +24,7 @@
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL;
 
 /**
@@ -37,34 +38,41 @@ namespace CeusMedia\Database\OSQL;
  */
 class Condition
 {
-	const OP_EQ		= '=';
-	const OP_GT		= '>';
-	const OP_GTE	= '>=';
-	const OP_LT		= '<';
-	const OP_LTE	= '<=';
-	const OP_NEQ	= '!=';
-	const OP_IS		= 'IS';
-	const OP_ISN	= 'IS NOT';
-	const OP_LIKE	= 'LIKE';
+	public const OP_EQ		= '=';
+	public const OP_GT		= '>';
+	public const OP_GTE		= '>=';
+	public const OP_LT		= '<';
+	public const OP_LTE		= '<=';
+	public const OP_NEQ		= '!=';
+	public const OP_IS		= 'IS';
+	public const OP_ISN		= 'IS NOT';
+	public const OP_LIKE	= 'LIKE';
 
-	protected $type			= NULL;
-	protected $fieldName	= NULL;
-	protected $operation	= self::OP_EQ;
-	protected $value		= NULL;
+	/** @var string|NULL $type */
+	protected ?string $type			= NULL;
+
+	/** @var string|NULL $fieldName */
+	protected ?string $fieldName	= NULL;
+
+	/** @var string $operation */
+	protected string $operation		= self::OP_EQ;
+
+	/** @var mixed|NULL $value */
+	protected $value				= NULL;
 
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		string		$fieldName		Column name
-	 *	@param		mixed		$value			Value to match
-	 *	@param		string		$operation		Comparison operation
+	 *	@param		string|NULL		$fieldName		Column name
+	 *	@param		mixed|NULL		$value			Value to match
+	 *	@param		string|NULL		$operation		Comparison operation
 	 *	@return		void
 	 */
-	public function __construct( $fieldName = NULL, $value = NULL, $operation = NULL )
+	public function __construct( string $fieldName = NULL, $value = NULL, ?string $operation = NULL )
 	{
-		if( $fieldName )
+		if( $fieldName !== NULL )
 			$this->setFieldName( $fieldName );
-		if( $operation )
+		if( $operation !== NULL )
 			$this->setOperation( $operation );
 		if( $value !== NULL )
 			$this->setValue( $value );
@@ -73,11 +81,11 @@ class Condition
 	/**
 	 *	Gets column name.
 	 *	@access		public
-	 *	@return		string
+	 *	@return		string|NULL
 	 */
 	public function getFieldName(): ?string
 	{
-		return $this->name;
+		return $this->fieldName;
 	}
 
 	/**
@@ -106,17 +114,17 @@ class Condition
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	public function render( & $parameters ): string
+	public function render( array & $parameters ): string
 	{
 		$counter	= 0;
 
 		do{
-			$key	= 'c_'.preg_replace( '/[^a-z0-9]/i', '_', $this->name ).'_'.$counter;
+			$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ).'_'.$counter;
 			$counter++;
 		}
 		while( isset( $parameters[$key] ) );
 
-		if( in_array( $this->type, ['array', 'object'] ) ){
+		if( in_array( $this->type, ['array', 'object'], TRUE ) ){
 			$keyList	= [];
 			foreach( $this->value as $value ){
 				$keyList[]	= ':'.$key;
@@ -124,17 +132,17 @@ class Condition
 					'type'	=> gettype( $value ),
 					'value'	=> $value
 				);
-				$key	= 'c_'.preg_replace( '/[^a-z0-9]/i', '_', $this->name ).'_'.$counter;
+				$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ).'_'.$counter;
 				$counter++;
 			}
-			$condition	= $this->name.' '.$this->operation.' ('.implode( ',', $keyList ).')';
+			$condition	= $this->fieldName.' '.$this->operation.' ('.implode( ',', $keyList ).')';
 		}
 		else{
-			$parameters[$key]	= array(
+			$parameters[$key]	= [
 				'type'	=> $this->type,
 				'value'	=> $this->value
-			);
-			$condition	= $this->name.' '.$this->operation.' :'.$key;
+			];
+			$condition	= $this->fieldName.' '.$this->operation.' :'.$key;
 		}
 		return $condition;
 	}
@@ -147,7 +155,7 @@ class Condition
 	 */
 	public function setFieldName( string $fieldName ): self
 	{
-		$this->name		= $fieldName;
+		$this->fieldName		= $fieldName;
 		return $this;
 	}
 
@@ -173,7 +181,7 @@ class Condition
 	public function setValue( $value ): self
 	{
 		$type	= gettype( $value );
-		if( in_array( $type, ['object', 'resource', 'resource (closed)'] ) )
+		if( in_array( $type, ['object', 'resource', 'resource (closed)'], TRUE ) )
 			throw new \InvalidArgumentException( 'Value of type "'.$type.'" is not allowed' );
 		$this->value	= $value;
 		$this->type		= $type;
