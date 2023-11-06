@@ -1,4 +1,23 @@
+## Version 0.6.1
 
+- Add new LIKE support in condition query.
+- Add entity support on fetching.
+- Split PDO connection into several class files.
+- Unfinalize PDO connection constructor and disable static constructor.
+- Code Style: Short Array Syntax.
+- Provide unit test config file as dist.
+- Reach max PHPStan level.
+- Update OSQL.
+- Update copyright year.
+- Add composer lock file.
+- Add badges.
+
+## Version 0.6.0
+- Use PHP 8.1.
+- Drop support for PHP 7.4. See branch 0.5.x.
+- Set PHPStan to PHP 8.1.
+- Use PHPUnit 10.1.
+- Fix bugs.
 
 ## Version 0.5.1
 - Support CeusMedia/Common 1.0.x.

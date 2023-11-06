@@ -80,9 +80,9 @@ class Insert extends AbstractQuery implements QueryInterface
 			$key	= 'value_'.str_replace( '.', '_', $name );
 			$listKeys[]		= $name;
 			$listValues[]	= ':'.$key;
-			$parameters[$key]	= array(
+			$parameters[$key]	= [
 				'type'	=> PDO::PARAM_STR,
-				'value'	=> $value
+				'value'	=> $value,
 			];
 		}
 		return vsprintf( '( %s ) VALUE ( %s )', [
