@@ -662,6 +662,8 @@ class Reader
 	{
 		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityObject );
+		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass )
+			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityClass );
 		return $statement->setFetchMode( $this->fetchMode );
 	}
 

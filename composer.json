@@ -35,6 +35,7 @@
   "autoload": {
     "psr-4": {
       "CeusMedia\\Database\\": ["src/"],
+      "CeusMedia\\DatabaseDemo\\": ["demo/"],
       "CeusMedia\\DatabaseTest\\": ["test/"]
     }
   },

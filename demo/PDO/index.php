@@ -1,9 +1,12 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 $pathLib	= dirname( dirname( __DIR__ ) ).'/';
 require_once $pathLib.'vendor/autoload.php';
 require_once $pathLib.'test/PDO/TransactionTable.php';
-new UI_DevOutput;
 
+new CeusMedia\Common\UI\DevOutput;
+
+use CeusMedia\Common\UI\HTML\Tag as HtmlTag;
 use CeusMedia\Database\PDO\Connection;
 use CeusMedia\Database\PDO\DataSourceName;
 
@@ -27,38 +30,38 @@ $dsn		= DataSourceName::renderStatic(
 
 try{
 	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
-	$model	= new CeusMedia_Database_Test_PDO_TransactionTable( $dbc );
+	$model	= new \CeusMedia\DatabaseTest\PDO\TransactionTable( $dbc );
 	$rows	= array();
 	$heads	= array();
 	foreach( $model->getAll() as $item ){
 		$cells	= array();
 		foreach( $item as $key => $value ){
 			if( !count( $rows ) )
-				$heads[]	= UI_HTML_Tag::create( 'th', $key );
-			$cells[]	= UI_HTML_Tag::create( 'td', $value );
+				$heads[]	= HtmlTag::create( 'th', $key );
+			$cells[]	= HtmlTag::create( 'td', $value );
 		}
-		$rows[]		= UI_HTML_Tag::create( 'tr', $cells );
+		$rows[]		= HtmlTag::create( 'tr', $cells );
 	}
-	$thead	= UI_HTML_Tag::create( 'thead', UI_HTML_Tag::create( 'tr', $heads ) );
-	$tbody	= UI_HTML_Tag::create( 'tbody', $rows );
-	$table	= UI_HTML_Tag::create( 'table', array( $thead, $tbody ), array( 'class' => 'table table-striped' ) );
+	$thead	= HtmlTag::create( 'thead', HtmlTag::create( 'tr', $heads ) );
+	$tbody	= HtmlTag::create( 'tbody', $rows );
+	$table	= HtmlTag::create( 'table', array( $thead, $tbody ), array( 'class' => 'table table-striped' ) );
 
-	$body	= UI_HTML_Tag::create( 'div', array(
-		UI_HTML_Tag::create( 'div', array(
-			UI_HTML_Tag::create( 'h1', 'PDO Demo' ),
-			UI_HTML_Tag::create( 'p', 'Simple demo of CeusMedia/Database/PDO' ),
+	$body	= HtmlTag::create( 'div', array(
+		HtmlTag::create( 'div', array(
+			HtmlTag::create( 'h1', 'PDO Demo' ),
+			HtmlTag::create( 'p', 'Simple demo of CeusMedia/Database/PDO' ),
 		), array( 'class' => 'hero-unit' ) ),
-		UI_HTML_Tag::create( 'h3', 'Transactions' ),
+		HtmlTag::create( 'h3', 'Transactions' ),
 		$table,
 	), array( 'class' => 'container' ) );
 }
 catch( Exception $e ){
-	UI_HTML_Exception_Page::display( $e );
+	\CeusMedia\Common\UI\HTML\Exception\Page::display( $e );
 	exit;
 }
 
 $pathCdn	= 'https://cdn.ceusmedia.de/';
-$page		= new UI_HTML_PageFrame();
+$page		= new \CeusMedia\Common\UI\HTML\PageFrame();
 $page->addStylesheet( $pathCdn.'css/bootstrap.min.css' );
 $page->addStylesheet( $pathCdn.'css/bootstrap-responsive.min.css' );
 $page->setBody( $body );

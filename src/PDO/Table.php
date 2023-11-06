@@ -514,6 +514,45 @@ abstract class Table
 		return $this;
 	}
 
+	/**
+	 *	Sets fetch mode.
+	 *	Mode is a mandatory integer representing a PDO fetch mode.
+	 *	@access		public
+	 *	@param		integer		$mode			PDO fetch mode
+	 *	@see		http://www.php.net/manual/en/pdo.constants.php
+	 *	@return		self
+	 */
+	public function setFetchMode( int $mode ): self
+	{
+		$this->fetchMode	= $mode;
+		$this->table->setFetchMode( $this->fetchMode );
+		return $this;
+	}
+
+	/**
+	 *	@access		public
+	 * 	@param		string|NULL		$className
+	 *	@return		self
+	 */
+	public function setFetchEntityClass( ?string $className ): self
+	{
+		$this->fetchEntityClass	= $className;
+		$this->table->setFetchEntityClass( $this->fetchEntityClass );
+		return $this;
+	}
+
+	/**
+	 *	@access		public
+	 *	@param		object|NULL		$object
+	 *	@return		self
+	 */
+	public function setFetchEntityObject( ?object $object ): self
+	{
+		$this->fetchEntityObject	= $object;
+		$this->table->setFetchEntityObject( $this->fetchEntityObject );
+		return $this;
+	}
+
 /*	public function setUndoStorage( $storage ): self
 	{
 		$this->table->setUndoStorage( $storage );
