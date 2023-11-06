@@ -39,17 +39,17 @@ class ReaderTest extends TestCase
 		parent::__construct( $name );
 
 		$this->tableName	= "transactions";
-		$this->columns		= array(
+		$this->columns		= [
 			'id',
 			'topic',
 			'label',
 			'timestamp',
-		);
+		];
 		$this->primaryKey	= $this->columns[0];
-		$this->indices		= array(
+		$this->indices		= [
 			'topic',
 			'label'
-		);
+		];
 	}
 
 	/**
@@ -220,10 +220,10 @@ class ReaderTest extends TestCase
 		self::assertCount( 2, $result );
 		self::assertCount( 1, $result[0] );
 
-		$expected	= array(
+		$expected	= [
 			['id' => 1],
 			['id' => 2],
-		);
+		];
 		$actual		= $result;
 		self::assertEquals( $expected, $actual );
 	}
@@ -621,17 +621,17 @@ class ReaderTest extends TestCase
 		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusPrimary( 2, FALSE );
-		$expected	= array(
+		$expected	= [
 			'topic' => 'start',
 			'id' => 2
-		);
+		];
 		$actual		= $this->reader->getFocus();
 		self::assertEquals( $expected, $actual );
 
 		$this->reader->focusPrimary( 2, TRUE );
-		$expected	= array(
+		$expected	= [
 			'id' => 2
-		);
+		];
 		$actual		= $this->reader->getFocus();
 		self::assertEquals( $expected, $actual );
 	}

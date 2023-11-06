@@ -20,7 +20,7 @@ $dbc	= new Connection( 'mysql:host=localhost;dbname='.$dbName, $dbUsername, $dbP
 $client	= new Client( $dbc );
 
 $select	= Select::create( $client )
-	->get( array(
+	->get( [
 		't.title as trackTitle',
 		't.youtube as trackYoutube',
 		't.bandcamp as trackBandcamp',
@@ -28,7 +28,7 @@ $select	= Select::create( $client )
 		'r.title AS releaseTitle',
 		'e.title as episodeTitle',
 //		'e.episodeId',
-	) )
+	] )
 	->from( new Table( 'library_tracks', 't' ) )
 	->where( new Condition( 'e.episodeId', 42 ) )
 //	->leftJoin( new Table( 'library_artists', 'a' ), 't.artistId', 'a.artistId' )

@@ -112,10 +112,10 @@ class Select extends AbstractQuery implements QueryInterface
 		$direction	= strtoupper( $direction ?? 'ASC' );
 		if( !in_array( $direction, ['ASC', 'DESC'], TRUE ) )
 			throw new InvalidArgumentException( 'Direction must be ASC or DESC' );
-		$this->orders[]	= (object) array(
+		$this->orders[]	= (object) [
 			'field'		=> $field,
 			'direction'	=> $direction,
-		);
+		];
 		return $this;
 	}
 
@@ -178,10 +178,10 @@ class Select extends AbstractQuery implements QueryInterface
 		$options	= $this->renderOptions();
 		$query		= 'SELECT '.$options.$fields.$from.$joins.$conditions.$group.$orders.$limit.$offset;
 		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE|ORDER|LIMIT|GROUP|HAVING)/', PHP_EOL.'\\1', $query );
-		return (object) array(
+		return (object) [
 			'query'			=> $query,
 			'parameters'	=> $parameters,
-		);
+		];
 	}
 
 	protected function renderOptions(): string

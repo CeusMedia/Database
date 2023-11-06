@@ -1,5 +1,10 @@
 
 
+## Version 0.5.1
+- Support CeusMedia/Common 1.0.x.
+- Short array syntax.
+- Allow array of values for PDO:::Table::*ByIndex.
+
 ## Version 0.5.0
 - Fully typed (class members and method arguments).
 - Reach PHPStan level 9 (max!) PLUS extra strict rules (for PDO).

@@ -83,7 +83,7 @@ class Insert extends AbstractQuery implements QueryInterface
 			$parameters[$key]	= array(
 				'type'	=> PDO::PARAM_STR,
 				'value'	=> $value
-			);
+			];
 		}
 		return vsprintf( '( %s ) VALUE ( %s )', [
 			implode( ', ', $listKeys ),
@@ -108,10 +108,10 @@ class Insert extends AbstractQuery implements QueryInterface
 		$offset		= $this->renderOffset( $parameters );
 		/** @noinspection SqlNoDataSourceInspection */
 		$query		= 'INSERT INTO '.$table.$fields.$conditions.$limit.$offset;
-		return (object) array(
+		return (object) [
 			'query'			=> $query,
 			'parameters'	=> $parameters,
-		);
+		];
 	}
 
 	/**

@@ -99,11 +99,11 @@ abstract class Table
 
 	public function indexByCondition( $name, $operation, $value, $limit = NULL, $offset = NULL )
 	{
-		$conditions	= array(
+		$conditions	= [
 			'name'		=> $name,
 			'operation'	=> $operation,
 			'value'		=> $value,
-		);
+		];
 		return $this->indexByConditions( array( $conditions ), $limit, $offset );
 	}
 

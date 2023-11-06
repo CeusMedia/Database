@@ -256,11 +256,11 @@ class DataSourceName
 	protected function renderDsnForDefault(): string
 	{
 		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
-		$map	= array(
+		$map	= [
 			'host'		=> $this->host,
 			'port'		=> $port,
 			'dbname'	=> $this->database,
-		);
+		];
 		return $this->renderDsnParts( $map );
 	}
 
@@ -273,13 +273,13 @@ class DataSourceName
 	{
 		$host	= !is_null( $this->host ) ? $this->host : NULL;
 		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
-		$map	= array(
+		$map	= [
 			'DataSource'	=> $host,
 			'Port'			=> $port,
 			'Database'		=> $this->database,
 			'User'			=> $this->username,
 			'Password'		=> $this->password
-		);
+		];
 		return $this->renderDsnParts( $map );
 	}
 

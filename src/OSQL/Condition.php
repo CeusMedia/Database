@@ -140,10 +140,10 @@ class Condition
 			$condition	= $this->fieldName.' '.$this->operation.' ('.implode( ',', $keyList ).')';
 		}
 		else{
-			$parameters[$key]	= array(
+			$parameters[$key]	= [
 				'type'	=> $this->type,
 				'value'	=> $this->value
-			);
+			];
 			$condition	= $this->fieldName.' '.$this->operation.' :'.$key;
 		}
 		return $condition;
