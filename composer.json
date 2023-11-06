@@ -78,7 +78,7 @@
   "scripts-descriptions": {
     "dev:install": "Installs project dependencies for Development stage",
     "dev:update": "Updates project dependencies for Development stage",
-    "dev:unit": "Run unit tests",
+    "dev:phpunit": "Run unit tests",
     "dev:phpstan": "Validate codebase with PHPStan",
     "dev:phpstan-clear": "Clear PHPStan cache",
     "dev:phpstan-save": "Store current results in ignore list",
