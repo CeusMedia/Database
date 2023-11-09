@@ -28,6 +28,7 @@
 namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Common\Alg\Time\Clock;
+use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Table;
 use InvalidArgumentException;
 use RuntimeException;
@@ -51,6 +52,17 @@ class Select extends AbstractQuery implements QueryInterface
 	protected array $fields		= ['*'];
 	protected array $tables		= [];
 	protected ?string $groupBy	= NULL;
+
+	/**
+	 *	Static constructor.
+	 *	@access		public
+	 *	@param		Client		$dbc	OSQL database connection
+	 *	@return		self
+	 */
+	public static function create( Client $dbc ): self
+	{
+		return new static( $dbc );
+	}
 
 	/**
 	 *	Enable/disable counting of all rows ignoring limits.

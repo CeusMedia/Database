@@ -1,9 +1,14 @@
-<?php
-$pathLib	= dirname( dirname( __DIR__ ) ).'/';
+<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+
+$pathLib	= dirname( __DIR__, 2 ).'/';
 require_once $pathLib.'vendor/autoload.php';
 require_once $pathLib.'test/PDO/TransactionTable.php';
-new UI_DevOutput;
 
+use CeusMedia\Common\UI\DevOutput;
+use CeusMedia\Common\UI\HTML\Exception\Page as HtmlExceptionPage;
+use CeusMedia\Common\UI\HTML\PageFrame as HtmlPage;
+use CeusMedia\Common\UI\HTML\Tag as HtmlTag;
+use CeusMedia\Common\UI\OutputBuffer;
 use CeusMedia\Database\PDO\DataSourceName;
 use CeusMedia\Database\OSQL\Condition;
 use CeusMedia\Database\OSQL\Condition\Group as ConditionGroup;
@@ -12,25 +17,28 @@ use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Table;
 use CeusMedia\Database\OSQL\Query\Select;
 
+new DevOutput;
+
 ( file_exists( $pathLib.'demo/demo.ini' ) ) or die( 'Missing demo ini file (demo/demo.ini)'.PHP_EOL );
 
 $config		= parse_ini_file( $pathLib.'demo/demo.ini', TRUE );
-$dbConfig	= (object) $config['demo'];
+$dbConfig	= (object) ( $config['demo'] ?? '' );
 
 $command	= "mysql -u%s -p%s %s < %sdemo/demo_galleries.sql";
 $command	= sprintf( $command, $dbConfig->username, $dbConfig->password, $dbConfig->database, $pathLib );
 passthru( $command );
 
-$dsn		= DataSourceName::renderStatic(
-	$dbConfig->driver,
-	$dbConfig->database,
-	$dbConfig->host,
-	$dbConfig->port,
-	$dbConfig->username,
-	$dbConfig->password
-);
 
 try{
+	$dsn		= DataSourceName::renderStatic(
+		$dbConfig->driver,
+		$dbConfig->database,
+		$dbConfig->host,
+		$dbConfig->port,
+		$dbConfig->username,
+		$dbConfig->password
+	);
+
 	$tableGallery	= new Table( 'galleries', 'g' );
 	$tableImage		= new Table( 'gallery_images', 'gi' );
 
@@ -89,7 +97,7 @@ try{
 
 	$query	= $select->render();
 
-	$ob		= new UI_OutputBuffer();
+	$ob		= new OutputBuffer();
 	remark( 'Query:' );
 	remark( $query->query );
 	remark( 'Parameters:' );
@@ -105,21 +113,21 @@ try{
 	$ob->close();
 }
 catch( Exception $e ){
-	UI_HTML_Exception_Page::display( $e );
+	HtmlExceptionPage::display( $e );
 	exit;
 }
 
-$body	= UI_HTML_Tag::create( 'div', array(
-	UI_HTML_Tag::create( 'div', array(
-		UI_HTML_Tag::create( 'h1', 'OSQL Demo' ),
-		UI_HTML_Tag::create( 'p', 'Simple demo of CeusMedia/Database/OSQL' ),
+$body	= HtmlTag::create( 'div', array(
+	HtmlTag::create( 'div', array(
+		HtmlTag::create( 'h1', 'OSQL Demo' ),
+		HtmlTag::create( 'p', 'Simple demo of CeusMedia/Database/OSQL' ),
 	), array( 'class' => 'hero-unit' ) ),
-	UI_HTML_Tag::create( 'h3', 'Galleries' ),
+	HtmlTag::create( 'h3', 'Galleries' ),
 	$content,
 ), array( 'class' => 'container' ) );
 
 $pathCdn	= 'https://cdn.ceusmedia.de/';
-$page		= new UI_HTML_PageFrame();
+$page		= new HtmlPage();
 $page->addStylesheet( $pathCdn.'css/bootstrap.min.css' );
 $page->addStylesheet( $pathCdn.'css/bootstrap-responsive.min.css' );
 $page->setBody( $body );

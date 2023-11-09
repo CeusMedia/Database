@@ -168,12 +168,12 @@ abstract class AbstractQuery implements QueryInterface
 		return $this;
 	}
 
-	public function leftJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): QueryInterface
+	public function leftJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): AbstractQuery
 	{
 		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_LEFT );
 	}
 
-	public function rightJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): QueryInterface
+	public function rightJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): AbstractQuery
 	{
 		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_RIGHT );
 	}
