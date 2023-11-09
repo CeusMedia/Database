@@ -93,7 +93,6 @@ class DataSourceName
 	 *	Converts DSN Object into a String.
 	 *	@access		public
 	 *	@return		string
-	 *	@throws		Exception
 	 */
 	public function __toString(): string
 	{
@@ -141,9 +140,8 @@ class DataSourceName
 	}
 
 	/**
-	 *  ...
-	 *  @return	 	string
-	 *  @throws		 Exception
+	 *  Returns rendered DSN string for set driver.
+	 *  @return		string
 	 */
 	public function render(): string
 	{
@@ -152,7 +150,7 @@ class DataSourceName
 			'firebird'	=> $prefix.$this->renderDsnForFirebird(),
 			'informix'	=> $prefix.$this->renderDsnForInformix(),
 			'oci'		=> $prefix.$this->renderDsnForOci(),
-			'odbc'		=> $prefix.$this->renderDsnForOdbc(),
+//			'odbc'		=> $prefix.$this->renderDsnForOdbc(),
 			'pgsql'		=> $prefix.$this->renderDsnForPgsql(),
 			'sqlite'	=> $prefix.$this->renderDsnForSqlite(),
 			default		=> $prefix.$this->renderDsnForDefault(),
@@ -329,13 +327,15 @@ class DataSourceName
 	 */
 	protected function renderDsnForPgsql(): string
 	{
-		return $this->renderDsnParts( array(
-			'host'		=> !is_null( $this->host ) ? $this->host : NULL,
-			'port'		=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+		return $this->renderDsnParts( [
+			'host'		=> $this->host,
+//			'port'		=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+//			'port'		=> ( NULL !== $this->port ) && $this->port > 0 ? $this->port : NULL,
+			'port'		=> 0 !== ( $this->port ?? 0 )? $this->port : NULL,
 			'dbname'	=> $this->database,
 			'user'		=> $this->username,
 			'password'	=> $this->password
-		), ' ' );
+		], ' ' );
 	}
 
 	/**

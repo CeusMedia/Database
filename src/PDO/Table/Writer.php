@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
  *	Write Access for Database Tables.
  *
@@ -26,7 +27,11 @@
  */
 namespace CeusMedia\Database\PDO\Table;
 
+use CeusMedia\Common\ADT\Collection\Dictionary;
 use InvalidArgumentException;
+use ReflectionObject;
+use RuntimeException;
+use Traversable;
 
 /**
  *	Write Access for Database Tables.
@@ -74,12 +79,14 @@ class Writer extends Reader
 	/**
 	 *	Inserts data into this table and returns ID.
 	 *	@access		public
-	 *	@param		array		$data			associative array of data to store
-	 *	@param		boolean		$stripTags		Flag: strip HTML Tags from values
-	 *	@return		integer		ID of inserted row
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
+	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
+	 *	@return		integer			ID of inserted row
 	 */
-	public function insert( array $data = [], bool $stripTags = TRUE ): int
+	public function insert( array|object $data = [], bool $stripTags = TRUE ): int
 	{
+		if( is_object( $data ) )
+			$data	= $this->convertObjectToArray( $data );
 		$columns	= [];
 		$values		= [];
 		//  iterate Columns
@@ -123,12 +130,15 @@ class Writer extends Reader
 	/**
 	 *	Updating data of focused primary key in this table.
 	 *	@access		public
-	 *	@param		array		$data			Map of data to store
-	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
+	 *	@param		boolean			$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
+	 *	@throw		RuntimeException				Not implemented: Entity classes with protected members
 	 */
-	public function update( array $data = [], bool $stripTags = TRUE ): int
+	public function update( array|object $data = [], bool $stripTags = TRUE ): int
 	{
+		if( is_object( $data ) )
+			$data	= $this->convertObjectToArray( $data );
 		if( count( $data ) === 0 )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		$this->validateFocus();
@@ -157,13 +167,15 @@ class Writer extends Reader
 	/**
 	 *	Updates data in table where conditions are given for.
 	 *	@access		public
-	 *	@param		array		$data			Array of data to store
-	 *	@param		array		$conditions		Array of condition pairs
-	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
+	 *	@param		array			$conditions		Array of condition pairs
+	 *	@param		boolean			$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
 	 */
-	public function updateByConditions( array $data = [], array $conditions = [], bool $stripTags = FALSE ): int
+	public function updateByConditions( array|object $data = [], array $conditions = [], bool $stripTags = FALSE ): int
 	{
+		if( is_object( $data ) )
+			$data	= $this->convertObjectToArray( $data );
 		if( count( $data ) === 0 )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		if( count( $conditions ) === 0 )
@@ -201,5 +213,37 @@ class Writer extends Reader
 		$query	= 'TRUNCATE '.$this->getTableName();
 		$this->dbc->exec( $query );
 		return $this;
+	}
+
+	/**
+	 *	Tries to convert several data object types to an array.
+	 *	Supports anonymous object and dictionary.
+	 *	Supports any traversable or iterator.
+	 *	Supports entity object where class has public properties.
+	 *	Does not support entity object with getters and setters, yet.
+	 *
+	 *	@param		object		$object
+	 *	@return		array
+	 */
+	protected function convertObjectToArray( object $object ): array
+	{
+		if( 'stdClass' === get_class( $object ) )
+			return (array) $object;
+		if( $object instanceof Dictionary )
+			/** @phpstan-ignore-next-line */
+			return $object->getAll();
+		if( is_iterable( $object ) || $object instanceof Traversable ){
+			$map	= [];
+			foreach( $object as $key => $value )
+				$map[$key]	= $value;
+			return $map;
+		}
+
+		$reflection	= new ReflectionObject( $object );
+		if( $reflection->hasProperty( $this->primaryKey ) ){
+			if( $reflection->getProperty( $this->primaryKey )->isPublic() )
+				return (array) $object;
+		}
+		throw new RuntimeException( 'Not implemented, yet' );
 	}
 }

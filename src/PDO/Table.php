@@ -39,6 +39,7 @@ use PDO;
 use Psr\SimpleCache\InvalidArgumentException as SimpleCacheInvalidArgumentException;
 use RangeException;
 use ReflectionException;
+use ReflectionObject;
 use RuntimeException;
 
 /**
@@ -117,12 +118,12 @@ abstract class Table
 	/**
 	 *	Returns Data of single Line by ID.
 	 *	@access		public
-	 *	@param		array			$data			Data to add to Table
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function add( array $data, bool $stripTags = TRUE ): int
+	public function add( array|object $data, bool $stripTags = TRUE ): int
 	{
 		$id	= $this->table->insert( $data, $stripTags );
 		$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
@@ -178,17 +179,17 @@ abstract class Table
 	/**
 	 *	Modifies data of single row by ID.
 	 *	@access		public
-	 *	@param		integer			$id				ID to focus on
-	 *	@param		array			$data			Data to edit
+	 *	@param		integer|string	$id				ID to focus on
+	 *	@param		array|object	$data			Data to edit
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function edit( int $id, array $data, bool $stripTags = TRUE ): int
+	public function edit( int|string $id, array|object $data, bool $stripTags = TRUE ): int
 	{
 		$this->table->focusPrimary( $id );
 		$result	= 0;
-		if( $this->table->get() !== NULL )
+		if( $this->table->has() )
 			$result	= $this->table->update( $data, $stripTags );
 		$this->table->defocus();
 		$this->cache->delete( $this->cacheKey.$id );
@@ -427,7 +428,11 @@ abstract class Table
 	{
 		if( $this->cache->has( $this->cacheKey.$id ) )
 			return TRUE;
-		return (bool) $this->get( $id );
+		$this->table->focusPrimary( $id );
+		$result	= $this->table->has();
+		print_m( $result );
+		$this->table->defocus();
+		return $result;
 	}
 
 	/**
@@ -506,6 +511,34 @@ abstract class Table
 		$number	= $this->removeBySetFocus();
 		$this->table->defocus();
 		return $number;
+	}
+
+	/**
+	 *	Save entity object
+	 *	@param		object		$entity
+	 *	@param		bool		$stripTags
+	 *	@return		bool
+	 *	@throws		SimpleCacheInvalidArgumentException
+	 *	@throws		ReflectionException
+	 */
+	public function save( object $entity, bool $stripTags = TRUE ): bool
+	{
+		$entityClass	= get_class( $entity );
+		if( NULL !== $this->fetchEntityClass && $entityClass !== $this->fetchEntityClass )
+			throw new InvalidArgumentException( vsprintf( 'Entity class (%s) mismatching table defined entity class (%s)', [
+				$entityClass,
+				$this->fetchEntityClass,
+			] ) );
+		if( NULL !== $this->fetchEntityObject && $entityClass !== get_class( $this->fetchEntityObject ) )
+			throw new InvalidArgumentException( vsprintf( 'Entity class (%s) mismatching table defined entity class (%s)', [
+				$entityClass,
+				get_class( $this->fetchEntityObject ),
+			] ) );
+		$reflection	= new ReflectionObject( $entity );
+		$property	= $reflection->getProperty( $this->primaryKey );
+		/** @var integer|string $id */
+		$id			= $property->getValue( $entity );
+		return 0 !== $this->edit( $id, $entity, $stripTags );
 	}
 
 	public function setCache( SimpleCacheInterface $cache ): self

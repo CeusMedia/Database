@@ -175,15 +175,16 @@ class Reader
 	/**
 	 *	Returns all entries of this table in an array.
 	 *	@access		public
-	 *	@param		array|string|null	$columns		List of columns to deliver
+	 *	@param		array|string|NULL	$columns		List of columns to deliver
 	 *	@param		array		$conditions		Map of condition pairs additional to focuses indices
 	 *	@param		array		$orders			Map of order relations
 	 *	@param		array		$limits			Array of limit conditions
 	 *	@param		array		$groupings		List of columns to group by
-	 *	@param		array		$havings		List of conditions to apply after grouping
+	 *	@param		array		$having			List of conditions to apply after grouping
 	 *	@return		array		List of fetched table rows
+	 *	@throws		RuntimeException			If executing fails
 	 */
-	public function find( array|string|null $columns = [], array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $havings = [] ): array
+	public function find( array|string|null $columns = [], array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $having = [] ): array
 	{
 		$this->validateColumns( $columns );
 		//  render WHERE clause if needed, uncursored, allow functions
@@ -196,28 +197,25 @@ class Reader
 		//  render GROUP BY clause if needed
 		$groupings	= count( $groupings ) > 0 ? ' GROUP BY '.join( ', ', $groupings ) : '';
 		//  render HAVING clause if needed
-		$havings 	= count( $havings ) > 0 ? ' HAVING '.join( ' AND ', $havings ) : '';
+		$partHaving 	= count( $having ) > 0 ? ' HAVING '.join( ' AND ', $having ) : '';
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
 		//  render base query
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName();
 
-		//  append rendered conditions, orders, limits, groupings and havings
-		$query		= $query.$conditions.$groupings.$havings.$orders.$limits;
+		//  append rendered conditions, orders, limits, groupings and having
+		$query		= $query.$conditions.$groupings.$partHaving.$orders.$limits;
 		$statement	= $this->dbc->prepare( $query );
-		if( $statement->execute() ){
-			$this->applyFetchModeOnStatement( $statement );
-			$resultList	= $this->applyFetchModeOnResultSet( $statement );
-			if( $resultList !== FALSE )
-				return $resultList;
-		}
-		return [];
+		if( !$statement->execute() )
+			throw new RuntimeException( 'Executing failed' );
+		$this->applyFetchModeOnStatement( $statement );
+		return $this->applyFetchModeOnResultSet( $statement );
 	}
 
 	/**
 	 *	Returns all entries of this table in an array.
 	 *	@access		public
-	 *	@param		array|string|null	$columns		List of columns to deliver
+	 *	@param		array|string|NULL	$columns		List of columns to deliver
 	 *	@param		string				$column			Column to match with values
 	 *	@param		array				$values			List of possible values of column
 	 *	@param		array				$orders			Map of order relations
@@ -244,18 +242,15 @@ class Reader
 		$columns	= $this->getColumnEnumeration( $columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$column.' IN ('.implode( ', ', $values ).') '.$orders.$limits;
 		$statement	= $this->dbc->prepare( $query );
-		if( $statement->execute() ){
-			$this->applyFetchModeOnStatement( $statement );
-			$resultList	= $this->applyFetchModeOnResultSet( $statement );
-			if( $resultList !== FALSE )
-				return $resultList;
-		}
-		return [];
+		if( !$statement->execute() )
+			throw new RuntimeException( 'Executing failed' );
+		$this->applyFetchModeOnStatement( $statement );
+		return $this->applyFetchModeOnResultSet( $statement );
 	}
 
 	/**
 	 *	@access		public
-	 *	@param		array|string|null	$columns		List of columns to deliver
+	 *	@param		array|string|NULL	$columns		List of columns to deliver
 	 *	@param		string				$column			Column to match with values
 	 *	@param		array				$values			List of possible values of column
 	 *	@param		array				$conditions		Additional AND-related conditions
@@ -287,13 +282,10 @@ class Reader
 		$columns	= $this->getColumnEnumeration( $columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$column.' IN ('.implode( ', ', $values ).') '.$orders.$limits;
 		$statement	= $this->dbc->prepare( $query );
-		if( $statement->execute() ){
-			$this->applyFetchModeOnStatement( $statement );
-			$resultList	= $this->applyFetchModeOnResultSet( $statement );
-			if( $resultList !== FALSE )
-				return $resultList;
-		}
-		return [];
+		if( !$statement->execute() )
+			throw new RuntimeException( 'Executing failed' );
+		$this->applyFetchModeOnStatement( $statement );
+		return $this->applyFetchModeOnResultSet( $statement );
 	}
 
 	/**
@@ -339,7 +331,7 @@ class Reader
 	 *	@return		array|object|NULL
 	 *	@todo		implement using given fields
 	 */
-	public function get( bool $first = TRUE, array $orders = [], array $limits = [], array $fields = [] ): object|array|null
+	public function get( bool $first = TRUE, array $orders = [], array $limits = [], array $fields = [] ): object|array|NULL
 	{
 		$this->validateFocus();
 
@@ -354,11 +346,9 @@ class Reader
 		if( $statement->execute() ){
 			$this->applyFetchModeOnStatement( $statement );
 			$resultList = $this->applyFetchModeOnResultSet( $statement );
-			if( $resultList !== FALSE ){
-				if( $first )
-					return count( $resultList ) !== 0 ? $resultList[0] : NULL;
-				return $resultList;
-			}
+			if( $first )
+				return count( $resultList ) !== 0 ? $resultList[0] : NULL;
+			return $resultList;
 		}
 		return $first ? NULL : [];
 	}
@@ -493,6 +483,25 @@ class Reader
 	public function getTableName(): string
 	{
 		return $this->tableName;
+	}
+
+	/**
+	 *	Returns data of focused keys.
+	 *	@access		public
+	 *	@return		bool
+	 *	@todo		implement using given fields
+	 */
+	public function has(): bool
+	{
+		$this->validateFocus();
+		$conditions	= $this->getConditionQuery();
+//		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
+		$query		= 'SELECT COUNT(*) FROM '.$this->getTableName().' WHERE '.$conditions;
+		$statement	= $this->dbc->prepare( $query );
+		$statement->execute();
+		/** @var array<int,int> $result */
+		$result		= $statement->fetch( PDO::FETCH_NUM );
+		return 0 !== $result[0];
 	}
 
 	/**
@@ -643,15 +652,20 @@ class Reader
 
 	/**
 	 *	@param		PDOStatement	$resultSet
-	 *	@return		array|FALSE
+	 *	@return		array
+	 *	@throws		RuntimeException	if fetching fails
 	 */
-	protected function applyFetchModeOnResultSet( PDOStatement $resultSet )
+	protected function applyFetchModeOnResultSet( PDOStatement $resultSet ): array
 	{
 		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass )
-			return $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
-		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
-			return $resultSet->fetchAll( $this->fetchMode );
-		return $resultSet->fetchAll( $this->fetchMode );
+			$fetched	= $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
+		else if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
+			$fetched	= $resultSet->fetchAll( $this->fetchMode );
+		else
+			$fetched	= $resultSet->fetchAll( $this->fetchMode );
+		if( FALSE === $fetched )
+			throw new RuntimeException( 'Fetching failed' );
+		return $fetched;
 	}
 
 	/**
@@ -796,7 +810,7 @@ class Reader
 	 *	...
 	 *	@access		protected
 	 *	@param		string					$column			...
-	 *	@param		string|int|float|null	$value			...
+	 *	@param		string|int|float|NULL	$value			...
 	 *	@param		boolean					$maskColumn		...
 	 *	@return		string					...
 	 *	@throws		InvalidArgumentException	if whitespace is missing after an operator
@@ -840,14 +854,14 @@ class Reader
 			$matches	= [];
 			preg_match_all( $patternLike, $valueString, $matches );
 			$operation	= ( $matches[1][0] === '!%' ? 'NOT ' : '' ).'LIKE';
-			$value		= $this->secureValue( $matches[2][0] );
+			$valueString	= $this->secureValue( $matches[2][0] );
 		}
 		else if( preg_match( '/^%/', $valueString ) === 1 || preg_match( '/%$/', $valueString ) === 1 ){
 			$operation	= ' LIKE ';
-			$value		= $this->secureValue( $valueString );
+			$valueString	= $this->secureValue( $valueString );
 		}
 		else{
-			if( strtolower( $valueString ) == 'is null' || strtolower( $valueString ) == 'is not null'){
+			if( strtolower( $valueString ) == 'is NULL' || strtolower( $valueString ) == 'is not null'){
 				$operation		= '';
 				$valueString	= strtoupper( $valueString );
 			}
@@ -867,14 +881,11 @@ class Reader
 	/**
 	 *	Secures Conditions Value by adding slashes or quoting.
 	 *	@access		protected
-	 *	@param		string|int|float|null	$value		String, integer, float or NULL to be secured
+	 *	@param		string|int|float|NULL	$value		String, integer, float or NULL to be secured
 	 *	@return		string
 	 */
 	protected function secureValue( string|int|float|null $value ): string
 	{
-#		if( !ini_get( 'magic_quotes_gpc' ) )
-#			$value = addslashes( $value );
-#		$value	= htmlentities( $value );
 		if( NULL === $value )
 			return "NULL";
 		if( is_numeric( $value ) )
@@ -888,7 +899,7 @@ class Reader
 	/**
 	 *	Checks columns names for querying methods (find,get), sets wildcard if empty or throws an exception if unacceptable.
 	 *	@access		protected
-	 *	@param		array|string|null		$columns		String or array of column names to validate
+	 *	@param		array|string|NULL		$columns		String or array of column names to validate
 	 *	@return		void
 	 *	@throws		InvalidArgumentException	if columns is neither a list of columns nor *
 	 *	@throws		DomainException				if column is neither a defined column nor *
