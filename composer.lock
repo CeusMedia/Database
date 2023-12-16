@@ -70,12 +70,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/CeusMedia/Common.git",
-                "reference": "eead41cea3f06a673e0ef2e4cb7eca11caa76721"
+                "reference": "9d0b37ca5819c06c5b187721d1025530bbd6ed69"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/CeusMedia/Common/zipball/eead41cea3f06a673e0ef2e4cb7eca11caa76721",
-                "reference": "eead41cea3f06a673e0ef2e4cb7eca11caa76721",
+                "url": "https://api.github.com/repos/CeusMedia/Common/zipball/9d0b37ca5819c06c5b187721d1025530bbd6ed69",
+                "reference": "9d0b37ca5819c06c5b187721d1025530bbd6ed69",
                 "shasum": ""
             },
             "require": {
@@ -83,7 +83,8 @@
                 "psr/simple-cache": "^3.0"
             },
             "require-dev": {
-                "ceus-media/doc-creator": "^0.9.6 | 0.9.x-dev | dev-master",
+                "ceus-media/doc-creator": "^1 | 1.0.x-dev",
+                "ceus-media/php-parser": "^0.4 | 0.4.x-dev",
                 "erusev/parsedown": "~1.0",
                 "ext-bz2": "*",
                 "ext-curl": "*",
@@ -103,7 +104,7 @@
                 "ext-zip": "*",
                 "ext-zlib": "*",
                 "michelf/php-markdown": "^1.7",
-                "php-parallel-lint/php-parallel-lint": "^1.3 | dev-master",
+                "php-parallel-lint/php-parallel-lint": "^1.3",
                 "phpstan/phpstan": "^1",
                 "phpstan/phpstan-strict-rules": "^1",
                 "phpunit/phpunit": "^9 | ^10",
@@ -115,8 +116,7 @@
                     "src/global.php"
                 ],
                 "psr-4": {
-                    "CeusMedia\\Common\\": "src/",
-                    "CeusMedia\\CommonTest\\": "test/"
+                    "CeusMedia\\Common\\": "src/"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -137,7 +137,7 @@
                 "jabber": "cwuerker@ceusmedia.de",
                 "source": "https://github.com/CeusMedia/Common/tree/1.0.x"
             },
-            "time": "2023-11-05T21:32:18+00:00"
+            "time": "2023-12-16T03:17:37+00:00"
         },
         {
             "name": "psr/cache",

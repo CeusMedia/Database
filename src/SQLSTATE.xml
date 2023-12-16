@@ -1,0 +1,235 @@
+<SQLSTATE>
+	<class id="00">
+		<subclass id="000" meaning="Successful completion"/>
+	</class>
+	<class id="01">
+		<subclass id="000" meaning="Warning"/>
+		<subclass id="002" meaning="disconnect error"/>
+		<subclass id="003" meaning="null value eliminated in set function"/>
+		<subclass id="004" meaning="string data, right truncation"/>
+		<subclass id="005" meaning="insufficient item descriptor areas"/>
+		<subclass id="006" meaning="privilege not revoked"/>
+		<subclass id="007" meaning="privilege not granted"/>
+		<subclass id="008" meaning="implicit zero-bit padding"/>
+		<subclass id="S01" meaning="error in row"/>
+		<subclass id="S02" meaning="option value changed"/>
+		<subclass id="S05" meaning="cancel treated as close"/>
+		<subclass id="S06" meaning="attempt to fetch before the result set returned the first rowset"/>
+		<subclass id="S07" meaning="fractional truncation"/>
+	</class>
+	<class id="02">
+		<subclass id="000" meaning="No data"/>
+	</class>
+	<class id="07">
+		<subclass id="000" meaning="Dynamic SQL error"/>
+		<subclass id="001" meaning="using clause does not match dynamic parameter specifications"/>
+		<subclass id="002" meaning="using clause does not match target specifications"/>
+		<subclass id="003" meaning="cursor specification cannot be executed"/>
+		<subclass id="004" meaning="using clause required for dynamic parameters"/>
+		<subclass id="005" meaning="prepared statement is not a cursor specification"/>
+		<subclass id="006" meaning="restricted data type attribute violation"/>
+		<subclass id="007" meaning="using clause required for result fields"/>
+		<subclass id="008" meaning="invalid descriptor count"/>
+		<subclass id="009" meaning="invalid descriptor index"/>
+		<subclass id="00F" meaning="invalid DATETIME_INTERVAL_CODE"/>
+	</class>
+	<class id="08">
+		<subclass id="000" meaning="Connection exception"/>
+		<subclass id="001" meaning="client unable to establish connection"/>
+		<subclass id="002" meaning="connection name in use"/>
+		<subclass id="003" meaning="connection does not exist"/>
+		<subclass id="004" meaning="server rejected the connection"/>
+		<subclass id="006" meaning="connection failure"/>
+	</class>
+	<class id="09">
+		<subclass id="000" meaning="Triggered action exception"/>
+	</class>
+	<class id="0A">
+		<subclass id="000" meaning="Feature not supported"/>
+	</class>
+	<class id="0B">
+		<subclass id="000" meaning="Invalid transaction initiation"/>
+	</class>
+	<class id="0K">
+		<subclass id="000" meaning="Resignal when handler not active"/>
+	</class>
+	<class id="0W">
+		<subclass id="000" meaning="Prohibited statement encountered during trigger execution"/>
+	</class>
+	<class id="21">
+		<subclass id="000" meaning="Cardinality violation"/>
+		<subclass id="S01" meaning="insert value list does not match column list"/>
+		<subclass id="S02" meaning="degree of derived table does not match column list"/>
+	</class>
+	<class id="22">
+		<subclass id="000" meaning="Data exception"/>
+		<subclass id="001" meaning="string data, right truncation"/>
+		<subclass id="002" meaning="null value, no indicator parameter"/>
+		<subclass id="003" meaning="numeric value out of range"/>
+		<subclass id="005" meaning="error in assignment"/>
+		<subclass id="006" meaning="invalid interval format"/>
+		<subclass id="007" meaning="invalid datetime format"/>
+		<subclass id="008" meaning="datetime field overflow"/>
+		<subclass id="011" meaning="substring error"/>
+		<subclass id="012" meaning="division by zero"/>
+		<subclass id="015" meaning="interval field overflow"/>
+		<subclass id="018" meaning="invalid character value for cast"/>
+		<subclass id="019" meaning="invalid escape character"/>
+		<subclass id="023" meaning="invalid parameter value"/>
+		<subclass id="024" meaning="unterminated C string"/>
+		<subclass id="025" meaning="invalid escape sequence"/>
+		<subclass id="026" meaning="string data, length mismatch"/>
+		<subclass id="027" meaning="trim error"/>
+		<subclass id="029" meaning="noncharacter in UCS string"/>
+	</class>
+	<class id="23">
+		<subclass id="000" meaning="Integrity constraint violation"/>
+	</class>
+	<class id="24">
+		<subclass id="000" meaning="Invalid cursor state"/>
+	</class>
+	<class id="25">
+		<subclass id="000" meaning="Invalid transaction state"/>
+		<subclass id="S03" meaning="transaction is rolled back"/>
+	</class>
+	<class id="26">
+		<subclass id="000" meaning="Invalid SQL statement name"/>
+	</class>
+	<class id="27">
+		<subclass id="000" meaning="Triggered data change violation"/>
+	</class>
+	<class id="28">
+		<subclass id="000" meaning="Invalid authorization specification"/>
+	</class>
+	<class id="2E">
+		<subclass id="000" meaning="Invalid connection name"/>
+	</class>
+	<class id="2F">
+		<subclass id="000" meaning="SQL routine exception"/>
+		<subclass id="003" meaning="prohibited SQL-statement attempted"/>
+		<subclass id="005" meaning="function executed no return statement"/>
+	</class>
+	<class id="33">
+		<subclass id="000" meaning="Invalid SQL descriptor name"/>
+	</class>
+	<class id="34">
+		<subclass id="000" meaning="Invalid cursor name"/>
+	</class>
+	<class id="35">
+		<subclass id="000" meaning="Invalid condition number"/>
+	</class>
+	<class id="37">
+		<subclass id="000" meaning="Syntax error or access violation in PREPARE or EXECUTE IMMEDIATE"/>
+	</class>
+	<class id="3C">
+		<subclass id="000" meaning="Ambiguous cursor name"/>
+	</class>
+	<class id="40">
+		<subclass id="000" meaning="transaction rollback"/>
+		<subclass id="001" meaning="serialization failure"/>
+	</class>
+	<class id="42">
+		<subclass id="000" meaning="Syntax error or access rule violation"/>
+		<subclass id="S01" meaning="base table or view already exists"/>
+		<subclass id="S02" meaning="base table or view not found"/>
+		<subclass id="S11" meaning="index already exists"/>
+		<subclass id="S21" meaning="column already exists"/>
+		<subclass id="S22" meaning="column not found"/>
+	</class>
+	<class id="44">
+		<subclass id="000" meaning="WITH CHECK OPTION violation"/>
+	</class>
+	<class id="45">
+		<subclass id="000" meaning="Unhandled user-defined exception"/>
+	</class>
+	<class id="HY">
+		<subclass id="000" meaning="General error"/>
+		<subclass id="001" meaning="memory allocation error"/>
+		<subclass id="003" meaning="invalid application buffer type"/>
+		<subclass id="004" meaning="invalid SQL data type"/>
+		<subclass id="007" meaning="associated statement is not prepared"/>
+		<subclass id="008" meaning="operation canceled"/>
+		<subclass id="009" meaning="invalid use of null pointer"/>
+		<subclass id="010" meaning="function sequence error"/>
+		<subclass id="011" meaning="attribute cannot be set now"/>
+		<subclass id="012" meaning="invalid transaction operation code"/>
+		<subclass id="013" meaning="memory management error"/>
+		<subclass id="014" meaning="limit on the number of handles exceeded"/>
+		<subclass id="015" meaning="no cursor name available"/>
+		<subclass id="016" meaning="cannot modify an implementation row descriptor"/>
+		<subclass id="017" meaning="invalid use of an automatically allocated descriptor handle"/>
+		<subclass id="018" meaning="server declined cancel request SQLCancel"/>
+		<subclass id="019" meaning="non-character and non-binary data sent in pieces"/>
+		<subclass id="020" meaning="attempt to concatenate a null value"/>
+		<subclass id="021" meaning="inconsistent descriptor information"/>
+		<subclass id="024" meaning="invalid attribute value"/>
+		<subclass id="090" meaning="invalid string or buffer length"/>
+		<subclass id="091" meaning="invalid descriptor field identifier"/>
+		<subclass id="092" meaning="invalid attribute/option identifier"/>
+		<subclass id="093" meaning="invalid parameter number"/>
+		<subclass id="095" meaning="function type out of range"/>
+		<subclass id="096" meaning="invalid information type"/>
+		<subclass id="097" meaning="column type out of range"/>
+		<subclass id="098" meaning="scope type out of range"/>
+		<subclass id="099" meaning="nullable type out of range"/>
+		<subclass id="100" meaning="uniqueness option type out of range"/>
+		<subclass id="101" meaning="accuracy option type out of range"/>
+		<subclass id="102" meaning="table type out of range"/>
+		<subclass id="103" meaning="invalid retrieval code"/>
+		<subclass id="104" meaning="invalid precision or scale value"/>
+		<subclass id="105" meaning="invalid parameter type"/>
+		<subclass id="106" meaning="fetch type out of range"/>
+		<subclass id="107" meaning="row value out of range"/>
+		<subclass id="108" meaning="concurrency option out of range"/>
+		<subclass id="109" meaning="invalid cursor position"/>
+		<subclass id="110" meaning="invalid driver completion"/>
+		<subclass id="111" meaning="invalid bookmark value"/>
+		<subclass id="C00" meaning="optional feature not implemented"/>
+		<subclass id="T00" meaning="timeout expired"/>
+		<subclass id="T01" meaning="connection timeout expired"/>
+	</class>
+	<class id="IM">
+		<subclass id="000" meaning="ODBC specific return codes"/>
+		<subclass id="001" meaning="driver does not support this function"/>
+		<subclass id="008" meaning="dialog failed"/>
+	</class>
+	<class id="S0">
+		<subclass id="000" meaning="ODBC 2.0 codes"/>
+		<subclass id="001" meaning="base table or view already exists"/>
+		<subclass id="002" meaning="base table not found"/>
+		<subclass id="011" meaning="index already exists"/>
+		<subclass id="012" meaning="index not found"/>
+		<subclass id="021" meaning="column already exists"/>
+		<subclass id="022" meaning="column not found"/>
+	</class>
+	<class id="S1">	
+		<subclass id="000" meaning="General error"/>
+		<subclass id="001" meaning="memory allocation failure"/>
+		<subclass id="002" meaning="invalid column number"/>
+		<subclass id="003" meaning="program type out of range"/>
+		<subclass id="004" meaning="SQL data type out of range"/>
+		<subclass id="008" meaning="operation canceled"/>
+		<subclass id="009" meaning="invalid argument value"/>
+		<subclass id="010" meaning="function sequence error"/>	
+		<subclass id="012" meaning="invalid transaction operation code specified"/>
+		<subclass id="090" meaning="invalid string or buffer length"/>
+		<subclass id="091" meaning="descriptor type out of range"/>
+		<subclass id="092" meaning="option type out of range"/>
+		<subclass id="093" meaning="invalid parameter number"/>
+		<subclass id="095" meaning="function type out of range"/>
+		<subclass id="096" meaning="information type out of range"/>
+		<subclass id="097" meaning="column type out of range"/>
+		<subclass id="098" meaning="scope type out of range"/>
+		<subclass id="099" meaning="nullable type out of range"/>
+		<subclass id="100" meaning="uniqueness option out of range"/>
+		<subclass id="101" meaning="accuracy option type out of range"/>
+		<subclass id="102" meaning="table type out of range"/>
+		<subclass id="105" meaning="direction option out of range"/>
+		<subclass id="106" meaning="fetch type out of range"/>
+		<subclass id="107" meaning="row value out of range"/>
+		<subclass id="108" meaning="concurrency option out of range"/>
+		<subclass id="109" meaning="invalid cursor position"/>
+		<subclass id="C00" meaning="driver not capable"/>
+		<subclass id="T00" meaning="timeout expired"/>
+	</class>
+</SQLSTATE>
