@@ -42,7 +42,7 @@ use RuntimeException;
  */
 class Update extends AbstractQuery implements QueryInterface
 {
-	public ?int $rowCount;
+	public int $nrAffectedRows	= 0;
 
 	protected array $conditions	= [];
 	protected array $fields		= [];

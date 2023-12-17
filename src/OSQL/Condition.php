@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection PhpUnused */
+
 /**
  *	...
  *
@@ -28,6 +29,7 @@
 namespace CeusMedia\Database\OSQL;
 
 use InvalidArgumentException;
+use Traversable;
 
 /**
  *	...
@@ -121,21 +123,23 @@ class Condition
 		$counter	= 0;
 
 		do{
-			$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ).'_'.$counter;
+			$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ?? '' ).'_'.$counter;
 			$counter++;
 		}
 		while( isset( $parameters[$key] ) );
 
 		if( in_array( $this->type, ['array', 'object'], TRUE ) ){
 			$keyList	= [];
-			foreach( $this->value as $value ){
-				$keyList[]	= ':'.$key;
-				$parameters[$key]	= array(
-					'type'	=> gettype( $value ),
-					'value'	=> $value
-				);
-				$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ).'_'.$counter;
-				$counter++;
+			if( $this->value instanceof Traversable || is_array( $this->value ) ){
+				foreach( $this->value as $value ){
+					$keyList[]	= ':'.$key;
+					$parameters[$key]	= array(
+						'type'	=> gettype( $value ),
+						'value'	=> $value
+					);
+					$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ?? '' ).'_'.$counter;
+					$counter++;
+				}
 			}
 			$condition	= $this->fieldName.' '.$this->operation.' ('.implode( ',', $keyList ).')';
 		}

@@ -41,7 +41,8 @@ use RuntimeException;
  */
 class Delete extends AbstractQuery implements QueryInterface
 {
-	public int $affectedRows;
+	public int $nrAffectedRows	= 0;
+
 
 	protected array $conditions	= [];
 	protected ?Table $table		= NULL;

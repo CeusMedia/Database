@@ -42,10 +42,11 @@ use RuntimeException;
  */
 class Insert extends AbstractQuery implements QueryInterface
 {
-	public ?string $lastInsertId		= NULL;
+	public ?string $lastInsertId	= NULL;
+	public int $nrAffectedRows		= 0;
 
 	protected array $fields;
-	protected ?Table $table		= NULL;
+	protected ?Table $table			= NULL;
 
 	/**
 	 *	...

@@ -27,7 +27,6 @@
  */
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Table;
 use InvalidArgumentException;
@@ -45,6 +44,7 @@ use RuntimeException;
 class Select extends AbstractQuery implements QueryInterface
 {
 	public int $foundRows		= 0;
+	public array $result		= [];
 
 	protected bool $countRows	= FALSE;
 	protected array $conditions	= [];
@@ -61,7 +61,8 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	public static function create( Client $dbc ): self
 	{
-		return new static( $dbc );
+		$className	= static::class;
+		return new $className( $dbc );
 	}
 
 	/**
@@ -176,7 +177,6 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	public function render(): object
 	{
-//		$clock		= new Clock();
 		$this->checkSetup();
 		$parameters	= [];
 		$fields		= implode( ', ', $this->fields );

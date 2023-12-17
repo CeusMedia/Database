@@ -30,7 +30,10 @@ namespace CeusMedia\Database\OSQL;
 
 use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Common\Exception\SQL as SqlException;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
+use CeusMedia\Database\OSQL\Query\AbstractQuery;
+use CeusMedia\Database\OSQL\Query\Insert as InsertQuery;
+use CeusMedia\Database\OSQL\Query\Select as SelectQuery;
+use CeusMedia\Database\OSQL\Query\Update as UpdateQuery;
 use InvalidArgumentException;
 use PDO;
 
@@ -88,12 +91,13 @@ class Client
 	/**
 	 *	Executes query and returns result.
 	 *	@access		public
-	 *	@param		QueryInterface		$query
+	 *	@param		AbstractQuery		$query
 	 *	@return		object|array|int|float|string|bool|null
 	 */
-	public function execute( QueryInterface $query ): float|object|int|bool|array|string|null
+	public function execute( AbstractQuery $query ): float|object|int|bool|array|string|null
 	{
 		$clock		= new Clock();
+		/** @var object{query: string, parameters: array<string,string|int|float>} $queryParts */
 		$queryParts	= $query->render();
 		$query->timing['render']	= $clock->stop( 0, 6 );
 		$query->statement			= $queryParts->query;
@@ -101,6 +105,10 @@ class Client
 
 		$clock->start();
 		$stmt	= $this->dbc->prepare( $queryParts->query );
+		/**
+		 * @var string $name
+		 * @var array<string,string|int|float> $parameter
+		 */
 		foreach( $queryParts->parameters as $name => $parameter ){
 			$type	= $this->getPdoTypeFromValue( $parameter['value'] );
 			$stmt->bindParam( $name, $parameter['value'], $type );
@@ -116,24 +124,29 @@ class Client
 		$query->timing['execute']	= $clock->stop( 0, 6 );
 		$query->timing['total']		= array_sum( $query->timing );
 
-		if( strpos( $queryParts->query, 'SQL_CALC_FOUND_ROWS' ) ){
-			$query->foundRows	= current( $this->dbc->query( 'SELECT FOUND_ROWS()' )->fetch() );
-		}
-
-		if( $query instanceof Query\Select ){
+		if( $query instanceof SelectQuery ){
+			if( str_contains( $queryParts->query, 'SQL_CALC_FOUND_ROWS' ) ){
+				$result	= $this->dbc->query( 'SELECT FOUND_ROWS()' );
+				if( FALSE !== $result ){
+					/** @var array<int> $count */
+					$count	= $result->fetch();
+					$query->foundRows	= 0 !== count( $count ) ? current( $count ) : 0;
+				}
+			}
 			$query->result	= $stmt->fetchAll( $this->fetchMode );
 			return $query->result;
 		}
-		else if( $query instanceof Query\Insert ){
-			$query->rowCount		= $stmt->rowCount();
-			$query->lastInsertId	= $this->dbc->lastInsertId() ?: NULL;
+		else if( $query instanceof InsertQuery ){
+			$query->nrAffectedRows	= $stmt->rowCount();
+			$id	= $this->dbc->lastInsertId();
+			$query->lastInsertId	= FALSE !== $id ? $id : NULL;
 			return $query->lastInsertId;
 		}
-		else if( $query instanceof Query\Update || $query instanceof Query\Delete ){
-			$query->rowCount	= $stmt->rowCount();
-			return $query->rowCount;
+		else if( $query instanceof UpdateQuery || $query instanceof Query\Delete ){
+			$query->nrAffectedRows	= $stmt->rowCount();
+			return $query->nrAffectedRows;
 		}
-		return $result;
+		return TRUE;
 	}
 
 	/**

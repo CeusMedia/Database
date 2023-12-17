@@ -60,6 +60,9 @@ abstract class AbstractQuery implements QueryInterface
 		'total'		=> 0,
 	];
 
+	public ?string $statement		= NULL;
+	public array $parameters		= [];
+
 	protected Client $dbc;
 	protected array $conditions		= [];
 	protected array $joins			= [];
@@ -67,6 +70,7 @@ abstract class AbstractQuery implements QueryInterface
 	protected ?int $limit			= NULL;
 	protected ?int $offset			= NULL;
 //	protected $query;
+
 
 	/**
 	 *	Constructor.
@@ -87,15 +91,16 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	public static function create( Client $dbc ): self
 	{
-		return new static( $dbc );
+		$className	= static::class;
+		return new $className( $dbc );
 	}
 
 	/**
 	 *	Sends query to assigned client for execution and returns response.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		float|object|int|bool|array|string|NULL
 	 */
-	public function execute(): array
+	public function execute(): float|object|int|bool|array|string|NULL
 	{
 		return $this->dbc->execute( $this );
 	}
