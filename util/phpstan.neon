@@ -7,7 +7,7 @@ parameters:
 	level: max
 	paths:
 #		- ../src/DAO
-#		- ../src/OSQL
+		- ../src/OSQL
 		- ../src/PDO
 	checkMissingIterableValueType: false
 	treatPhpDocTypesAsCertain: false

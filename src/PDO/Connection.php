@@ -25,22 +25,12 @@
  *	@copyright		2007-2023 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
+ *	@codeCoverageIgnore
  */
 namespace CeusMedia\Database\PDO;
 
 use CeusMedia\Database\PDO\Connection\Php80;
 use CeusMedia\Database\PDO\Connection\Php81;
-
-/**
- *	Enhanced PDO Connection.
- *	@category		Library
- *	@package		CeusMedia_Database_PDO
- *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
- *	@link			https://github.com/CeusMedia/Database
- *	@todo			Code Documentation
- */
 
 if( version_compare( PHP_VERSION, '8.1.0', '>=' ) ){
 	class Connection extends Php81 {}

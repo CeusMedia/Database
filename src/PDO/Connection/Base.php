@@ -20,7 +20,7 @@
  *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *	@category		Library
- *	@package		CeusMedia_Database_PDO
+ *	@package		CeusMedia_Database_PDO_Connection
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2023 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -37,7 +37,7 @@ use PDOStatement;
 /**
  *	Enhanced PDO Connection.
  *	@category		Library
- *	@package		CeusMedia_Database_PDO
+ *	@package		CeusMedia_Database_PDO_Connection
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2023 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3

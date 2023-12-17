@@ -24,7 +24,7 @@
   },
   "require-dev": {
     "ext-mysqli": "*",
-    "ceus-media/doc-creator": "*",
+    "ceus-media/doc-creator": "^1.0 | 1.0.x-dev",
     "phpunit/phpunit": "^9.5 | ^10.1",
     "phpstan/phpstan": "^1",
     "phpstan/phpstan-strict-rules": "^1",
@@ -46,8 +46,8 @@
       "@dev:phpunit"
     ],
     "dev:install": "composer install --quiet",
-    "dev:update": "composer update --quiet",
-    "incomplete:dev:create-docs": [
+    "dev:update": "composer update",
+    "dev:create-docs": [
       "@dev:install",
       "php vendor/ceus-media/doc-creator/doc-creator.php --config-file=util/doc.xml"
     ],
@@ -91,5 +91,7 @@
     "dev:rector": "Shows suggestions of configured Rector rules",
     "dev:rector-fix": "Apply currently configured Rector rules to codebase",
     "dev:test-syntax": "Validate code base syntax using PHP linter"
-  }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
 }
