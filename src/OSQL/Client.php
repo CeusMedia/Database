@@ -31,6 +31,7 @@ namespace CeusMedia\Database\OSQL;
 use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Common\Exception\SQL as SqlException;
 use CeusMedia\Database\OSQL\Query\AbstractQuery;
+use CeusMedia\Database\OSQL\Query\Delete as DeleteQuery;
 use CeusMedia\Database\OSQL\Query\Insert as InsertQuery;
 use CeusMedia\Database\OSQL\Query\Select as SelectQuery;
 use CeusMedia\Database\OSQL\Query\Update as UpdateQuery;
@@ -65,21 +66,25 @@ class Client
 		$this->setFetchMode( self::$defaultFetchMode );
 	}
 
-/*
-	public function select()
+	public function select(): SelectQuery
 	{
-		return new \CeusMedia\Database\OSQL\Query\Select();
+		return new SelectQuery( $this );
 	}
 
-	public function update()
+	public function update(): UpdateQuery
 	{
-		return new \CeusMedia\Database\OSQL\Query\Update();
+		return new UpdateQuery( $this );
 	}
 
-	public function delete()
+	public function delete(): DeleteQuery
 	{
-		return new \CeusMedia\Database\OSQL\Query\Delete();
-	}*/
+		return new DeleteQuery( $this );
+	}
+
+	public function insert(): InsertQuery
+	{
+		return new InsertQuery( $this );
+	}
 /*
 	public function getStringFromQuery( $query )
 	{
