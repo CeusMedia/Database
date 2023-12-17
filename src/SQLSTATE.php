@@ -24,6 +24,7 @@
  *	@copyright		2007-2023 Christian Würker
  *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
+ *	@see			https://www.microfocus.com/documentation/visual-cobol/vc60/VS2017/HRDBRHESQL16.html
  */
 
 namespace CeusMedia\Database;
