@@ -1,3 +1,13 @@
+## Version 0.6.2
+- General:
+	- Import SQLSTATE from CeusMedia::Common.
+- PDO:
+	- Support data and entity objects.
+	- Add connection factory.
+	- Use entity class in cli demo.
+- OSQL:
+	- Update to reach PHPStan level max + strict.
+
 ## Version 0.6.1
 
 - Add new LIKE support in condition query.
