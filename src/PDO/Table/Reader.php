@@ -141,7 +141,7 @@ class Reader
 		//  render WHERE clause if needed, foreign cursored, allow functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
 		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
-		$query		= 'EXPLAIN SELECT COUNT(*) FROM '.$this->getTableName().$conditions;
+		$query		= 'EXPLAIN SELECT COUNT('.$this->primaryKey.') FROM '.$this->getTableName().$conditions;
 		$result	= $this->dbc->query( $query );
 		if( $result !== FALSE ){
 			/** @var array|FALSE $array */
