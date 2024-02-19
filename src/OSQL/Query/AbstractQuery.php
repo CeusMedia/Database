@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  *	Abstract query class.
  *
- *	Copyright (c) 2010-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -18,13 +18,13 @@ declare(strict_types=1);
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 
@@ -43,8 +43,8 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 abstract class AbstractQuery implements QueryInterface
@@ -144,7 +144,7 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	 public function or( Condition|Group $condition ): self
 	 {
-		if( count( $this->conditions ) === 0 )
+		if( 0 === count( $this->conditions ) )
 			throw new RuntimeException( 'No condition set yet' );
 		$this->conditions[]	= [
 			'operation'	=> Group::OPERATION_OR,
@@ -232,7 +232,7 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	protected function renderJoins(): string
 	{
-		if( count( $this->joins ) === 0 )
+		if( 0 === count( $this->joins ) )
 			return '';
 		$list	= [];
 		foreach( $this->joins as $join ){
@@ -258,11 +258,11 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	protected function renderConditions( array &$parameters ): string
 	{
-		if( count( $this->conditions ) === 0 )
+		if( 0 === count( $this->conditions ) )
 			return '';
 		$list	= [];
 		foreach( $this->conditions as $condition ){
-			if( count( $list ) !== 0 )
+			if( 0 !== count( $list ) )
 				$list[]	= $condition['operation'];
 			$list[]	= $condition['condition']->render( $parameters );
 		}
@@ -277,7 +277,7 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	protected function renderLimit( array &$parameters ): string
 	{
-		if( $this->limit === NULL )
+		if( NULL === $this->limit )
 			return '';
 		$limit		= ' LIMIT :limit';
 		$parameters['limit']	= [
@@ -295,7 +295,7 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	protected function renderOffset( array &$parameters ): string
 	{
-		if( $this->offset === NULL )
+		if( NULL === $this->offset )
 			return '';
 		$offset		= ' OFFSET :offset';
 		$parameters['offset']	= [

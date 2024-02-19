@@ -3,7 +3,7 @@
 /**
 *	Pool for database connections.
  *
- *	Copyright (c) 2007-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -16,13 +16,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO;
@@ -35,8 +35,8 @@ use DomainException;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Pool
@@ -44,8 +44,8 @@ class Pool
 	/** @var		string|NULL		$default		Name of default connection */
 	protected ?string $default;
 
-	/** @var		array		$connections	Map of connections by name */
-	protected array $connections		= [];
+	/** @var		array			$connections	Map of connections by name */
+	protected array $connections	= [];
 
 	/**
 	 *	Add a connection by a name.

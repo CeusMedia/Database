@@ -4,7 +4,7 @@
 /**
  *	Abstract database table.
  *
- *	Copyright (c) 2007-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -17,13 +17,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO;
@@ -48,8 +48,8 @@ use RuntimeException;
  *	@package		CeusMedia_Database_PDO
  *	@uses			TableWriter
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 abstract class Table
@@ -104,11 +104,11 @@ abstract class Table
 	 *	@access		public
 	 *	@param		Connection		$dbc		PDO database connection object
 	 *	@param		?string			$prefix		Table name prefix
-	 *	@param		?integer		$id			ID to focus on
+	 *	@param		?string			$id			ID to focus on
 	 *	@return		void
 	 *	@throws		ReflectionException
 	 */
-	public function __construct( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL )
+	public function __construct( Connection $dbc, ?string $prefix = NULL, ?string $id = NULL )
 	{
 		$this->checkTableSetup();
 		$this->setDatabase( $dbc, $prefix, $id );
@@ -148,7 +148,7 @@ abstract class Table
 	 *	@param		float|array|int|string	$value			Value(s) of Index
 	 *	@return		integer					Number of entries within this index
 	 */
-	public function countByIndex(string $key, float|array|int|string $value ): int
+	public function countByIndex( string $key, float|array|int|string $value ): int
 	{
 		return $this->table->count( [$key => $value] );
 	}
@@ -233,7 +233,7 @@ abstract class Table
 			$this->table->defocus();
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
-		if( NULL !== $field && strlen( trim( $field ) ) !== 0 )
+		if( NULL !== $field && 0 !== strlen( trim( $field ) ) )
 			return $this->getFieldFromResult( $data, $field );
 		return $data;
 	}
@@ -253,9 +253,9 @@ abstract class Table
 	public function getAll( array $conditions = [], array $orders = [], array $limits = [], array $fields = [], array $groupings = [], array $having = [], bool $strict = FALSE ): array
 	{
 		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $having );
-		if( count( $fields ) !== 0 ){
+		if( 0 !== count( $fields ) ){
 			foreach( $data as $nr => $set ){
-				if( count( $fields ) === 1 )
+				if( 1 === count( $fields ) )
 					$data[$nr]	= $this->getFieldFromResult( $set, $fields[0], $strict );
 				else
 					$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
@@ -301,9 +301,9 @@ abstract class Table
 		/** @var array $data */
 		$data	= $this->table->get( FALSE, $orders, $limits );
 		$this->table->defocus();
-		if( count( $fields ) > 0 )
+		if( 0 !== count( $fields ) )
 			foreach( $data as $nr => $set ){
-				if( count( $fields ) === 1 )
+				if( 1 === count( $fields ) )
 					$data[$nr]	= $this->getFieldFromResult( $set, current( $fields ), $strict );
 				else
 					$data[$nr]	= $this->getFieldsFromResult( $set, $fields, $strict );
@@ -325,14 +325,14 @@ abstract class Table
 	public function getByIndex( string $key, float|array|int|string $value, array $orders = [], array|string $fields = [], bool $strict = FALSE ): float|object|array|bool|int|string|null
 	{
 		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
+			$fields	= 0 !== strlen( trim( $fields ) ) ? [trim( $fields )] : [];
 		foreach( $fields as $field )
 			$this->checkField( $field );
 		$this->table->focusIndex( $key, $value );
 		/** @var object|array $data */
 		$data	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
-		if( count( $fields ) === 1 )
+		if( 1 === count( $fields ) )
 			return $this->getFieldFromResult( $data, current( $fields ), $strict );
 		return $this->getFieldsFromResult( $data, $fields, $strict );
 	}
@@ -351,7 +351,7 @@ abstract class Table
 	public function getByIndices( array $indices, array $orders = [], array|string $fields = [], bool $strict = FALSE ): float|object|array|bool|int|string|null
 	{
 		if( is_string( $fields ) )
-			$fields	= strlen( trim( $fields ) ) > 0 ? array( trim( $fields ) ) : [];
+			$fields	= 0 !== strlen( trim( $fields ) ) ? [trim( $fields )] : [];
 		foreach( $fields as $nr => $field )
 			$fields[$nr]	= $this->checkField( $field );
 		$this->checkIndices( $indices, TRUE );
@@ -360,7 +360,7 @@ abstract class Table
 		/** @var object|array $result */
 		$result	= $this->table->get( TRUE, $orders );
 		$this->table->defocus();
-		if( count( $fields ) === 1 )
+		if( 1 === count( $fields ) )
 			return $this->getFieldFromResult( $result, current( $fields ), $strict );
 		return $this->getFieldsFromResult( $result, $fields, $strict );
 	}
@@ -471,7 +471,7 @@ abstract class Table
 		$result	= FALSE;
 		/** @var array $found */
 		$found	= $this->table->get( FALSE );
-		if( count( $found ) === 1 ){
+		if( 1 === count( $found ) ){
 			$this->table->delete();
 			$result	= TRUE;
 		}
@@ -624,7 +624,7 @@ abstract class Table
 	protected function checkField( string $field, bool $mandatory = FALSE, bool $strict = TRUE ): bool|string|null
 	{
 		$field	= trim( $field );
-		if( strlen( $field ) === 0 ){
+		if( 0 === strlen( $field ) ){
 			if( $mandatory ){
 				if( !$strict )
 					return FALSE;
@@ -658,7 +658,7 @@ abstract class Table
 	 */
 	protected function checkIndices( array $indices, bool $mandatory = FALSE, bool $strict = TRUE, bool $withPrimaryKey = FALSE ): bool|array
 	{
-		if( count( $indices ) === 0 ){
+		if( 0 === count( $indices ) ){
 			if( $mandatory ){
 				if( !$strict )
 					return FALSE;
@@ -692,7 +692,7 @@ abstract class Table
 	 */
 	protected function getFieldFromResult( object|array|null $result, string $field, bool $strict = TRUE ): float|bool|int|string|NULL
 	{
-		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
+		if( is_null( $result ) || is_array( $result ) && 0 === count( $result ) ){
 			if( $strict )
 				throw new RangeException( 'Result is empty' );
 			return NULL;
@@ -700,7 +700,7 @@ abstract class Table
 		if( !in_array( $field, $this->columns, TRUE ) )
 			throw new DomainException( 'Field "'.$field.'" is not an existing column' );
 
-		if( preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) === 1 ){
+		if( 1 === preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) ){
 			if( in_array( $matches[2], $this->columns, TRUE ) )
 				throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2].' is a column' );
 			$field	= $matches[2];
@@ -735,12 +735,12 @@ abstract class Table
 	 */
 	protected function getFieldsFromResult( object|array|null $result, array $fields = [], bool $strict = TRUE ): float|object|int|bool|array|string|NULL
 	{
-		if( count( $fields ) === 0 )
+		if( 0 === count( $fields ) )
 			return $result;
-		if( count( $fields ) === 1 )
+		if( 1 === count( $fields ) )
 			return $this->getFieldFromResult( $result, current( $fields ) );
 
-		if( is_null( $result ) || is_array( $result ) && count( $result ) === 0 ){
+		if( is_null( $result ) || is_array( $result ) && 0 === count( $result ) ){
 			if( $strict )
 				throw new RangeException( 'Result is empty' );
 			return [];
@@ -751,7 +751,7 @@ abstract class Table
 				array_splice( $fields, $nr, 1, $this->columns );
 
 		foreach( $fields as $nr => $field ){
-			if( preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) === 1 ){
+			if( 1 === preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) ){
 				if( in_array( $matches[2], $this->columns, TRUE ) )
 					throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2].' is a column' );
 				$fields[$nr]	= $matches[2];
@@ -763,11 +763,11 @@ abstract class Table
 		if( in_array( $this->fetchMode, [PDO::FETCH_CLASS, PDO::FETCH_OBJ], TRUE ) ) {
 			/** @var object $result */
 			$map = (object)[];
-			foreach ($fields as $field) {
-				if (!property_exists($result, $field))
-					throw new RangeException('Field "' . $field . '" is not an column of result set');
-				$values = get_object_vars($result);
-				$map->$field = $values[$field];
+			foreach( $fields as $field ){
+				if( !property_exists( $result, $field ) )
+					throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
+				$values	= get_object_vars( $result );
+				$map->$field	= $values[$field];
 			}
 			return $map;
 		}
@@ -775,7 +775,7 @@ abstract class Table
 		/** @var array $result */
 		$list	= [];
 		foreach( $fields as $field ){
-			if( $field !== '*' && !isset( $result[$field] ) )
+			if( '*' !== $field  && !isset( $result[$field] ) )
 				throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
 			$list[$field]	= $result[$field];
 		}
@@ -806,14 +806,14 @@ abstract class Table
 	 *	@access		protected
 	 *	@param		Connection		$dbc		PDO database connection object
 	 *	@param		string|NULL		$prefix		Table name prefix
-	 *	@param		integer|NULL	$id			ID to focus on
+	 *	@param		string|NULL		$id			ID to focus on
 	 *	@return		self
 	 */
-	protected function setDatabase( Connection $dbc, ?string $prefix = NULL, ?int $id = NULL ): self
+	protected function setDatabase( Connection $dbc, ?string $prefix = NULL, ?string $id = NULL ): self
 	{
-		$this->dbc = $dbc;
-		$this->prefix = (string) $prefix;
-		$this->table = new TableWriter(
+		$this->dbc		= $dbc;
+		$this->prefix	= (string) $prefix;
+		$this->table	= new TableWriter(
 			$dbc,
 			$this->prefix . $this->name,
 			$this->columns,
@@ -834,9 +834,9 @@ abstract class Table
 
 	private function checkTableSetup(): void
 	{
-		if( strlen( trim( $this->name ) ) === 0 )
+		if( 0 === strlen( trim( $this->name ) ) )
 			throw new RuntimeException( 'No table name set' );
-		if( count( $this->columns ) === 0 )
+		if( 0 === count( $this->columns ) )
 			throw new RuntimeException( 'No table columns set' );
 	}
 
@@ -848,7 +848,7 @@ abstract class Table
 	{
 		/** @var array $rows */
 		$rows	= $this->table->get( FALSE );
-		if( count( $rows ) === 0 )
+		if( 0 === count( $rows ) )
 			return 0;
 		$number = $this->table->delete();
 		foreach( $rows as $row ){

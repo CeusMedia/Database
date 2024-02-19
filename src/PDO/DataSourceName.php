@@ -3,7 +3,7 @@
 /**
  *	Builder for Data Source Name Strings.
  *
- *	Copyright (c) 2007-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -16,13 +16,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO;
@@ -36,8 +36,8 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class DataSourceName
@@ -173,13 +173,13 @@ class DataSourceName
 	public static function renderStatic( string $driver, string $database, ?string $host = NULL, ?int $port = NULL, ?string $username = NULL, ?string $password = NULL ): string
 	{
 		$dsn	= new self( $driver, $database );
-		if( $host !== NULL )
+		if( NULL !== $host )
 			$dsn->setHost( $host );
-		if( $port !== NULL )
+		if( NULL !== $port )
 			$dsn->setPort( $port );
-		if( $username !== NULL )
+		if( NULL !== $username )
 			$dsn->setUsername( $username );
-		if( $password !== NULL )
+		if( NULL !== $password )
 			$dsn->setPassword( $password );
 		return $dsn->render();
 	}
@@ -253,7 +253,7 @@ class DataSourceName
 	 */
 	protected function renderDsnForDefault(): string
 	{
-		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
+		$port	= !is_null( $this->port ) && 0 !== $this->port ? $this->port : NULL;
 		$map	= [
 			'host'		=> $this->host,
 			'port'		=> $port,
@@ -270,7 +270,7 @@ class DataSourceName
 	protected function renderDsnForFirebird(): string
 	{
 		$host	= !is_null( $this->host ) ? $this->host : NULL;
-		$port	= !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL;
+		$port	= !is_null( $this->port ) && 0 !== $this->port ? $this->port : NULL;
 		$map	= [
 			'DataSource'	=> $host,
 			'Port'			=> $port,
@@ -290,7 +290,7 @@ class DataSourceName
 	{
 		return $this->renderDsnParts( [
 			'host'		=> !is_null( $this->host ) ? $this->host : NULL,
-			'service'	=> !is_null( $this->port ) && $this->port > 0 ? $this->port : NULL,
+			'service'	=> !is_null( $this->port ) && 0 !== $this->port ? $this->port : NULL,
 			'database'	=> $this->database,
 		] );
 	}
@@ -303,7 +303,7 @@ class DataSourceName
 	protected function renderDsnForOci(): string
 	{
 		$dbname	= $this->database;
-		$port	= !is_null( $this->port ) && $this->port > 0 ? ':'.$this->port : '';
+		$port	= !is_null( $this->port ) && 0 !== $this->port ? ':'.$this->port : '';
 		if( !is_null( $this->host ) )
 			$dbname	= '//'.$this->host.$port.'/'.$this->database;
 		return 'dbname='.$dbname;

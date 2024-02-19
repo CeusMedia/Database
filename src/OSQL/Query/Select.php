@@ -3,7 +3,7 @@
 /**
  *	Builder for SELECT statements.
  *
- *	Copyright (c) 2010-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -16,13 +16,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL\Query;
@@ -37,8 +37,8 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Select extends AbstractQuery implements QueryInterface
@@ -98,7 +98,7 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function checkSetup(): void
 	{
-		if( count( $this->tables ) === 0 )
+		if( 0 === count( $this->tables ) )
 			throw new RuntimeException( 'No from clause set' );
 	}
 
@@ -139,7 +139,7 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderFrom(): string
 	{
-		if( count( $this->tables ) === 0 )
+		if( 0 === count( $this->tables ) )
 			throw new RuntimeException( 'No table set' );
 		$list	= [];
 		foreach( $this->tables as $table )
@@ -154,14 +154,14 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderGrouping(): string
 	{
-		if( $this->groupBy === NULL )
+		if( NULL === $this->groupBy )
 			return '';
 		return ' GROUP BY '.$this->groupBy;
 	}
 
 	protected function renderOrders(): string
 	{
-		if( count( $this->orders ) === 0 )
+		if( 0 === count( $this->orders ) )
 			return '';
 		$list	= [];
 		foreach( $this->orders as $order ){
@@ -201,7 +201,7 @@ class Select extends AbstractQuery implements QueryInterface
 		$options	= [];
 		if( $this->countRows )
 			$options[]	= 'SQL_CALC_FOUND_ROWS';
-		if( count( $options ) === 0 )
+		if( 0 === count( $options ) )
 			return '';
 		return join( $options ).' ';
 	}

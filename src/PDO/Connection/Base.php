@@ -4,7 +4,7 @@
 /**
  *	Enhanced PDO Connection.
  *
- *	Copyright (c) 2007-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -17,13 +17,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Connection
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO\Connection;
@@ -39,8 +39,8 @@ use PDOStatement;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Connection
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  *	@todo			Code Documentation
  */
@@ -96,7 +96,7 @@ abstract class Base extends PDO
 		//  note name of used driver
 		/** @var string|NULL $defaultDriver */
 		$defaultDriver	= $this->getAttribute( PDO::ATTR_DRIVER_NAME );
-		if( $defaultDriver !== NULL )
+		if( NULL !== $defaultDriver )
 			$this->driver	= $defaultDriver;
 	}
 
@@ -162,7 +162,7 @@ abstract class Base extends PDO
 	 */
 	public function exec( string $statement ): int
 	{
-		$affectedRows   = 0;
+		$affectedRows	= 0;
 		$this->logStatement( $statement );
 		try{
 			$this->numberExecutes++;
@@ -222,10 +222,10 @@ abstract class Base extends PDO
 	{
 		$query	= "SHOW TABLES" . ( !is_null( $prefix ) ? " LIKE '".$prefix."%'" : "" );
 		$result	= parent::query( $query );
-		if( $result === FALSE )
+		if( FALSE === $result )
 			return [];
 		$tables	= $result->fetchAll( PDO::FETCH_COLUMN );
-		if( $tables === FALSE )
+		if( FALSE === $tables )
 			return [];
 		return $tables;
 	}
@@ -329,7 +329,7 @@ abstract class Base extends PDO
 	public function setErrorLogFile( string $fileName ): self
 	{
 		$this->logFileErrors	= $fileName;
-		if( strlen( trim( $fileName ) ) > 0 && !file_exists( dirname( $fileName ) ) )
+		if( 0 !== strlen( trim( $fileName ) ) && !file_exists( dirname( $fileName ) ) )
 			mkdir( dirname( $fileName ), 0700, TRUE );
 		return $this;
 	}
@@ -343,7 +343,7 @@ abstract class Base extends PDO
 	public function setStatementLogFile( string $fileName ): self
 	{
 		$this->logFileStatements	= $fileName;
-		if( strlen( trim( $fileName ) ) > 0 && !file_exists( dirname( $fileName ) ) )
+		if( 0 !== strlen( trim( $fileName ) ) && !file_exists( dirname( $fileName ) ) )
 			mkdir( dirname( $fileName ), 0700, TRUE );
 		return $this;
 	}

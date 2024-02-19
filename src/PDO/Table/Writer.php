@@ -3,7 +3,7 @@
 /**
  *	Write Access for Database Tables.
  *
- *	Copyright (c) 2007-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -16,13 +16,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO\Table;
@@ -38,8 +38,8 @@ use Traversable;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Writer extends Reader
@@ -139,11 +139,11 @@ class Writer extends Reader
 	{
 		if( is_object( $data ) )
 			$data	= $this->convertObjectToArray( $data );
-		if( count( $data ) === 0 )
+		if( 0 === count( $data ) )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		$this->validateFocus();
 		$has	= $this->get( FALSE );
-		if( is_null( $has ) || is_array( $has ) && count( $has ) === 0 )
+		if( is_null( $has ) || is_array( $has ) && 0 === count( $has ) )
 			throw new InvalidArgumentException( 'No data sets focused for update' );
 		$updates	= [];
 		foreach( $this->columns as $column ){
@@ -156,9 +156,9 @@ class Writer extends Reader
 			$updates[] = '`'.$column.'`='.$value;
 		}
 		$affectedRows   = 0;
-		if( count( $updates ) > 0 ){
+		if( 0 !== count( $updates ) ){
 			$updates	= implode( ', ', $updates );
-			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery();
+			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery();
 			$affectedRows	= $this->dbc->exec( $query );
 		}
 		return $affectedRows;
@@ -176,9 +176,9 @@ class Writer extends Reader
 	{
 		if( is_object( $data ) )
 			$data	= $this->convertObjectToArray( $data );
-		if( count( $data ) === 0 )
+		if( 0 === count( $data ) )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
-		if( count( $conditions ) === 0 )
+		if( 0 === count( $conditions ) )
 			throw new InvalidArgumentException( 'Conditions for update cannot be empty' );
 
 		$updates	= [];
@@ -193,7 +193,7 @@ class Writer extends Reader
 			}
 		}
 		$affectedRows   = 0;
-		if( count( $updates ) !== 0 ){
+		if( 0 !== count( $updates ) ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$conditions;
 			$affectedRows		= $this->dbc->exec( $query );

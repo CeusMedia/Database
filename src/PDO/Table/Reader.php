@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  *	Table with column definition and indices.
  *
- *	Copyright (c) 2007-2023 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -18,13 +18,13 @@ declare(strict_types=1);
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 
@@ -43,41 +43,41 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2023 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Reader
 {
-	/**	@var	Connection			$dbc				Database connection resource object */
+	/**	@var	int							$defaultFetchMode	Default fetch mode, can be set statically */
+	public static int $defaultFetchMode		= PDO::FETCH_ASSOC;
+
+	/**	@var	Connection					$dbc				Database connection resource object */
 	protected Connection $dbc;
 
-	/**	@var	array				$columns			List of table columns */
+	/**	@var	array						$columns			List of table columns */
 	protected array $columns;
 
-	/**	@var	array				$indices			List of indices of table */
-	protected array $indices			= [];
+	/**	@var	array						$indices			List of indices of table */
+	protected array $indices				= [];
 
-	/**	@var	array				$focusedIndices		List of focused indices */
-	protected array $focusedIndices	= [];
+	/**	@var	array						$focusedIndices		List of focused indices */
+	protected array $focusedIndices			= [];
 
-	/**	@var	string				$primaryKey			Primary key of this table */
+	/**	@var	string						$primaryKey			Primary key of this table */
 	protected string $primaryKey;
 
-	/**	@var	string				$tableName			Name of this table */
+	/**	@var	string						$tableName			Name of this table */
 	protected string $tableName;
 
-	/**	@var	int					$fetchMode			Name of this table */
+	/**	@var	int							$fetchMode			Name of this table */
 	protected int $fetchMode;
 
-	/**	@var	int					$defaultFetchMode	Default fetch mode, can be set statically */
-	public static int $defaultFetchMode	= PDO::FETCH_ASSOC;
+	/**	@var	string|NULL					$fetchEntityClass	Entity class name for PDO fetch mode FETCH_CLASS */
+	protected ?string $fetchEntityClass		= NULL;
 
-	/**	@var	string|NULL			$fetchEntityClass	Entity class name for PDO fetch mode FETCH_CLASS */
-	protected ?string $fetchEntityClass					= NULL;
-
-	/**	@var	object|NULL			$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
-	protected ?object $fetchEntityObject				= NULL;
+	/**	@var	object|NULL					$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
+	protected ?object $fetchEntityObject	= NULL;
 
 	//	public $undoStorage;
 
@@ -89,10 +89,10 @@ class Reader
 	 *	@param		string		$tableName		Table name
 	 *	@param		array		$columns		List of table columns
 	 *	@param		string		$primaryKey		Name of the primary key of this table
-	 *	@param		?integer	$focus			Focused primary key on start up
+	 *	@param		?string		$focus			Focused primary key on start up
 	 *	@return		void
 	 */
-	public function __construct( Connection $dbc, string $tableName, array $columns, string $primaryKey, ?int $focus = NULL )
+	public function __construct( Connection $dbc, string $tableName, array $columns, string $primaryKey, ?string $focus = NULL )
 	{
 		$this->setDbConnection( $dbc );
 		$this->setTableName( $tableName );
@@ -100,7 +100,7 @@ class Reader
 		$this->setPrimaryKey( $primaryKey );
 		$this->setFetchMode( static::$defaultFetchMode );
 		$this->defocus();
-		if( $focus !== NULL )
+		if( NULL !== $focus )
 			$this->focusPrimary( $focus );
 	}
 
@@ -120,13 +120,14 @@ class Reader
 		$query	= 'SELECT COUNT(`%s`) AS count FROM %s%s';
 		$query	= sprintf( $query, $this->primaryKey, $this->getTableName(), $conditions );
 		$result	= $this->dbc->query( $query );
-		if( $result !== FALSE ){
-			/** @var array|FALSE $array */
-			$array	= $result->fetch( PDO::FETCH_NUM );
-			if( $array !== FALSE )
-				return (int) $array[0];
-		}
-		return 0;
+		if( FALSE === $result )
+			return 0;
+
+		/** @var array|FALSE $array */
+		$array	= $result->fetch( PDO::FETCH_NUM );
+		if( FALSE === $array )
+			return 0;
+		return (int) $array[0];
 	}
 
 	/**
@@ -143,13 +144,14 @@ class Reader
 		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
 		$query		= 'EXPLAIN SELECT COUNT('.$this->primaryKey.') FROM '.$this->getTableName().$conditions;
 		$result	= $this->dbc->query( $query );
-		if( $result !== FALSE ){
-			/** @var array|FALSE $array */
-			$array	= $result->fetch( PDO::FETCH_ASSOC );
-			if( $array !== FALSE )
-				return (int) $array['rows'];
-		}
-		return 0;
+		if( FALSE === $result )
+			return 0;
+
+		/** @var array|FALSE $array */
+		$array	= $result->fetch( PDO::FETCH_ASSOC );
+		if( FALSE === $array )
+			return 0;
+		return (int) $array['rows'];
 	}
 
 	/**
@@ -160,7 +162,7 @@ class Reader
 	 */
 	public function defocus( bool $primaryOnly = FALSE ): bool
 	{
-		if( count( $this->focusedIndices ) === 0 )
+		if( 0 === count( $this->focusedIndices ) )
 			return FALSE;
 		if( $primaryOnly ){
 			if( !array_key_exists( $this->primaryKey, $this->focusedIndices ) )
@@ -189,15 +191,15 @@ class Reader
 		$this->validateColumns( $columns );
 		//  render WHERE clause if needed, uncursored, allow functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );
-		$conditions = strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
+		$conditions = 0 !== strlen( $conditions ) ? ' WHERE '.$conditions : '';
 		//  render ORDER BY clause if needed
 		$orders		= $this->getOrderCondition( $orders );
 		//  render LIMIT BY clause if needed
 		$limits		= $this->getLimitCondition( $limits );
 		//  render GROUP BY clause if needed
-		$groupings	= count( $groupings ) > 0 ? ' GROUP BY '.join( ', ', $groupings ) : '';
+		$groupings	= 0 !== count( $groupings ) ? ' GROUP BY '.join( ', ', $groupings ) : '';
 		//  render HAVING clause if needed
-		$partHaving 	= count( $having ) > 0 ? ' HAVING '.join( ' AND ', $having ) : '';
+		$partHaving	= 0 !== count( $having ) ? ' HAVING '.join( ' AND ', $having ) : '';
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
 		//  render base query
@@ -220,7 +222,7 @@ class Reader
 	 *	@param		array				$values			List of possible values of column
 	 *	@param		array				$orders			Map of order relations
 	 *	@param		array				$limits			Array of limit conditions
-	 *	@throws		DomainException				if column is not an index
+	 *	@throws		DomainException		if column is not an index
 	 */
 	public function findWhereIn( array|string|null $columns, string $column, array $values, array $orders = [], array $limits = [] ): array
 	{
@@ -276,7 +278,7 @@ class Reader
 		for( $i=0; $i<count( $values ); $i++ )
 			$values[$i]	= $this->secureValue( $values[$i] );
 
-		if( strlen( $conditions ) > 0 )
+		if( 0 !== strlen( $conditions ) )
 			$conditions	.= ' AND ';
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( $columns );
@@ -387,7 +389,7 @@ class Reader
 		$columns	= [$column];
 		$this->validateColumns( $columns );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
-		$conditions	= strlen( $conditions ) > 0 ? ' WHERE '.$conditions : '';
+		$conditions	= 0 !== strlen( $conditions ) ? ' WHERE '.$conditions : '';
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $limits );
 		$query		= 'SELECT DISTINCT('.reset( $columns ).') FROM '.$this->getTableName().$conditions.$orders.$limits;
@@ -395,7 +397,7 @@ class Reader
 		$resultSet	= $this->dbc->query( $query );
 		if( $resultSet instanceof PDOStatement ){
 			$resultRows	= $resultSet->fetchAll( PDO::FETCH_NUM );
-			if( $resultRows !== FALSE )
+			if( FALSE !== $resultRows )
 				foreach( $resultRows as $row )
 					$list[]	= $row[0];
 		}
@@ -449,7 +451,7 @@ class Reader
 	public function getIndices( bool $withPrimaryKey = FALSE ): array
 	{
 		$indices	= $this->indices;
-		if( strlen( trim( $this->primaryKey ) ) > 0 && $withPrimaryKey )
+		if( 0 !== strlen( trim( $this->primaryKey ) ) && $withPrimaryKey )
 			array_unshift( $indices, $this->primaryKey );
 		return $indices;
 	}
@@ -512,9 +514,9 @@ class Reader
 	 */
 	public function isFocused( ?string $index = NULL ): bool
 	{
-		if( count( $this->focusedIndices ) === 0 )
+		if( 0 === count( $this->focusedIndices ) )
 			return FALSE;
-		if( !is_null( $index ) && strlen( trim( $index ) ) > 0 && !array_key_exists( $index, $this->focusedIndices ) )
+		if( !is_null( $index ) && 0 !== strlen( trim( $index ) ) && !array_key_exists( $index, $this->focusedIndices ) )
 			return FALSE;
 		return TRUE;
 	}
@@ -528,7 +530,7 @@ class Reader
 	 */
 	public function setColumns( array $columns ): self
 	{
-		if( count( $columns ) === 0 )
+		if( 0 === count( $columns ) )
 			throw new RangeException( 'Column array must not be empty' );
 		$this->columns = $columns;
 		return $this;
@@ -592,8 +594,7 @@ class Reader
 	 */
 	public function setIndices( array $indices ): self
 	{
-		foreach( $indices as $index )
-		{
+		foreach( $indices as $index ){
 			if( !in_array( $index, $this->columns, TRUE ) )
 				throw new DomainException( 'Column "'.$index.'" is not existing in table "'.$this->tableName.'" and cannot be an index' );
 			if( $index === $this->primaryKey )
@@ -613,7 +614,7 @@ class Reader
 	 */
 	public function setPrimaryKey( string $column ): self
 	{
-		if( strlen( trim( $column ) ) === 0 )
+		if( 0 === strlen( trim( $column ) ) )
 			throw new RangeException( 'Primary key column cannot be empty' );
 		if( !in_array( $column, $this->columns, TRUE ) )
 			throw new DomainException( 'Column "'.$column.'" is not existing and can not be primary key' );
@@ -630,7 +631,7 @@ class Reader
 	 */
 	public function setTableName( string $tableName ): self
 	{
-		if( strlen( trim( $tableName ) ) === 0 )
+		if( 0 === strlen( trim( $tableName ) ) )
 			throw new InvalidArgumentException( 'Table name cannot be empty' );
 		$this->tableName = $tableName;
 		return $this;
@@ -721,7 +722,7 @@ class Reader
 		//  iterate remaining conditions
 		foreach( $conditions as $key => $value )
 			//  column key is an aggregate function
-			if( preg_match( "/^[a-z]+\(.+\)$/i", $key ) > 0 )
+			if( 1 === preg_match( "/^[a-z]+\(.+\)$/i", $key ) )
 				$functionConditions[$key]	= $value;
 
 		//  if using primary key & is focused primary
@@ -732,7 +733,7 @@ class Reader
 				$columnConditions = $this->getFocus();
 		}
 		//  if using indices
-		if( $useIndices && count( $this->focusedIndices ) > 0 ){
+		if( $useIndices && 0 !== count( $this->focusedIndices ) ){
 			//  iterate focused indices
 			foreach( $this->focusedIndices as $index => $value )
 				//  skip primary key
@@ -782,7 +783,7 @@ class Reader
 	{
 		$limit		= !isset( $limits[1] ) ? 0 : abs( $limits[1] );
 		$offset		= !isset( $limits[0] ) ? 0 : abs( $limits[0] );
-		if( $limit > 0 )
+		if( 0 !== $limit )
 			return ' LIMIT '.$limit.' OFFSET '.$offset;
 		return '';
 	}
@@ -796,8 +797,7 @@ class Reader
 	protected function getOrderCondition( array $orders = [] ): string
 	{
 		$order	= '';
-		if( count( $orders ) > 0 )
-		{
+		if( 0 !== count( $orders ) ){
 			$list	= [];
 			foreach( $orders as $column => $direction )
 				$list[] = '`'.$column.'` '.strtoupper( $direction );
@@ -823,49 +823,49 @@ class Reader
 		$patternLike		= '/^(%|!%) (.+)$/';
 
 		$valueString	= (string) $value;
-		if( preg_match( $patternBetween, trim( $valueString ), $result ) === 1 ){
+		if( 1 === preg_match( $patternBetween, trim( $valueString ), $result ) ){
 			$matches	= [];
 			preg_match_all( $patternBetween, $valueString, $matches );
 			$operation		= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
 			$valueString	= $this->secureValue( $matches[3][0] ).' AND '.$this->secureValue( $matches[6][0] );
-			if( strlen( $matches[2][0] ) === 0 || strlen( $matches[4][0] ) === 0 || strlen( $matches[5][0] ) === 0 )
+			if( 0 === strlen( $matches[2][0] ) || 0 === strlen( $matches[4][0] ) || 0 === strlen( $matches[5][0] ) )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
 		}
-		else if( preg_match( $patternBitwise, $valueString, $result ) === 1 ){
+		else if( 1 === preg_match( $patternBitwise, $valueString, $result ) ){
 			$matches	= [];
 			preg_match_all( $patternBitwise, $valueString, $matches );
-			$operation	= ' '.$matches[1][0].' ';
-			$valueString		= $this->secureValue( $matches[3][0] );
-			if( strlen( $matches[2][0] ) === 0 )
+			$operation		= ' '.$matches[1][0].' ';
+			$valueString	= $this->secureValue( $matches[3][0] );
+			if( 0 === strlen( $matches[2][0] ) )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
-		else if( preg_match( $patternOperators, $valueString, $result ) === 1 ){
+		else if( 1 === preg_match( $patternOperators, $valueString, $result ) ){
 			$matches	= [];
 			preg_match_all( $patternOperators, $valueString, $matches );
-			$operation	= ' '.$matches[1][0].' ';
-			$valueString		= $this->secureValue( $matches[3][0] );
-			if( strlen( $matches[2][0] ) === 0 )
+			$operation		= ' '.$matches[1][0].' ';
+			$valueString	= $this->secureValue( $matches[3][0] );
+			if( 0 === strlen( $matches[2][0] ) )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
-		else if( preg_match( $patternLike, $valueString, $result ) === 1 ){
+		else if( 1 === preg_match( $patternLike, $valueString, $result ) ){
 			$matches	= [];
 			preg_match_all( $patternLike, $valueString, $matches );
-			$operation	= ( $matches[1][0] === '!%' ? 'NOT ' : '' ).'LIKE';
+			$operation		= ( $matches[1][0] === '!%' ? 'NOT ' : '' ).'LIKE';
 			$valueString	= $this->secureValue( $matches[2][0] );
 		}
-		else if( preg_match( '/^%/', $valueString ) === 1 || preg_match( '/%$/', $valueString ) === 1 ){
-			$operation	= ' LIKE ';
+		else if( 1 === preg_match( '/^%/', $valueString ) || 1 === preg_match( '/%$/', $valueString ) ){
+			$operation		= ' LIKE ';
 			$valueString	= $this->secureValue( $valueString );
 		}
 		else{
-			if( strtolower( $valueString ) == 'is NULL' || strtolower( $valueString ) == 'is not null'){
+			if( 'is null' === strtolower( $valueString ) || 'is not null' === strtolower( $valueString ) ){
 				$operation		= '';
 				$valueString	= strtoupper( $valueString );
 			}
-			else if( $value === NULL ){
+			else if( NULL === $value ){
 				$operation		= 'IS';
 				$valueString	= 'NULL';
 			}
@@ -906,19 +906,19 @@ class Reader
 	 */
 	protected function validateColumns( array|string|null &$columns ): void
 	{
-		if( is_string( $columns ) && strlen( trim( $columns ) ) > 0 )
+		if( is_string( $columns ) && 0 !== strlen( trim( $columns ) ) )
 			$columns	= [$columns];
-		else if( is_array( $columns ) && count( $columns ) === 0 )
+		else if( is_array( $columns ) && 0 === count( $columns ) )
 			$columns	= ['*'];
-		else if( $columns === NULL )
+		else if( NULL === $columns )
 			$columns	= ['*'];
 
 		if( !is_array( $columns ) )
 			throw new InvalidArgumentException( 'Column keys must be an array of column names, a column name string or "*"' );
 		foreach( $columns as $column ){
-			if( $column === '*' || in_array( $column, $this->columns, TRUE ) )
+			if( '*' === $column || in_array( $column, $this->columns, TRUE ) )
 				continue;
-			if( preg_match( '/ AS /i', $column ) === 1 )
+			if( 1 === preg_match( '/ AS /i', $column ) )
 				continue;
 			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 		}
