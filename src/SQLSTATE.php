@@ -55,7 +55,7 @@ class SQLSTATE
 	 *	@static
 	 *	@param		string		$SQLSTATE		SQLSTATE code
 	 *	@return		string|NULL
-	 *	@see		http://developer.mimer.com/documentation/html_92/Mimer_SQL_Mobile_DocSet/App_Return_Codes2.html
+	 *	@see		https://developer.mimer.com/documentation/html_92/Mimer_SQL_Mobile_DocSet/App_Return_Codes2.html
 	 *	@see		http://publib.boulder.ibm.com/infocenter/idshelp/v10/index.jsp?topic=/com.ibm.sqls.doc/sqls520.htm
 	 */
 	public static function getMeaning( string $SQLSTATE ): ?string

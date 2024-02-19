@@ -553,7 +553,7 @@ class Reader
 	 *	Mode is a mandatory integer representing a PDO fetch mode.
 	 *	@access		public
 	 *	@param		integer		$mode			PDO fetch mode
-	 *	@see		http://www.php.net/manual/en/pdo.constants.php
+	 *	@see		https://php.net/manual/en/pdo.constants.php
 	 *	@return		self
 	 */
 	public function setFetchMode( int $mode ): self

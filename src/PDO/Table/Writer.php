@@ -206,7 +206,7 @@ class Writer extends Reader
 	 *	Note: This method does not return the number of removed rows.
 	 *	@access		public
 	 *	@return		self
-	 *	@see		http://dev.mysql.com/doc/refman/4.1/en/truncate.html
+	 *	@see		https://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
 	public function truncate(): self
 	{

@@ -86,7 +86,7 @@ abstract class Base extends PDO
 	 *	@param		?string		$password		Password of Database User
 	 *	@param		array		$driverOptions	Array of Driver Options
 	 *	@return		void
-	 *	@see		http://php.net/manual/en/pdo.drivers.php
+	 *	@see		https://php.net/manual/en/pdo.drivers.php
 	 */
 	public function __construct( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] )
 	{
@@ -196,7 +196,7 @@ abstract class Base extends PDO
 	 *	@param		?string		$password		Password of Database User
 	 *	@param		array		$driverOptions	Array of Driver Options
 	 *	@return		self
-	 *	@see		http://php.net/manual/en/pdo.drivers.php
+	 *	@see		https://php.net/manual/en/pdo.drivers.php
 	 */
 /*	public static function getInstance( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] ): self
 	{

@@ -72,7 +72,7 @@ class Factory
 	 *	@param		?string		$password		Password of Database User
 	 *	@param		array		$driverOptions	Array of Driver Options
 	 *	@return		Base
-	 *	@see		http://php.net/manual/en/pdo.drivers.php
+	 *	@see		https://php.net/manual/en/pdo.drivers.php
 	 */
 	public static function createByPhpVersion( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] ): Base
 	{
@@ -88,7 +88,7 @@ class Factory
 	 *	@param		?string		$username		Name of Database User
 	 *	@param		?string		$password		Password of Database User
 	 *	@param		array		$driverOptions	Array of Driver Options
-	 *	@see		http://php.net/manual/en/pdo.drivers.php
+	 *	@see		https://php.net/manual/en/pdo.drivers.php
 	 */
 	public function __construct( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] )
 	{
