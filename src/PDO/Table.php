@@ -420,11 +420,11 @@ abstract class Table
 
 	/**
 	 *	Indicates whether a table row is existing by ID.
-	 *	@param		integer			$id				ID to focus on
+	 *	@param		string			$id				ID to focus on
 	 *	@return		boolean
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function has( int $id ): bool
+	public function has( string $id ): bool
 	{
 		if( $this->cache->has( $this->cacheKey.$id ) )
 			return TRUE;
@@ -461,11 +461,11 @@ abstract class Table
 	/**
 	 *	Returns Data of single Line by ID.
 	 *	@access		public
-	 *	@param		integer			$id				ID to focus on
+	 *	@param		string			$id				ID to focus on
 	 *	@return		boolean
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function remove( int $id ): bool
+	public function remove( string $id ): bool
 	{
 		$this->table->focusPrimary( $id );
 		$result	= FALSE;
