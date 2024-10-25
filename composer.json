@@ -20,7 +20,7 @@
     "php": "^8.1",
     "ext-pdo": "*",
     "ceus-media/common": "^1.0 | 1.0.x-dev",
-    "ceus-media/cache": "^0.5 | 0.5.x-dev"
+    "ceus-media/cache": "^0.6 | 0.6.x-dev | ^0.5 | 0.5.x-dev"
   },
   "require-dev": {
     "ext-mysqli": "*",

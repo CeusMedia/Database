@@ -9,6 +9,8 @@ parameters:
 #		- ../src/DAO
 		- ../src/OSQL
 		- ../src/PDO
-	checkMissingIterableValueType: false
 	treatPhpDocTypesAsCertain: false
 	reportUnmatchedIgnoredErrors: false
+	ignoreErrors:
+		-
+			identifier: missingType.iterableValue
