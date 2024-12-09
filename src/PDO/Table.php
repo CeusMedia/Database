@@ -30,6 +30,7 @@ namespace CeusMedia\Database\PDO;
 
 use CeusMedia\Cache\Adapter\Noop as NoopCache;
 use CeusMedia\Common\Alg\Obj\Factory as ObjectFactory;
+use CeusMedia\Database\PDO\Table\Reader as TableReader;
 use CeusMedia\Database\PDO\Table\Writer as TableWriter;
 use Psr\SimpleCache\CacheInterface as SimpleCacheInterface;
 
@@ -46,7 +47,6 @@ use RuntimeException;
  *	Abstract database table.
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
- *	@uses			TableWriter
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2007-2024 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
@@ -69,8 +69,11 @@ abstract class Table
 	/**	@var	string										$primaryKey		Primary Key of Database Table */
 	protected string $primaryKey							= '';
 
-	/**	@var	TableWriter									$table			Database Table Writer Object for reading from and writing to Database Table */
-	protected TableWriter $table;
+	/**	@var	TableReader									$reader			Database Table Reader Object for reading from Database Table */
+	protected TableReader $reader;
+
+	/**	@var	TableWriter									$writer			Database Table Writer Object for writing to Database Table */
+	protected TableWriter $writer;
 
 	/**	@var	string										$prefix			Database Table Prefix */
 	protected string $prefix								= '';
@@ -125,7 +128,7 @@ abstract class Table
 	 */
 	public function add( array|object $data, bool $stripTags = TRUE ): int
 	{
-		$id	= $this->table->insert( $data, $stripTags );
+		$id	= $this->writer->insert( $data, $stripTags );
 		$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
 		return $id;
 	}
@@ -138,7 +141,7 @@ abstract class Table
 	 */
 	public function count( array $conditions = [] ): int
 	{
-		return $this->table->count( $conditions );
+		return $this->reader->count( $conditions );
 	}
 
 	/**
@@ -150,7 +153,7 @@ abstract class Table
 	 */
 	public function countByIndex( string $key, float|array|int|string $value ): int
 	{
-		return $this->table->count( [$key => $value] );
+		return $this->reader->count( [$key => $value] );
 	}
 
 	/**
@@ -173,7 +176,7 @@ abstract class Table
 	 */
 	public function countFast( array $conditions ): int
 	{
-		return $this->table->countFast( $conditions );
+		return $this->reader->countFast( $conditions );
 	}
 
 	/**
@@ -187,11 +190,13 @@ abstract class Table
 	 */
 	public function edit( int|string $id, array|object $data, bool $stripTags = TRUE ): int
 	{
-		$this->table->focusPrimary( $id );
+		$this->writer->focusPrimary( $id );
+		$this->reader->focusPrimary( $id );
 		$result	= 0;
-		if( $this->table->has() )
-			$result	= $this->table->update( $data, $stripTags );
-		$this->table->defocus();
+		if( $this->reader->has() )
+			$result	= $this->writer->update( $data, $stripTags );
+		$this->writer->defocus();
+		$this->reader->defocus();
 		$this->cache->delete( $this->cacheKey.$id );
 		return $result;
 	}
@@ -207,7 +212,7 @@ abstract class Table
 	public function editByIndices( array $indices, array $data, bool $stripTags = TRUE ): int
 	{
 		$this->checkIndices( $indices, TRUE );
-		return $this->table->updateByConditions( $data, $indices, $stripTags );
+		return $this->writer->updateByConditions( $data, $indices, $stripTags );
 	}
 
 	/**
@@ -227,10 +232,10 @@ abstract class Table
 			/** @var object|array $data */
 			$data = unserialize( $cacheData );
 		else{
-			$this->table->focusPrimary( $id );
+			$this->reader->focusPrimary( $id );
 			/** @var object|array $data */
-			$data	= $this->table->get();
-			$this->table->defocus();
+			$data	= $this->reader->get();
+			$this->reader->defocus();
 			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
 		}
 		if( NULL !== $field && 0 !== strlen( trim( $field ) ) )
@@ -252,7 +257,7 @@ abstract class Table
 	 */
 	public function getAll( array $conditions = [], array $orders = [], array $limits = [], array $fields = [], array $groupings = [], array $having = [], bool $strict = FALSE ): array
 	{
-		$data	= $this->table->find( $fields, $conditions, $orders, $limits, $groupings, $having );
+		$data	= $this->reader->find( $fields, $conditions, $orders, $limits, $groupings, $having );
 		if( 0 !== count( $fields ) ){
 			foreach( $data as $nr => $set ){
 				if( 1 === count( $fields ) )
@@ -277,7 +282,7 @@ abstract class Table
 	 */
 	public function getAllByIndex(string $key, float|array|bool|int|string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
-		if( !in_array( $key, $this->table->getIndices(), TRUE ) )
+		if( !in_array( $key, $this->reader->getIndices(), TRUE ) )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
 		$conditions	= [$key => $value];
 		return $this->getAll( $conditions, $orders, $limits, $fields, [], [], $strict );
@@ -297,10 +302,10 @@ abstract class Table
 	{
 		$this->checkIndices( $indices, TRUE );
 		foreach( $indices as $key => $value )
-			$this->table->focusIndex( $key, $value );
+			$this->reader->focusIndex( $key, $value );
 		/** @var array $data */
-		$data	= $this->table->get( FALSE, $orders, $limits );
-		$this->table->defocus();
+		$data	= $this->reader->get( FALSE, $orders, $limits );
+		$this->reader->defocus();
 		if( 0 !== count( $fields ) )
 			foreach( $data as $nr => $set ){
 				if( 1 === count( $fields ) )
@@ -328,10 +333,10 @@ abstract class Table
 			$fields	= 0 !== strlen( trim( $fields ) ) ? [trim( $fields )] : [];
 		foreach( $fields as $field )
 			$this->checkField( $field );
-		$this->table->focusIndex( $key, $value );
+		$this->reader->focusIndex( $key, $value );
 		/** @var object|array $data */
-		$data	= $this->table->get( TRUE, $orders );
-		$this->table->defocus();
+		$data	= $this->reader->get( TRUE, $orders );
+		$this->reader->defocus();
 		if( 1 === count( $fields ) )
 			return $this->getFieldFromResult( $data, current( $fields ), $strict );
 		return $this->getFieldsFromResult( $data, $fields, $strict );
@@ -356,10 +361,10 @@ abstract class Table
 			$fields[$nr]	= $this->checkField( $field );
 		$this->checkIndices( $indices, TRUE );
 		foreach( $indices as $key => $value )
-			$this->table->focusIndex( $key, $value );
+			$this->reader->focusIndex( $key, $value );
 		/** @var object|array $result */
-		$result	= $this->table->get( TRUE, $orders );
-		$this->table->defocus();
+		$result	= $this->reader->get( TRUE, $orders );
+		$this->reader->defocus();
 		if( 1 === count( $fields ) )
 			return $this->getFieldFromResult( $result, current( $fields ), $strict );
 		return $this->getFieldsFromResult( $result, $fields, $strict );
@@ -372,7 +377,7 @@ abstract class Table
 	 */
 	public function getColumns(): array
 	{
-		return $this->table->getColumns();
+		return $this->reader->getColumns();
 	}
 
 	/**
@@ -382,7 +387,7 @@ abstract class Table
 	 */
 	public function getIndices(): array
 	{
-		return $this->table->getIndices();
+		return $this->reader->getIndices();
 	}
 
 	/**
@@ -392,7 +397,7 @@ abstract class Table
 	 */
 	public function getLastQuery(): ?string
 	{
-		return $this->table->getLastQuery();
+		return $this->reader->getLastQuery();
 	}
 
 	/**
@@ -415,7 +420,7 @@ abstract class Table
 	 */
 	public function getPrimaryKey(): string
 	{
-		return $this->table->getPrimaryKey();
+		return $this->reader->getPrimaryKey();
 	}
 
 	/**
@@ -428,10 +433,10 @@ abstract class Table
 	{
 		if( $this->cache->has( $this->cacheKey.$id ) )
 			return TRUE;
-		$this->table->focusPrimary( $id );
-		$result	= $this->table->has();
+		$this->reader->focusPrimary( $id );
+		$result	= $this->reader->has();
 		print_m( $result );
-		$this->table->defocus();
+		$this->reader->defocus();
 		return $result;
 	}
 
@@ -467,15 +472,17 @@ abstract class Table
 	 */
 	public function remove( string $id ): bool
 	{
-		$this->table->focusPrimary( $id );
+		$this->reader->focusPrimary( $id );
+		$this->writer->focusPrimary( $id );
 		$result	= FALSE;
 		/** @var array $found */
-		$found	= $this->table->get( FALSE );
+		$found	= $this->reader->get( FALSE );
 		if( 1 === count( $found ) ){
-			$this->table->delete();
+			$this->writer->delete();
 			$result	= TRUE;
 		}
-		$this->table->defocus();
+		$this->reader->defocus();
+		$this->writer->defocus();
 		$this->cache->delete( $this->cacheKey.$id );
 		return $result;
 	}
@@ -490,9 +497,11 @@ abstract class Table
 	 */
 	public function removeByIndex( string $key, float|array|int|string $value ): int
 	{
-		$this->table->focusIndex( $key, $value );
+		$this->reader->focusIndex( $key, $value );
+		$this->writer->focusIndex( $key, $value );
 		$number	= $this->removeBySetFocus();
-		$this->table->defocus();
+		$this->reader->defocus();
+		$this->writer->defocus();
 		return $number;
 	}
 
@@ -506,10 +515,13 @@ abstract class Table
 	public function removeByIndices( array $indices ): int
 	{
 		$this->checkIndices( $indices, TRUE );
-		foreach( $indices as $key => $value )
-			$this->table->focusIndex( $key, $value );
+		foreach( $indices as $key => $value ){
+			$this->reader->focusIndex( $key, $value );
+			$this->writer->focusIndex( $key, $value );
+		}
 		$number	= $this->removeBySetFocus();
-		$this->table->defocus();
+		$this->reader->defocus();
+		$this->writer->defocus();
 		return $number;
 	}
 
@@ -558,7 +570,7 @@ abstract class Table
 	public function setFetchMode( int $mode ): self
 	{
 		$this->fetchMode	= $mode;
-		$this->table->setFetchMode( $this->fetchMode );
+		$this->reader->setFetchMode( $this->fetchMode );
 		return $this;
 	}
 
@@ -570,7 +582,7 @@ abstract class Table
 	public function setFetchEntityClass( ?string $className ): self
 	{
 		$this->fetchEntityClass	= $className;
-		$this->table->setFetchEntityClass( $this->fetchEntityClass );
+		$this->reader->setFetchEntityClass( $this->fetchEntityClass );
 		return $this;
 	}
 
@@ -582,7 +594,7 @@ abstract class Table
 	public function setFetchEntityObject( ?object $object ): self
 	{
 		$this->fetchEntityObject	= $object;
-		$this->table->setFetchEntityObject( $this->fetchEntityObject );
+		$this->reader->setFetchEntityObject( $this->fetchEntityObject );
 		return $this;
 	}
 
@@ -601,7 +613,7 @@ abstract class Table
 	 */
 	public function truncate(): self
 	{
-		$this->table->truncate();
+		$this->writer->truncate();
 		return $this;
 	}
 
@@ -667,7 +679,7 @@ abstract class Table
 		}
 
 		$list		= [];
-		$indexList	= $this->table->getIndices( $withPrimaryKey );
+		$indexList	= $this->reader->getIndices( $withPrimaryKey );
 		foreach( $indices as $index => $value ){
 			if( !in_array( $index, $indexList, TRUE ) ){
 				if( $strict )
@@ -813,7 +825,14 @@ abstract class Table
 	{
 		$this->dbc		= $dbc;
 		$this->prefix	= (string) $prefix;
-		$this->table	= new TableWriter(
+		$this->reader	= new TableReader(
+			$dbc,
+			$this->prefix . $this->name,
+			$this->columns,
+			$this->primaryKey,
+			$id
+		);
+		$this->writer	= new TableWriter(
 			$dbc,
 			$this->prefix . $this->name,
 			$this->columns,
@@ -821,12 +840,13 @@ abstract class Table
 			$id
 		);
 		if( 0 !== $this->fetchMode )
-			$this->table->setFetchMode($this->fetchMode);
-		$this->table->setIndices( $this->indices );
+			$this->reader->setFetchMode($this->fetchMode);
+		$this->reader->setIndices( $this->indices );
+		$this->writer->setIndices( $this->indices );
 		if( NULL !== $this->fetchEntityClass )
-			$this->table->setFetchEntityClass( $this->fetchEntityClass );
+			$this->reader->setFetchEntityClass( $this->fetchEntityClass );
 		if( NULL !== $this->fetchEntityObject )
-			$this->table->setFetchEntityObject( $this->fetchEntityObject );
+			$this->reader->setFetchEntityObject( $this->fetchEntityObject );
 		return $this;
 	}
 
@@ -847,10 +867,10 @@ abstract class Table
 	private function removeBySetFocus(): int
 	{
 		/** @var array $rows */
-		$rows	= $this->table->get( FALSE );
+		$rows	= $this->reader->get( FALSE );
 		if( 0 === count( $rows ) )
 			return 0;
-		$number = $this->table->delete();
+		$number = $this->writer->delete();
 		foreach( $rows as $row ){
 			$id		= match( $this->fetchMode ){
 				PDO::FETCH_CLASS, PDO::FETCH_OBJ	=> get_object_vars( $row )[$this->primaryKey],

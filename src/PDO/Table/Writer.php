@@ -29,6 +29,7 @@ namespace CeusMedia\Database\PDO\Table;
 
 use CeusMedia\Common\ADT\Collection\Dictionary;
 use InvalidArgumentException;
+use PDO;
 use ReflectionObject;
 use RuntimeException;
 use Traversable;
@@ -42,7 +43,7 @@ use Traversable;
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Writer extends Reader
+class Writer extends Abstraction
 {
 	/**
 	 *	Deletes focused Rows in this Table and returns number of affected Rows.
@@ -142,8 +143,7 @@ class Writer extends Reader
 		if( 0 === count( $data ) )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		$this->validateFocus();
-		$has	= $this->get( FALSE );
-		if( is_null( $has ) || is_array( $has ) && 0 === count( $has ) )
+		if( !$this->_currentFocusHits() )
 			throw new InvalidArgumentException( 'No data sets focused for update' );
 		$updates	= [];
 		foreach( $this->columns as $column ){
@@ -245,5 +245,33 @@ class Writer extends Reader
 				return (array) $object;
 		}
 		throw new RuntimeException( 'Not implemented, yet' );
+	}
+
+	/**
+	 *	Returns data of focused keys.
+	 *	@access		public
+	 *	@return		bool
+	 *	@todo		implement using given fields
+	 */
+	protected function _currentFocusHits(): bool
+	{
+		$this->validateFocus();
+
+		/** @noinspection SqlNoDataSourceInspection */
+		/** @noinspection SqlResolve */
+		$query	= vsprintf( 'SELECT COUNT(`%s`) AS count FROM %s WHERE %s', [
+			$this->primaryKey,
+			$this->getTableName(),
+			$this->getConditionQuery()
+		] );
+		$result	= $this->dbc->query( $query );
+		if( FALSE !== $result ){
+			/** @var array|FALSE $array */
+			$array	= $result->fetch( PDO::FETCH_NUM );
+			if( FALSE !== $array )
+				return (bool) (int) $array[0];
+
+		}
+		return FALSE;
 	}
 }
