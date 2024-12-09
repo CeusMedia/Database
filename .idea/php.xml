@@ -66,9 +66,6 @@
       <path value="$PROJECT_DIR$/vendor/phpunit/php-invoker" />
       <path value="$PROJECT_DIR$/vendor/phpunit/phpunit" />
       <path value="$PROJECT_DIR$/vendor/composer" />
-      <path value="$PROJECT_DIR$/vendor/doctrine/annotations" />
-      <path value="$PROJECT_DIR$/vendor/doctrine/instantiator" />
-      <path value="$PROJECT_DIR$/vendor/doctrine/lexer" />
       <path value="$PROJECT_DIR$/vendor/myclabs/deep-copy" />
       <path value="$PROJECT_DIR$/vendor/phpstan/phpstan-strict-rules" />
       <path value="$PROJECT_DIR$/vendor/phpstan/phpstan" />

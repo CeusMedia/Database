@@ -25,7 +25,7 @@
   "require-dev": {
     "ext-mysqli": "*",
     "ceus-media/doc-creator": "^1.0 | 1.0.x-dev",
-    "phpunit/phpunit": "^9.5 | ^10.1",
+    "phpunit/phpunit": "^10.1",
     "phpstan/phpstan": "^1",
     "phpstan/phpstan-strict-rules": "^1",
     "friendsofphp/php-cs-fixer": "*",
