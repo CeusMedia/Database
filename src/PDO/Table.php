@@ -105,13 +105,13 @@ abstract class Table
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		Connection		$dbc		PDO database connection object
-	 *	@param		?string			$prefix		Table name prefix
-	 *	@param		?string			$id			ID to focus on
+	 *	@param		Connection			$dbc		PDO database connection object
+	 *	@param		?string				$prefix		Table name prefix
+	 *	@param		int|string|NULL		$id			ID to focus on
 	 *	@return		void
 	 *	@throws		ReflectionException
 	 */
-	public function __construct( Connection $dbc, ?string $prefix = NULL, ?string $id = NULL )
+	public function __construct( Connection $dbc, ?string $prefix = NULL, int|string $id = NULL )
 	{
 		$this->checkTableSetup();
 		$this->setDatabase( $dbc, $prefix, $id );
@@ -381,6 +381,29 @@ abstract class Table
 	}
 
 	/**
+	 *	Returns list of distinct column values.
+	 *	@access		public
+	 *	@param		string			$column			Column to get distinct values for
+	 *	@param		array			$conditions		Map of Conditions to include in SQL Query
+	 *	@param		array			$orders			Map of Orders to include in SQL Query
+	 *	@param		array			$limits			List of Limits to include in SQL Query
+	 *	@return		array			List of distinct column values
+	 */
+	public function getDistinct( string $column, array $conditions, array $orders = [], array $limits = [] ): array
+	{
+		return $this->reader->getDistinctColumnValues( $column, $conditions, $orders, $limits );
+	}
+
+	/**
+	 *	Returns set fetch mode.
+	 *	@return		int
+	 */
+	public function getFetchMode(): int
+	{
+		return $this->reader->getFetchMode();
+	}
+
+	/**
 	 *	Returns list of table index columns.
 	 *	@access		public
 	 *	@return		array
@@ -425,17 +448,16 @@ abstract class Table
 
 	/**
 	 *	Indicates whether a table row is existing by ID.
-	 *	@param		string			$id				ID to focus on
+	 *	@param		int|string		$id				ID to focus on
 	 *	@return		boolean
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function has( string $id ): bool
+	public function has( int|string $id ): bool
 	{
 		if( $this->cache->has( $this->cacheKey.$id ) )
 			return TRUE;
 		$this->reader->focusPrimary( $id );
 		$result	= $this->reader->has();
-		print_m( $result );
 		$this->reader->defocus();
 		return $result;
 	}
@@ -466,11 +488,11 @@ abstract class Table
 	/**
 	 *	Returns Data of single Line by ID.
 	 *	@access		public
-	 *	@param		string			$id				ID to focus on
+	 *	@param		int|string		$id				ID to focus on
 	 *	@return		boolean
 	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
-	public function remove( string $id ): bool
+	public function remove( int|string $id ): bool
 	{
 		$this->reader->focusPrimary( $id );
 		$this->writer->focusPrimary( $id );
@@ -816,12 +838,12 @@ abstract class Table
 
 	/**
 	 *	@access		protected
-	 *	@param		Connection		$dbc		PDO database connection object
-	 *	@param		string|NULL		$prefix		Table name prefix
-	 *	@param		string|NULL		$id			ID to focus on
+	 *	@param		Connection			$dbc		PDO database connection object
+	 *	@param		string|NULL			$prefix		Table name prefix
+	 *	@param		int|string|NULL		$id			ID to focus on
 	 *	@return		self
 	 */
-	protected function setDatabase( Connection $dbc, ?string $prefix = NULL, ?string $id = NULL ): self
+	protected function setDatabase( Connection $dbc, ?string $prefix = NULL, int|string $id = NULL ): self
 	{
 		$this->dbc		= $dbc;
 		$this->prefix	= (string) $prefix;
