@@ -49,14 +49,14 @@ abstract class Abstraction
 	 *	Constructor.
 	 *
 	 *	@access		public
-	 *	@param		Connection	$dbc			Database connection resource object
-	 *	@param		string		$tableName		Table name
-	 *	@param		array		$columns		List of table columns
-	 *	@param		string		$primaryKey		Name of the primary key of this table
-	 *	@param		?string		$focus			Focused primary key on start up
+	 *	@param		Connection		$dbc			Database connection resource object
+	 *	@param		string			$tableName		Table name
+	 *	@param		array			$columns		List of table columns
+	 *	@param		string			$primaryKey		Name of the primary key of this table
+	 *	@param		int|string|NULL	$focus			Focused primary key on start up
 	 *	@return		void
 	 */
-	public function __construct( Connection $dbc, string $tableName, array $columns, string $primaryKey, ?string $focus = NULL )
+	public function __construct( Connection $dbc, string $tableName, array $columns, string $primaryKey, int|string $focus = NULL )
 	{
 		$this->setDbConnection( $dbc );
 		$this->setTableName( $tableName );

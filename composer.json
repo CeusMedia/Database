@@ -53,7 +53,7 @@
     ],
     "dev:phpunit": [
       "@dev:install",
-      "XDEBUG_MODE=coverage php vendor/bin/phpunit --configuration util/phpunit10.xml"
+      "XDEBUG_MODE=coverage php vendor/bin/phpunit --configuration util/phpunit.xml"
     ],
     "dev:phpstan": [
       "@dev:install",
