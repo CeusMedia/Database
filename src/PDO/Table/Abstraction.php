@@ -13,7 +13,7 @@ use PDOStatement;
 use RangeException;
 use RuntimeException;
 
-class Abstraction
+abstract class Abstraction
 {
 	/**	@var	int							$defaultFetchMode	Default fetch mode, can be set statically */
 	public static int $defaultFetchMode		= PDO::FETCH_ASSOC;
@@ -364,18 +364,22 @@ class Abstraction
 	protected function applyFetchModeOnResultSet( PDOStatement $resultSet ): array
 	{
 		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass ){
-			/** @var object $fetched */
+			/** @var array<object> $fetched */
 			$fetched	= $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
-			if( method_exists( $fetched, 'onFetch' ) )
-				$fetched	= $fetched->onFetch( $this, $resultSet );
+			foreach( $fetched as $entity )
+				if( method_exists( $entity, 'onFetch' ) )
+					$entity->onFetch( $this, $entity );
+			return $fetched;
 		}
-		else if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
+		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject ){
+			/** @var array<object> $fetched */
 			$fetched	= $resultSet->fetchAll( $this->fetchMode );
-		else
-			$fetched	= $resultSet->fetchAll( $this->fetchMode );
-		if( FALSE === $fetched )
-			throw new RuntimeException( 'Fetching failed' );
-		return $fetched;
+			foreach( $fetched as $entity )
+				if( method_exists( $entity, 'onFetch' ) )
+					$entity->onFetch( $this, $entity );
+			return $fetched;
+		}
+		return $resultSet->fetchAll( $this->fetchMode );
 	}
 
 	/**
