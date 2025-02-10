@@ -364,16 +364,29 @@ abstract class Abstraction
 	protected function applyFetchModeOnResultSet( PDOStatement $resultSet ): array
 	{
 		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass ){
-			/** @var array<object> $fetched */
-			$fetched	= $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
+			try{
+				/** @var array<object> $fetched */
+				$fetched	= $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
+			}
+			catch( \Error|\Exception|\Throwable $e ){
+				$message	= sprintf( 'Could not create entity of class %s on fetch', $this->fetchEntityClass );
+				throw new RuntimeException( $message, 0, $e );
+			}
 			foreach( $fetched as $entity )
 				if( method_exists( $entity, 'onFetch' ) )
 					$entity->onFetch( $this, $entity );
 			return $fetched;
 		}
+
 		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject ){
-			/** @var array<object> $fetched */
-			$fetched	= $resultSet->fetchAll( $this->fetchMode );
+			try{
+				/** @var array<object> $fetched */
+				$fetched	= $resultSet->fetchAll( $this->fetchMode );
+			}
+			catch( \Error|\Exception|\Throwable $e ){
+				$message	= sprintf( 'Could not extend entity object of class %s on fetch', $this->fetchEntityObject::class );
+				throw new RuntimeException( $message, 0, $e );
+			}
 			foreach( $fetched as $entity )
 				if( method_exists( $entity, 'onFetch' ) )
 					$entity->onFetch( $this, $entity );

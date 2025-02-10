@@ -8,6 +8,10 @@ use Countable;
 use Iterator;
 use JsonSerializable;
 
+/**
+ * @implements ArrayAccess<?string,int|float|string|bool|array|object|NULL>
+ * @implements Iterator<?string,int|float|string|bool|array|object|NULL>
+ */
 class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 {
 	/**	@var		int				$_iteratorPosition		Iterator Position */
@@ -57,12 +61,13 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 
 	/**
 	 *	@param		string		$key
-	 *	@return		int|float|string|array|object|NULL
+	 *	@return		int|float|string|bool|array|object|NULL
 	 */
-	public function get( string $key ): int|float|string|array|object|NULL
+	public function get( string $key ): int|float|string|bool|array|object|NULL
 	{
 		if( $this->offsetExists( $key ) )
 			/** @var int|float|string|bool|NULL $key */
+			/** @phpstan-ignore-next-line */
 			return $this->$key ?? null;
 		return NULL;
 	}
@@ -83,27 +88,37 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	 */
 	public function has( string $key ): bool
 	{
+		/** @phpstan-ignore-next-line */
 		return property_exists( $this, $key ) && NULL !== $this->$key;
 	}
 
 	/**
-	 *	@param		string								$key
-	 *	@param		int|float|string|bool|NULL	$value
+	 *	@param		string									$key
+	 *	@param		int|float|string|bool|array|object|NULL	$value
 	 *	@return		self
 	 */
-	public function set( string $key, int|float|string|bool|null $value ): self
+	public function set( string $key, int|float|string|bool|array|object|NULL $value ): self
 	{
 		if( property_exists( $this, $key ) )
+			/** @phpstan-ignore-next-line */
 			$this->$key	= $value;
 		return $this;
 	}
 
 	/**
-	 *	@return		array<string,int|float|string|bool|NULL>
+	 *	@return		array<string,int|float|string|bool|array|object|NULL>
 	 */
 	public function toArray(): array
 	{
-		return get_object_vars( $this );
+		$list	= [];
+		/**
+		 *	@var		string	$key
+		 *	@var		int|float|string|bool|array|object|NULL		$value
+		 */
+		/** @noinspection PhpLoopCanBeConvertedToArrayMapInspection */
+		foreach( get_object_vars( $this ) as $key => $value )
+			$list[$key]	= $value;
+		return $list;
 	}
 
 	/**
@@ -115,9 +130,9 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	}
 
 	/**
-	 *	@return		mixed
+	 *	@return		int|float|string|bool|array|object|NULL
 	 */
-	public function current(): mixed
+	public function current(): int|float|string|bool|array|object|NULL
 	{
 		if( !$this->valid() )
 			return NULL;
@@ -170,9 +185,9 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 
 	/**
 	 *	@param		mixed		$offset
-	 *	@return		mixed
+	 *	@return		int|float|string|bool|array|object|NULL
 	 */
-	public function offsetGet( mixed $offset ): mixed
+	public function offsetGet( mixed $offset ): int|float|string|bool|array|object|NULL
 	{
 		/** @var string $offset */
 		return $this->get( $offset );
@@ -198,6 +213,7 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	{
 		/** @var string $offset */
 		if( $this->offsetExists( $offset ) )
+			/** @phpstan-ignore-next-line */
 			unset( $this->$offset );
 	}
 

@@ -280,9 +280,9 @@ abstract class Table
 	 *	@param		boolean						$strict		Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
-	public function getAllByIndex(string $key, float|array|bool|int|string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
+	public function getAllByIndex( string $key, float|array|bool|int|string $value, array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
-		if( !in_array( $key, $this->reader->getIndices(), TRUE ) )
+		if( !in_array( $key, $this->reader->getIndices(), TRUE ) && $key !== $this->reader->getPrimaryKey() )
 			throw new DomainException( 'Requested column "'.$key.'" is not an index' );
 		$conditions	= [$key => $value];
 		return $this->getAll( $conditions, $orders, $limits, $fields, [], [], $strict );
