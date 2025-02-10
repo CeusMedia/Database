@@ -52,7 +52,7 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	}
 
 	/**
-	 *	@return		int
+	 *	@return		int<0,max>
 	 */
 	public function count(): int
 	{

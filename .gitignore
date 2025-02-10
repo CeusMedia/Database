@@ -9,3 +9,4 @@
 /util/.phpunit.cache/test-results
 /util/.phpunit.cache/
 ;/.idea
+/composer.lock

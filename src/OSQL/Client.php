@@ -102,7 +102,7 @@ class Client
 	public function execute( AbstractQuery $query ): float|object|int|bool|array|string|null
 	{
 		$clock		= new Clock();
-		/** @var object{query: string, parameters: array<string,string|int|float>} $queryParts */
+		/** @var object{query: string, parameters: array<string,array<string,string|int|float>>} $queryParts */
 		$queryParts	= $query->render();
 		$query->timing['render']	= $clock->stop( 0, 6 );
 		$query->statement			= $queryParts->query;
