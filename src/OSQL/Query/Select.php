@@ -3,7 +3,7 @@
 /**
  *	Builder for SELECT statements.
  *
- *	Copyright (c) 2010-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -16,18 +16,18 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Common\Alg\Time\Clock;
+use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Table;
 use InvalidArgumentException;
 use RuntimeException;
@@ -37,13 +37,14 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Select extends AbstractQuery implements QueryInterface
 {
 	public int $foundRows		= 0;
+	public array $result		= [];
 
 	protected bool $countRows	= FALSE;
 	protected array $conditions	= [];
@@ -51,6 +52,18 @@ class Select extends AbstractQuery implements QueryInterface
 	protected array $fields		= ['*'];
 	protected array $tables		= [];
 	protected ?string $groupBy	= NULL;
+
+	/**
+	 *	Static constructor.
+	 *	@access		public
+	 *	@param		Client		$dbc	OSQL database connection
+	 *	@return		self
+	 */
+	public static function create( Client $dbc ): self
+	{
+		$className	= static::class;
+		return new $className( $dbc );
+	}
 
 	/**
 	 *	Enable/disable counting of all rows ignoring limits.
@@ -65,17 +78,16 @@ class Select extends AbstractQuery implements QueryInterface
 	}
 
 	/**
-	 *	Adds fields to select and returns query object for chainability.
+	 *	Adds fields to select and returns query object for method chaining.
 	 *	@access		public
 	 *	@param		array|string	$fields		List of fields to select or one field name or asterisk
 	 *	@return		self
 	 */
-	public function get( $fields ): self
+	public function get( array|string $fields ): self
 	{
 		if( is_string( $fields ) )
-			$fields	= array( $fields );
-		if( !is_array( $fields ) )
-			throw new InvalidArgumentException( 'Must be array or string' );
+			$fields	= [$fields];
+		$this->fields	= $fields;
 		return $this;
 	}
 
@@ -84,14 +96,14 @@ class Select extends AbstractQuery implements QueryInterface
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
-		if( count( $this->tables ) === 0 )
+		if( 0 === count( $this->tables ) )
 			throw new RuntimeException( 'No from clause set' );
 	}
 
 	/**
-	 *	Sets table to select in and returns query object for chainability.
+	 *	Sets table to select in and returns query object for method chaining.
 	 *	@access		public
 	 *	@param		Table	$table		Table to select in
 	 *	@return		self
@@ -127,7 +139,7 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderFrom(): string
 	{
-		if( count( $this->tables ) === 0 )
+		if( 0 === count( $this->tables ) )
 			throw new RuntimeException( 'No table set' );
 		$list	= [];
 		foreach( $this->tables as $table )
@@ -142,14 +154,14 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	protected function renderGrouping(): string
 	{
-		if( $this->groupBy === NULL )
+		if( NULL === $this->groupBy )
 			return '';
 		return ' GROUP BY '.$this->groupBy;
 	}
 
 	protected function renderOrders(): string
 	{
-		if( count( $this->orders ) === 0 )
+		if( 0 === count( $this->orders ) )
 			return '';
 		$list	= [];
 		foreach( $this->orders as $order ){
@@ -165,7 +177,6 @@ class Select extends AbstractQuery implements QueryInterface
 	 */
 	public function render(): object
 	{
-//		$clock		= new Clock();
 		$this->checkSetup();
 		$parameters	= [];
 		$fields		= implode( ', ', $this->fields );
@@ -190,7 +201,7 @@ class Select extends AbstractQuery implements QueryInterface
 		$options	= [];
 		if( $this->countRows )
 			$options[]	= 'SQL_CALC_FOUND_ROWS';
-		if( count( $options ) === 0 )
+		if( 0 === count( $options ) )
 			return '';
 		return join( $options ).' ';
 	}

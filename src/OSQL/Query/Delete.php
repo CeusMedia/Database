@@ -2,7 +2,7 @@
 /**
  *	Builder for DELETE statements.
  *
- *	Copyright (c) 2010-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -15,20 +15,18 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Common\Alg\Time\Clock;
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
 use CeusMedia\Database\OSQL\Table;
 use RuntimeException;
 
@@ -37,13 +35,13 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Delete extends AbstractQuery implements QueryInterface
 {
-	public int $affectedRows;
+	public int $nrAffectedRows	= 0;
 
 	protected array $conditions	= [];
 	protected ?Table $table		= NULL;
@@ -59,9 +57,9 @@ class Delete extends AbstractQuery implements QueryInterface
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
-		if( $this->table === NULL )
+		if( NULL === $this->table )
 			throw new RuntimeException( 'No table clause set' );
 	}
 

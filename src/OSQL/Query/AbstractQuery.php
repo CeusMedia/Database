@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  *	Abstract query class.
  *
- *	Copyright (c) 2010-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -18,13 +18,13 @@ declare(strict_types=1);
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 
@@ -34,7 +34,6 @@ use CeusMedia\Database\OSQL\Client;
 use CeusMedia\Database\OSQL\Condition;
 use CeusMedia\Database\OSQL\Condition\Group;
 use CeusMedia\Database\OSQL\Table;
-use Exception;
 use InvalidArgumentException;
 use PDO as Pdo;
 use RuntimeException;
@@ -44,8 +43,8 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 abstract class AbstractQuery implements QueryInterface
@@ -61,6 +60,9 @@ abstract class AbstractQuery implements QueryInterface
 		'total'		=> 0,
 	];
 
+	public ?string $statement		= NULL;
+	public array $parameters		= [];
+
 	protected Client $dbc;
 	protected array $conditions		= [];
 	protected array $joins			= [];
@@ -68,6 +70,7 @@ abstract class AbstractQuery implements QueryInterface
 	protected ?int $limit			= NULL;
 	protected ?int $offset			= NULL;
 //	protected $query;
+
 
 	/**
 	 *	Constructor.
@@ -88,15 +91,16 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	public static function create( Client $dbc ): self
 	{
-		return new static( $dbc );
+		$className	= static::class;
+		return new $className( $dbc );
 	}
 
 	/**
 	 *	Sends query to assigned client for execution and returns response.
 	 *	@access		public
-	 *	@return		array
+	 *	@return		float|object|int|bool|array|string|NULL
 	 */
-	public function execute(): array
+	public function execute(): float|object|int|bool|array|string|NULL
 	{
 		return $this->dbc->execute( $this );
 	}
@@ -111,7 +115,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function where( $condition ): self
+	public function where( Condition|Group $condition ): self
 	{
 		return $this->and( $condition );
 	}
@@ -122,7 +126,7 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		Condition|Group	$condition		Condition object
 	 *	@return		self
 	 */
-	public function and( $condition ): self
+	public function and( Condition|Group $condition ): self
 	{
 		$this->conditions[]	= [
 			'operation'	=> Group::OPERATION_AND,
@@ -138,9 +142,9 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@return		self
 	 *	@throws		RuntimeException				if no conditions are set before
 	 */
-	 public function or( $condition ): self
+	 public function or( Condition|Group $condition ): self
 	 {
-		if( count( $this->conditions ) === 0 )
+		if( 0 === count( $this->conditions ) )
 			throw new RuntimeException( 'No condition set yet' );
 		$this->conditions[]	= [
 			'operation'	=> Group::OPERATION_OR,
@@ -169,12 +173,12 @@ abstract class AbstractQuery implements QueryInterface
 		return $this;
 	}
 
-	public function leftJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): QueryInterface
+	public function leftJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): AbstractQuery
 	{
 		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_LEFT );
 	}
 
-	public function rightJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): QueryInterface
+	public function rightJoin( Table $table, string $keyLeft, ?string $keyRight = NULL ): AbstractQuery
 	{
 		return $this->join( $table, $keyLeft, $keyRight, static::JOIN_TYPE_RIGHT );
 	}
@@ -228,7 +232,7 @@ abstract class AbstractQuery implements QueryInterface
 	 */
 	protected function renderJoins(): string
 	{
-		if( count( $this->joins ) === 0 )
+		if( 0 === count( $this->joins ) )
 			return '';
 		$list	= [];
 		foreach( $this->joins as $join ){
@@ -252,13 +256,13 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderConditions( & $parameters ): string
+	protected function renderConditions( array &$parameters ): string
 	{
-		if( count( $this->conditions ) === 0 )
+		if( 0 === count( $this->conditions ) )
 			return '';
 		$list	= [];
 		foreach( $this->conditions as $condition ){
-			if( count( $list ) !== 0 )
+			if( 0 !== count( $list ) )
 				$list[]	= $condition['operation'];
 			$list[]	= $condition['condition']->render( $parameters );
 		}
@@ -271,9 +275,9 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderLimit( & $parameters ): string
+	protected function renderLimit( array &$parameters ): string
 	{
-		if( $this->limit === NULL )
+		if( NULL === $this->limit )
 			return '';
 		$limit		= ' LIMIT :limit';
 		$parameters['limit']	= [
@@ -289,9 +293,9 @@ abstract class AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderOffset( & $parameters ): string
+	protected function renderOffset( array &$parameters ): string
 	{
-		if( $this->offset === NULL )
+		if( NULL === $this->offset )
 			return '';
 		$offset		= ' OFFSET :offset';
 		$parameters['offset']	= [

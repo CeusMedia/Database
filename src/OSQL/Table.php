@@ -2,7 +2,7 @@
 /**
  *	...
  *
- *	Copyright (c) 2010-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -15,13 +15,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\OSQL;
@@ -33,8 +33,8 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Table
@@ -52,9 +52,9 @@ class Table
 	 */
 	public function __construct( ?string $name = NULL, ?string $alias = NULL )
 	{
-		if( $name !== NULL )
+		if( NULL !== $name )
 			$this->setName( $name );
-		if( $alias !== NULL )
+		if( NULL !== $alias )
 			$this->setAlias( $alias );
 	}
 
@@ -80,10 +80,10 @@ class Table
 
 	public function render(): string
 	{
-		if( $this->name === NULL )
+		if( NULL === $this->name )
 			throw new RuntimeException( 'No table name set' );
 		$joins	= '';
-		if( count( $this->joins ) !== 0 ){
+		if( 0 !== count( $this->joins ) ){
 			$joins	= [];
 			foreach( $this->joins as $join ){
 				$tableName	= $join['table']->render();
@@ -92,7 +92,7 @@ class Table
 			}
 			$joins	= join( $joins );
 		}
-		if( $this->alias !== NULL && $this->alias !== $this->name )
+		if( NULL !== $this->alias && $this->alias !== $this->name )
 			return $this->name.' AS '.$this->alias.$joins;
 		return $this->name.$joins;
 	}

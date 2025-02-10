@@ -1,8 +1,8 @@
 # Database
 
-![Branch](https://img.shields.io/badge/Branch-0.5.x-blue?style=flat-square)
-![Release](https://img.shields.io/badge/Release-0.5.1-blue?style=flat-square)
-![PHP version](https://img.shields.io/badge/PHP-%5E7.4_|_8.0-blue?style=flat-square&color=777BB4)
+![Branch](https://img.shields.io/badge/Branch-0.6.x-blue?style=flat-square)
+![Release](https://img.shields.io/badge/Release-0.6.4-blue?style=flat-square)
+![PHP version](https://img.shields.io/badge/PHP-%5E8.1-blue?style=flat-square&color=777BB4)
 ![PHPStan level](https://img.shields.io/badge/PHPStan_level-max+strict-darkgreen?style=flat-square)
 
 PHP database access
@@ -85,7 +85,7 @@ object stdObject(
 ```
 Not having the fetch mode set would result in an associated array, which is set as default fetch mode in underlaying table reader. To change the fetch see below.
 
-**Hint:** There are more methods to retrive a single entry:
+**Hint:** There are more methods to read a single entry:
 
 - getByIndex
 - getByIndices
@@ -246,6 +246,30 @@ where YOUR_FETCH_MODE is one of these standard PDO fetch modes:
 - FETCH_BOTH
 - FETCH_OBJ
 
+### Entities
+
+Reading from tables can return lists of arrays or anonymous objects, easily.  
+To use entity classes to receive data objects, PDO's fetch mode can be set to <code>FETCH_CLASS</code>.
+A table implementation needs to set <code>::fetchEntityClass</code> to a class name.
+
+This could be an entity class:
+```
+class MyFirstTableEntity
+{
+    public string $id;
+    public string $maybeSomeForeignId;
+    public string $content;
+}
+```
+This entity class can be linked within the table as class to use on fetch:
+```
+class MyFirstTable extends Table
+{
+    ...
+    public ?string $fetchEntityClass    = '\\MyProject\\MyFirstTableEntity';
+}
+```
+Now, all indexing methods will return lists of filled entity classes. 
 
 ## Code Examples using OSQL
 

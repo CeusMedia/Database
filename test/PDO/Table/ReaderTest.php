@@ -34,9 +34,9 @@ class ReaderTest extends TestCase
 	 *	@access		public
 	 *	@return		void
 	 */
-	public function __construct()
+	public function __construct( string $name = '' )
 	{
-		parent::__construct();
+		parent::__construct( $name );
 
 		$this->tableName	= "transactions";
 		$this->columns		= [
@@ -739,6 +739,26 @@ class ReaderTest extends TestCase
 	}
 
 	/**
+	 *	@return		void
+	 */
+	public function testGetSetFetchEntityClass(): void
+	{
+		$className	= 'TestA';
+		$this->reader->setFetchEntityClass( $className );
+		self::assertEquals( $className, $this->reader->getFetchEntityClass() );
+	}
+
+	/**
+	 *	@return		void
+	 */
+	public function testGetSetFetchEntityObject(): void
+	{
+		$object	= new class(){ public $content	= 'testA'; };
+		$this->reader->setFetchEntityObject( $object );
+		self::assertEquals( $object, $this->reader->getFetchEntityObject() );
+	}
+
+	/**
 	 *	Tests Exception of Method 'setColumns'.
 	 *	@access		public
 	 *	@return		void
@@ -878,7 +898,6 @@ class ReaderTest extends TestCase
 	 */
 	protected function tearDown(): void
 	{
-		$this->dropTransactionsTable();
 		parent::tearDown();
 	}
 }

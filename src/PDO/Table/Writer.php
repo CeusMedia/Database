@@ -1,8 +1,9 @@
-<?php
+<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
  *	Write Access for Database Tables.
  *
- *	Copyright (c) 2007-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -15,29 +16,34 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 namespace CeusMedia\Database\PDO\Table;
 
+use CeusMedia\Common\ADT\Collection\Dictionary;
 use InvalidArgumentException;
+use PDO;
+use ReflectionObject;
+use RuntimeException;
+use Traversable;
 
 /**
  *	Write Access for Database Tables.
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2007-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Writer extends Reader
+class Writer extends Abstraction
 {
 	/**
 	 *	Deletes focused Rows in this Table and returns number of affected Rows.
@@ -74,12 +80,14 @@ class Writer extends Reader
 	/**
 	 *	Inserts data into this table and returns ID.
 	 *	@access		public
-	 *	@param		array		$data			associative array of data to store
-	 *	@param		boolean		$stripTags		Flag: strip HTML Tags from values
-	 *	@return		integer		ID of inserted row
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
+	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
+	 *	@return		integer			ID of inserted row
 	 */
-	public function insert( array $data = [], bool $stripTags = TRUE ): int
+	public function insert( array|object $data = [], bool $stripTags = TRUE ): int
 	{
+		if( is_object( $data ) )
+			$data	= $this->convertObjectToArray( $data );
 		$columns	= [];
 		$values		= [];
 		//  iterate Columns
@@ -123,17 +131,19 @@ class Writer extends Reader
 	/**
 	 *	Updating data of focused primary key in this table.
 	 *	@access		public
-	 *	@param		array		$data			Map of data to store
-	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
+	 *	@param		boolean			$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
+	 *	@throw		RuntimeException				Not implemented: Entity classes with protected members
 	 */
-	public function update( array $data = [], bool $stripTags = TRUE ): int
+	public function update( array|object $data = [], bool $stripTags = TRUE ): int
 	{
-		if( count( $data ) === 0 )
+		if( is_object( $data ) )
+			$data	= $this->convertObjectToArray( $data );
+		if( 0 === count( $data ) )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
 		$this->validateFocus();
-		$has	= $this->get( FALSE );
-		if( is_null( $has ) || is_array( $has ) && count( $has ) === 0 )
+		if( !$this->_currentFocusHits() )
 			throw new InvalidArgumentException( 'No data sets focused for update' );
 		$updates	= [];
 		foreach( $this->columns as $column ){
@@ -146,9 +156,9 @@ class Writer extends Reader
 			$updates[] = '`'.$column.'`='.$value;
 		}
 		$affectedRows   = 0;
-		if( count( $updates ) > 0 ){
+		if( 0 !== count( $updates ) ){
 			$updates	= implode( ', ', $updates );
-			$query	= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery( [] );
+			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery();
 			$affectedRows	= $this->dbc->exec( $query );
 		}
 		return $affectedRows;
@@ -157,16 +167,18 @@ class Writer extends Reader
 	/**
 	 *	Updates data in table where conditions are given for.
 	 *	@access		public
-	 *	@param		array		$data			Array of data to store
-	 *	@param		array		$conditions		Array of condition pairs
-	 *	@param		boolean		$stripTags		Flag: strip HTML tags from values
+	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
+	 *	@param		array			$conditions		Array of condition pairs
+	 *	@param		boolean			$stripTags		Flag: strip HTML tags from values
 	 *	@return		integer
 	 */
-	public function updateByConditions( array $data = [], array $conditions = [], bool $stripTags = FALSE ): int
+	public function updateByConditions( array|object $data = [], array $conditions = [], bool $stripTags = FALSE ): int
 	{
-		if( count( $data ) === 0 )
+		if( is_object( $data ) )
+			$data	= $this->convertObjectToArray( $data );
+		if( 0 === count( $data ) )
 			throw new InvalidArgumentException( 'Data for update cannot be empty' );
-		if( count( $conditions ) === 0 )
+		if( 0 === count( $conditions ) )
 			throw new InvalidArgumentException( 'Conditions for update cannot be empty' );
 
 		$updates	= [];
@@ -176,14 +188,12 @@ class Writer extends Reader
 			if( isset( $data[$column] ) ){
 				if( $stripTags )
 					$data[$column]	= strip_tags( $data[$column] );
-				if( $data[$column] == 'on' )
-					$data[$column] = 1;
 				$data[$column]	= $this->secureValue( $data[$column] );
 				$updates[] = '`'.$column.'`='.$data[$column];
 			}
 		}
 		$affectedRows   = 0;
-		if( count( $updates ) !== 0 ){
+		if( 0 !== count( $updates ) ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$conditions;
 			$affectedRows		= $this->dbc->exec( $query );
@@ -196,12 +206,72 @@ class Writer extends Reader
 	 *	Note: This method does not return the number of removed rows.
 	 *	@access		public
 	 *	@return		self
-	 *	@see		http://dev.mysql.com/doc/refman/4.1/en/truncate.html
+	 *	@see		https://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
 	public function truncate(): self
 	{
 		$query	= 'TRUNCATE '.$this->getTableName();
 		$this->dbc->exec( $query );
 		return $this;
+	}
+
+	/**
+	 *	Tries to convert several data object types to an array.
+	 *	Supports anonymous object and dictionary.
+	 *	Supports any traversable or iterator.
+	 *	Supports entity object where class has public properties.
+	 *	Does not support entity object with getters and setters, yet.
+	 *
+	 *	@param		object		$object
+	 *	@return		array
+	 */
+	protected function convertObjectToArray( object $object ): array
+	{
+		if( 'stdClass' === get_class( $object ) )
+			return (array) $object;
+		if( $object instanceof Dictionary )
+			/** @phpstan-ignore-next-line */
+			return $object->getAll();
+		if( is_iterable( $object ) || $object instanceof Traversable ){
+			$map	= [];
+			foreach( $object as $key => $value )
+				$map[$key]	= $value;
+			return $map;
+		}
+
+		$reflection	= new ReflectionObject( $object );
+		if( $reflection->hasProperty( $this->primaryKey ) ){
+			if( $reflection->getProperty( $this->primaryKey )->isPublic() )
+				return (array) $object;
+		}
+		throw new RuntimeException( 'Not implemented, yet' );
+	}
+
+	/**
+	 *	Returns data of focused keys.
+	 *	@access		public
+	 *	@return		bool
+	 *	@todo		implement using given fields
+	 */
+	protected function _currentFocusHits(): bool
+	{
+		$this->validateFocus();
+
+		/** @noinspection SqlNoDataSourceInspection */
+		/** @noinspection SqlResolve */
+		$query	= vsprintf( 'SELECT COUNT(`%s`) AS count FROM %s WHERE %s', [
+			$this->primaryKey,
+			$this->getTableName(),
+			$this->getConditionQuery()
+		] );
+		$result	= $this->dbc->query( $query );
+		if( FALSE !== $result ){
+			/** @var array|FALSE $array */
+			$array	= $result->fetch( PDO::FETCH_NUM );
+			if( FALSE !== $array )
+				return (bool) (int) $array[0];
+
+		}
+		return FALSE;
 	}
 }

@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection ALL */
 /** @noinspection PhpComposerExtensionStubsInspection */
 declare(strict_types=1);
 
@@ -88,6 +88,7 @@ abstract class TestCase extends BaseTestCase
 		$this->username	= self::$config['unitTest-Database']['username'];
 		$this->password	= self::$config['unitTest-Database']['password'];
 		$this->database	= self::$config['unitTest-Database']['database'];
+		$this->options	= [];
 
 		if( !$this->setUpDirectConnection() )
 			self::markTestSkipped( 'Support for MySQL is missing' );

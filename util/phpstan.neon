@@ -3,12 +3,14 @@ includes:
 	- phpstan-baseline.neon
 
 parameters:
-	phpVersion: 70432
+	phpVersion: 80100
 	level: max
 	paths:
 #		- ../src/DAO
-#		- ../src/OSQL
+		- ../src/OSQL
 		- ../src/PDO
-	checkMissingIterableValueType: false
 	treatPhpDocTypesAsCertain: false
 	reportUnmatchedIgnoredErrors: false
+	ignoreErrors:
+		-
+			identifier: missingType.iterableValue

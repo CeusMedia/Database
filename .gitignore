@@ -1,9 +1,11 @@
 /vendor
-/composer.lock
+;/composer.lock
 /doc/
 /demo/demo.ini
-;/.idea
-/.phpunit.result.cache
+/test/config/test.ini
 /.php_cs.cache
 /util/.phpunit.cache
 /util/.phpunit.result.cache
+/util/.phpunit.cache/test-results
+/util/.phpunit.cache/
+;/.idea

@@ -3,7 +3,7 @@
 /**
  *	Client wrapper to use OSQL with an existing PDO database connection.
  *
- *	Copyright (c) 2010-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -16,13 +16,13 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 
@@ -30,7 +30,11 @@ namespace CeusMedia\Database\OSQL;
 
 use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Common\Exception\SQL as SqlException;
-use CeusMedia\Database\OSQL\Query\QueryInterface;
+use CeusMedia\Database\OSQL\Query\AbstractQuery;
+use CeusMedia\Database\OSQL\Query\Delete as DeleteQuery;
+use CeusMedia\Database\OSQL\Query\Insert as InsertQuery;
+use CeusMedia\Database\OSQL\Query\Select as SelectQuery;
+use CeusMedia\Database\OSQL\Query\Update as UpdateQuery;
 use InvalidArgumentException;
 use PDO;
 
@@ -39,8 +43,8 @@ use PDO;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Client
@@ -62,21 +66,25 @@ class Client
 		$this->setFetchMode( self::$defaultFetchMode );
 	}
 
-/*
-	public function select()
+	public function select(): SelectQuery
 	{
-		return new \CeusMedia\Database\OSQL\Query\Select();
+		return new SelectQuery( $this );
 	}
 
-	public function update()
+	public function update(): UpdateQuery
 	{
-		return new \CeusMedia\Database\OSQL\Query\Update();
+		return new UpdateQuery( $this );
 	}
 
-	public function delete()
+	public function delete(): DeleteQuery
 	{
-		return new \CeusMedia\Database\OSQL\Query\Delete();
-	}*/
+		return new DeleteQuery( $this );
+	}
+
+	public function insert(): InsertQuery
+	{
+		return new InsertQuery( $this );
+	}
 /*
 	public function getStringFromQuery( $query )
 	{
@@ -88,12 +96,13 @@ class Client
 	/**
 	 *	Executes query and returns result.
 	 *	@access		public
-	 *	@param		QueryInterface		$query
-	 *	@return		object|array|int|float|string|bool
+	 *	@param		AbstractQuery		$query
+	 *	@return		object|array|int|float|string|bool|null
 	 */
-	public function execute( QueryInterface $query )
+	public function execute( AbstractQuery $query ): float|object|int|bool|array|string|null
 	{
 		$clock		= new Clock();
+		/** @var object{query: string, parameters: array<string,string|int|float>} $queryParts */
 		$queryParts	= $query->render();
 		$query->timing['render']	= $clock->stop( 0, 6 );
 		$query->statement			= $queryParts->query;
@@ -101,6 +110,10 @@ class Client
 
 		$clock->start();
 		$stmt	= $this->dbc->prepare( $queryParts->query );
+		/**
+		 * @var string $name
+		 * @var array<string,string|int|float> $parameter
+		 */
 		foreach( $queryParts->parameters as $name => $parameter ){
 			$type	= $this->getPdoTypeFromValue( $parameter['value'] );
 			$stmt->bindParam( $name, $parameter['value'], $type );
@@ -116,24 +129,29 @@ class Client
 		$query->timing['execute']	= $clock->stop( 0, 6 );
 		$query->timing['total']		= array_sum( $query->timing );
 
-		if( strpos( $queryParts->query, 'SQL_CALC_FOUND_ROWS' ) ){
-			$query->foundRows	= current( $this->dbc->query( 'SELECT FOUND_ROWS()' )->fetch() );
-		}
-
-		if( $query instanceof Query\Select ){
+		if( $query instanceof SelectQuery ){
+			if( str_contains( $queryParts->query, 'SQL_CALC_FOUND_ROWS' ) ){
+				$result	= $this->dbc->query( 'SELECT FOUND_ROWS()' );
+				if( FALSE !== $result ){
+					/** @var array<int> $count */
+					$count	= $result->fetch();
+					$query->foundRows	= 0 !== count( $count ) ? current( $count ) : 0;
+				}
+			}
 			$query->result	= $stmt->fetchAll( $this->fetchMode );
 			return $query->result;
 		}
-		else if( $query instanceof Query\Insert ){
-			$query->rowCount		= $stmt->rowCount();
-			$query->lastInsertId	= $this->dbc->lastInsertId() ?: NULL;
+		else if( $query instanceof InsertQuery ){
+			$query->nrAffectedRows	= $stmt->rowCount();
+			$id	= $this->dbc->lastInsertId();
+			$query->lastInsertId	= FALSE !== $id ? $id : NULL;
 			return $query->lastInsertId;
 		}
-		else if( $query instanceof Query\Update || $query instanceof Query\Delete ){
-			$query->rowCount	= $stmt->rowCount();
-			return $query->rowCount;
+		else if( $query instanceof UpdateQuery || $query instanceof Query\Delete ){
+			$query->nrAffectedRows	= $stmt->rowCount();
+			return $query->nrAffectedRows;
 		}
-		return $result;
+		return TRUE;
 	}
 
 	/**
@@ -158,7 +176,7 @@ class Client
 	/**
 	 *	@return		string|FALSE
 	 */
-	public function getLastInsertId()
+	public function getLastInsertId(): string|FALSE
 	{
 		return $this->dbc->lastInsertId();
 	}

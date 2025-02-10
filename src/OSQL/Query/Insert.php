@@ -2,7 +2,7 @@
 /**
  *	Builder for INSERT statements.
  *
- *	Copyright (c) 2010-2020 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2010-2024 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -15,19 +15,20 @@
  *	GNU General Public License for more details.
  *
  *	You should have received a copy of the GNU General Public License
- *	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 
 namespace CeusMedia\Database\OSQL\Query;
 
 use CeusMedia\Database\OSQL\Table;
+use PDO;
 use RuntimeException;
 
 /**
@@ -35,25 +36,26 @@ use RuntimeException;
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2010-2020 Christian Würker
- *	@license		http://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@copyright		2010-2024 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
 class Insert extends AbstractQuery implements QueryInterface
 {
-	public ?string $lastInsertId		= NULL;
+	public ?string $lastInsertId	= NULL;
+	public int $nrAffectedRows		= 0;
 
 	protected array $fields;
-	protected ?Table $table		= NULL;
+	protected ?Table $table			= NULL;
 
 	/**
 	 *	...
 	 *	@access		protected
 	 *	@return		void
 	 */
-	protected function checkSetup()
+	protected function checkSetup(): void
 	{
-		if( $this->table === NULL )
+		if( NULL === $this->table )
 			throw new RuntimeException( 'No table clause set' );
 	}
 
@@ -69,22 +71,25 @@ class Insert extends AbstractQuery implements QueryInterface
 	 *	@param		array		$parameters		Reference to parameters map
 	 *	@return		string
 	 */
-	protected function renderFields( & $parameters ): string
+	protected function renderFields( array &$parameters ): string
 	{
-		if( count( $this->fields ) === 0 )
+		if( 0 === count( $this->fields ) )
 			return '';
 		$listKeys	= [];
-		$listVals	= [];
+		$listValues	= [];
 		foreach( $this->fields as $name => $value ){
 			$key	= 'value_'.str_replace( '.', '_', $name );
-			$listKeys[]	= $name;
-			$listVals[]	= ':'.$key;
+			$listKeys[]			= $name;
+			$listValues[]		= ':'.$key;
 			$parameters[$key]	= [
-				'type'	=> \PDO::PARAM_STR,
-				'value'	=> $value
+				'type'	=> PDO::PARAM_STR,
+				'value'	=> $value,
 			];
 		}
-		return '( '.implode( ', ', $listKeys ).' ) VALUE ( '.implode( ', ', $listVals ).' )';
+		return vsprintf( '( %s ) VALUE ( %s )', [
+			implode( ', ', $listKeys ),
+			implode( ', ', $listValues ),
+		] );
 	}
 
 	/**
@@ -111,13 +116,13 @@ class Insert extends AbstractQuery implements QueryInterface
 	}
 
 	/**
-	 *	Add pair to insert and returns query object for chainability.
+	 *	Add pair to insert and returns query object for method chaining.
 	 *	@access		public
-	 *	@param		string		$name
-	 *	@param		mixed		$value
+	 *	@param		string					$name
+	 *	@param		string|int|float|null	$value
 	 *	@return		self
 	 */
-	public function set( string $name, $value ): self
+	public function set( string $name, string|int|float|null $value ): self
 	{
 		$this->fields[$name]	 = $value;
 		return $this;

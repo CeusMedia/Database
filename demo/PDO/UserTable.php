@@ -1,12 +1,22 @@
 <?php
-class UserTable extends \CeusMedia\Database\PDO\Table{
 
-	protected $name			= 'users';
-	protected $columns		= [
+namespace CeusMedia\DatabaseDemo\PDO;
+
+use CeusMedia\Database\PDO\Table as PdoTable;
+use PDO;
+
+class UserTable extends PdoTable
+{
+	protected string $name			= 'users';
+
+	protected array $columns		= [
 		'userId',
 		'username',
 	];
-	protected $primaryKey	= 'userId';
-	protected $indices		= array();
-	protected $fetchMode	= \PDO::FETCH_OBJ;
+
+	protected string $primaryKey	= 'userId';
+
+	protected array $indices		= [];
+
+	protected int $fetchMode		= PDO::FETCH_OBJ;
 }
