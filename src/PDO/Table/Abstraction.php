@@ -99,7 +99,7 @@ abstract class Abstraction
 	public function focusIndex( string $column, string|int|float|array $value ): self
 	{
 		//  check column name
-		if( !in_array( $column, $this->indices, TRUE ) && $column != $this->primaryKey )
+		if( !in_array( $column, $this->indices, TRUE ) && $column !== $this->primaryKey )
 			throw new DomainException( 'Column "'.$column.'" is neither an index nor primary key and cannot be focused' );
 		//  set Focus
 		$this->focusedIndices[$column] = $value;
@@ -368,6 +368,7 @@ abstract class Abstraction
 				/** @var array<object> $fetched */
 				$fetched	= $resultSet->fetchAll( $this->fetchMode, $this->fetchEntityClass );
 			}
+			/** @phpstan-ignore-next-line */
 			catch( \Error|\Exception|\Throwable $e ){
 				$message	= sprintf( 'Could not create entity of class %s on fetch', $this->fetchEntityClass );
 				throw new RuntimeException( $message, 0, $e );
@@ -383,6 +384,7 @@ abstract class Abstraction
 				/** @var array<object> $fetched */
 				$fetched	= $resultSet->fetchAll( $this->fetchMode );
 			}
+			/** @phpstan-ignore-next-line */
 			catch( \Error|\Exception|\Throwable $e ){
 				$message	= sprintf( 'Could not extend entity object of class %s on fetch', $this->fetchEntityObject::class );
 				throw new RuntimeException( $message, 0, $e );
@@ -448,7 +450,7 @@ abstract class Abstraction
 			//  iterate focused indices
 			foreach( $this->focusedIndices as $index => $value )
 				//  skip primary key
-				if( $index != $this->primaryKey )
+				if( $index !== $this->primaryKey )
 					//  if index column is not already in conditions
 					if( !array_key_exists( $index, $columnConditions ) )
 						//  note index pair
@@ -461,6 +463,10 @@ abstract class Abstraction
 		//  iterate noted column conditions
 		foreach( $columnConditions as $column => $value ){
 			if( is_array( $value ) ){
+				/**
+				 * @var int $nr
+				 * @var string|int|float $part
+				 */
 				foreach( $value as $nr => $part )
 					$value[$nr]	= $this->realizeConditionQueryPart( $column, $part );
 				$part	= '('.implode( ' OR ', $value ).')';
@@ -552,9 +558,9 @@ abstract class Abstraction
 		if( 1 === preg_match( $patternBetween, trim( $valueString ), $result ) ){
 			$matches	= [];
 			preg_match_all( $patternBetween, $valueString, $matches );
-			$operation		= $matches[1][0] == '!><' ? ' NOT BETWEEN ' : ' BETWEEN ';
+			$operation		= '!><' === $matches[1][0] ? ' NOT BETWEEN ' : ' BETWEEN ';
 			$valueString	= $this->secureValue( $matches[3][0] ).' AND '.$this->secureValue( $matches[6][0] );
-			if( 0 === strlen( $matches[2][0] ) || 0 === strlen( $matches[4][0] ) || 0 === strlen( $matches[5][0] ) )
+			if( '' === trim( $matches[2][0] ) || '' === trim( $matches[4][0] ) || '' === trim( $matches[5][0] ) )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
 		}
@@ -626,11 +632,11 @@ abstract class Abstraction
 	 *	Checks columns names for querying methods (find,get), sets wildcard if empty or throws an exception if unacceptable.
 	 *	@access		protected
 	 *	@param		array|string|NULL		$columns		String or array of column names to validate
-	 *	@return		void
+	 *	@return		array
 	 *	@throws		InvalidArgumentException	if columns is neither a list of columns nor *
 	 *	@throws		DomainException				if column is neither a defined column nor *
 	 */
-	protected function validateColumns( array|string|null &$columns ): void
+	protected function validateColumns( array|string|NULL $columns ): array
 	{
 		if( is_string( $columns ) && 0 !== strlen( trim( $columns ) ) )
 			$columns	= [$columns];
@@ -648,6 +654,7 @@ abstract class Abstraction
 				continue;
 			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 		}
+		return $columns;
 	}
 
 	/**

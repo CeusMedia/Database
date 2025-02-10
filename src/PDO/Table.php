@@ -740,8 +740,7 @@ abstract class Table
 			$field	= $matches[2];
 		}
 
-		if( in_array( $this->fetchMode, [PDO::FETCH_CLASS, PDO::FETCH_OBJ], TRUE ) ){
-			/** @var object $result */
+		if( is_object( $result ) ){
 			if( !property_exists( $result, $field ) )
 				throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
 			/** @var array<string,string|int|float|bool|NULL> $values */
@@ -749,7 +748,6 @@ abstract class Table
 			return $values[$field];
 		}
 
-		/** @var array $result */
 		if( !isset( $result[$field] ) )
 			throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
 		return $result[$field];
@@ -794,8 +792,7 @@ abstract class Table
 				throw new DomainException( 'Field "'.$field.'" is not an existing column' );
 		}
 
-		if( in_array( $this->fetchMode, [PDO::FETCH_CLASS, PDO::FETCH_OBJ], TRUE ) ) {
-			/** @var object $result */
+		if( is_object( $result ) ) {
 			$map = (object)[];
 			foreach( $fields as $field ){
 				if( !property_exists( $result, $field ) )
@@ -806,7 +803,6 @@ abstract class Table
 			return $map;
 		}
 
-		/** @var array $result */
 		$list	= [];
 		foreach( $fields as $field ){
 			if( '*' !== $field  && !isset( $result[$field] ) )

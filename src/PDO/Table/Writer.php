@@ -109,7 +109,7 @@ class Writer extends Abstraction
 				if( isset( $columns[$index] ) )
 					continue;
 				//  skip primary key
-				if( $index == $this->primaryKey )
+				if( $index === $this->primaryKey )
 					continue;
 				//  add key
 				$columns[$index]	= $index;

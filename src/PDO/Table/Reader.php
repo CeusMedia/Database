@@ -114,7 +114,7 @@ class Reader extends Abstraction
 	 */
 	public function find( array|string|null $columns = [], array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $having = [] ): array
 	{
-		$this->validateColumns( $columns );
+		$columns	= $this->validateColumns( $columns );
 		//  render WHERE clause if needed, uncursored, allow functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE, TRUE );
 		$conditions = 0 !== strlen( $conditions ) ? ' WHERE '.$conditions : '';
@@ -156,9 +156,9 @@ class Reader extends Abstraction
 		if( !is_string( $columns ) && !is_array( $columns ) )
 			//  otherwise use empty array
 			$columns	= [];
-		$this->validateColumns( $columns );
+		$columns	= $this->validateColumns( $columns );
 
-		if( $column != $this->getPrimaryKey() && !in_array( $column, $this->getIndices(), TRUE ) )
+		if( $this->getPrimaryKey() !== $column && !in_array( $column, $this->getIndices(), TRUE ) )
 			throw new DomainException( 'Field of WHERE IN-statement must be an index' );
 
 		$orders		= $this->getOrderCondition( $orders );
@@ -192,9 +192,9 @@ class Reader extends Abstraction
 		if( !is_string( $columns ) && !is_array( $columns ) )
 			//  otherwise use empty array
 			$columns	= [];
-		$this->validateColumns( $columns );
+		$columns	= $this->validateColumns( $columns );
 
-		if( $column != $this->getPrimaryKey() && !in_array( $column, $this->getIndices(), TRUE ) )
+		if( $this->getPrimaryKey() !== $column && !in_array( $column, $this->getIndices(), TRUE ) )
 			throw new RangeException( 'Field of WHERE IN-statement must be an index' );
 
 		//  render WHERE clause if needed, uncursored, allow functions
@@ -260,7 +260,7 @@ class Reader extends Abstraction
 	public function getDistinctColumnValues( string $column, array $conditions = [], array $orders = [], array $limits = [] ): array
 	{
 		$columns	= [$column];
-		$this->validateColumns( $columns );
+		$columns	= $this->validateColumns( $columns );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		$conditions	= 0 !== strlen( $conditions ) ? ' WHERE '.$conditions : '';
 		$orders		= $this->getOrderCondition( $orders );
