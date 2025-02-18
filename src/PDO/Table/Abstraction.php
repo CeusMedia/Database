@@ -578,7 +578,7 @@ abstract class Abstraction
 			preg_match_all( $patternOperators, $valueString, $matches );
 			$operation		= ' '.$matches[1][0].' ';
 			$valueString	= $this->secureValue( $matches[3][0] );
-			if( '' === trim( $matches[2][0] ) )
+			if( '' === $matches[2][0] )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
 //				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
 		}
