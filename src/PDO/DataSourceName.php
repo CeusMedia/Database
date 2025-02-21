@@ -128,6 +128,52 @@ class DataSourceName
 	}
 
 	/**
+	 *	Returns set database name.
+	 *	@return		?string
+	 */
+	public function getDatabase(): ?string
+	{
+		return $this->database;
+	}
+
+	/**
+	 *	Returns sets host name or URI of database server.
+	 *	@access		public
+	 *	@return		?string
+	 */
+	public function getHost(): ?string
+	{
+		return $this->host;
+	}
+
+	/**
+	 *	Returns set password.
+	 *	@return		?string
+	 */
+	public function getPassword(): ?string
+	{
+		return $this->password;
+	}
+
+	/**
+	 *	Returns set port of database server.
+	 *	@return		?int
+	 */
+	public function getPort(): ?int
+	{
+		return $this->port;
+	}
+
+	/**
+	 *	Returns set username.
+	 *	@return		?string
+	 */
+	public function getUsername(): ?string
+	{
+		return $this->username;
+	}
+
+	/**
 	 *	Static constructor.
 	 *	@access		public
 	 *	@param		string		$driver			Database Driver (cubrid,dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)

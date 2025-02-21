@@ -220,14 +220,12 @@ abstract class Base extends PDO
 	 */
 	public function getTables( ?string $prefix = NULL ): array
 	{
-		$query	= "SHOW TABLES" . ( !is_null( $prefix ) ? " LIKE '".$prefix."%'" : "" );
-		$result	= parent::query( $query );
+		$hasPrefix	= '' !== ( $prefix ?? '' );
+		$query		= "SHOW TABLES" . ( $hasPrefix ? " LIKE '".$prefix."%'" : "" );
+		$result		= parent::query( $query );
 		if( FALSE === $result )
 			return [];
-		$tables	= $result->fetchAll( PDO::FETCH_COLUMN );
-		if( FALSE === $tables )
-			return [];
-		return $tables;
+		return $result->fetchAll( PDO::FETCH_COLUMN );
 	}
 
 	/**
