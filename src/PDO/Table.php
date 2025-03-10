@@ -536,7 +536,7 @@ abstract class Table
 	 */
 	public function removeByIndices( array $indices ): int
 	{
-		$this->checkIndices( $indices, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
 		foreach( $indices as $key => $value ){
 			$this->reader->focusIndex( $key, $value );
 			$this->writer->focusIndex( $key, $value );
