@@ -10,3 +10,5 @@
 /util/.phpunit.cache/
 ;/.idea
 /composer.lock
+/demo/Utility/MySQL/config.ini
+/demo/Utility/MySQL/*.sql

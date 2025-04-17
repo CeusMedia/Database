@@ -32,29 +32,6 @@ class WriterTest extends TestCase
 	protected PdoTableWriter $writer;
 
 	/**
-	 *	Constructor.
-	 *	@access		public
-	 *	@return		void
-	 */
-	public function __construct( string $name = '' )
-	{
-		parent::__construct( $name );
-
-		$this->tableName	= "transactions";
-		$this->columns		= [
-			'id',
-			'topic',
-			'label',
-			'timestamp',
-		];
-		$this->primaryKey	= $this->columns[0];
-		$this->indices		= [
-			'topic',
-			'label'
-		];
-	}
-
-	/**
 	 *	Tests Method 'delete'.
 	 *	@access		public
 	 *	@return		void
@@ -441,6 +418,20 @@ class WriterTest extends TestCase
 	protected function setUp(): void
 	{
 		parent::setUp();
+
+		$this->tableName	= "transactions";
+		$this->columns		= [
+			'id',
+			'topic',
+			'label',
+			'timestamp',
+		];
+		$this->primaryKey	= $this->columns[0];
+		$this->indices		= [
+			'topic',
+			'label'
+		];
+
 		$this->createTransactionsTableFromFileOnDirectConnection();
 
 		$this->reader	= new PdoTableReader( $this->connection, $this->tableName, $this->columns, $this->primaryKey );
