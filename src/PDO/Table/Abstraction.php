@@ -617,18 +617,18 @@ abstract class Abstraction
 			preg_match_all( $patternBetween, $valueString, $matches );
 			$operation		= '!><' === $matches[1][0] ? ' NOT BETWEEN ' : ' BETWEEN ';
 			$valueString	= $this->secureValue( $matches[3][0] ).' AND '.$this->secureValue( $matches[6][0] );
-			if( '' === trim( $matches[2][0] ) || '' === trim( $matches[4][0] ) || '' === trim( $matches[5][0] ) )
-				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
-//				trigger_error( 'Missing whitespace between operators and values', E_USER_DEPRECATED );
+			if( '' === $matches[2][0] || '' === $matches[4][0] || '' === $matches[5][0] )
+				throw new InvalidArgumentException( 'Missing whitespace between operator and value for column '.$column );
+//				trigger_error( 'Missing whitespace between operators and values for column '.$column, E_USER_DEPRECATED );
 		}
 		else if( 1 === preg_match( $patternBitwise, $valueString, $result ) ){
 			$matches	= [];
 			preg_match_all( $patternBitwise, $valueString, $matches );
 			$operation		= ' '.$matches[1][0].' ';
 			$valueString	= $this->secureValue( $matches[3][0] );
-			if( 0 === strlen( $matches[2][0] ) )
-				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
-//				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
+			if( '' === $matches[2][0] )
+				throw new InvalidArgumentException( 'Missing whitespace between operator and value for column '.$column );
+//				trigger_error( 'Missing whitespace between operator and value for column '.$column, E_USER_DEPRECATED );
 		}
 		else if( 1 === preg_match( $patternOperators, $valueString, $result ) ){
 			$matches	= [];
@@ -636,8 +636,8 @@ abstract class Abstraction
 			$operation		= ' '.$matches[1][0].' ';
 			$valueString	= $this->secureValue( $matches[3][0] );
 			if( '' === $matches[2][0] )
-				throw new InvalidArgumentException( 'Missing whitespace between operator and value' );
-//				trigger_error( 'Missing whitespace between operator and value', E_USER_DEPRECATED );
+				throw new InvalidArgumentException( 'Missing whitespace between operator and value for column '.$column );
+//				trigger_error( 'Missing whitespace between operator and value for column '.$column, E_USER_DEPRECATED );
 		}
 		else if( 1 === preg_match( $patternLike, $valueString, $result ) ){
 			$matches	= [];
