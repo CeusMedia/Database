@@ -211,7 +211,7 @@ abstract class Table
 	 */
 	public function editByIndices( array $indices, array $data, bool $stripTags = TRUE ): int
 	{
-		$this->checkIndices( $indices, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
 		return $this->writer->updateByConditions( $data, $indices, $stripTags );
 	}
 
@@ -300,7 +300,7 @@ abstract class Table
 	 */
 	public function getAllByIndices( array $indices = [], array $orders = [], array $limits = [], array $fields = [], bool $strict = FALSE ): array
 	{
-		$this->checkIndices( $indices, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->reader->focusIndex( $key, $value );
 		/** @var array $data */
@@ -359,7 +359,7 @@ abstract class Table
 			$fields	= 0 !== strlen( trim( $fields ) ) ? [trim( $fields )] : [];
 		foreach( $fields as $nr => $field )
 			$fields[$nr]	= $this->checkField( $field );
-		$this->checkIndices( $indices, TRUE );
+		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->reader->focusIndex( $key, $value );
 		/** @var object|array $result */
