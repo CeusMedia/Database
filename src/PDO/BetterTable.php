@@ -283,7 +283,7 @@ abstract class BetterTable
 			throw Deprecation::create( 'Using fields in getAll is discouraged' )
 				->setDescription( 'Code update is needed due to change of PDO table class top support entity classes' )
 				->setSuggestion( 'Use getColumnOfAllByConditions or getColumnsOfAllByConditions instead' );
-		$this->checkIndices( [$key], TRUE, TRUE, TRUE );
+		$this->checkIndices( [$key => $value], TRUE, TRUE, TRUE );
 		return $this->getAll( [$key => $value], $orders, $limits );
 	}
 
@@ -451,16 +451,16 @@ abstract class BetterTable
 	/**
 	 *	Returns single field value of first entry selected by index.
 	 *	@access		public
+	 *	@param		string					$field			Field to return from result
 	 *	@param		string					$key			Key of index
 	 *	@param		float|array|int|string	$value			Value(s) of index
-	 *	@param		string					$field			Field to return from result
 	 *	@param		array					$orders			Map of orders to include in SQL query
 	 *	@param		boolean					$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		bool|int|float|string|NULL				Value of field of first found row for index value, NULL if no entries found
 	 *	@throws		RangeException			if field is empty
 	 *	@throws		DomainException			if field is not a table column
 	 */
-	public function getFirstFieldByIndex( string $key, float|array|int|string $value, string $field, array $orders = [], bool $strict = FALSE ): float|bool|int|string|NULL
+	public function getFirstFieldByIndex( string $field, string $key, float|array|int|string $value, array $orders = [], bool $strict = FALSE ): float|bool|int|string|NULL
 	{
 		$this->checkField( $field, TRUE );
 		$this->reader->focusIndex( $key, $value );
@@ -473,10 +473,10 @@ abstract class BetterTable
 	/**
 	 *	Returns data of first entry selected by index.
 	 *	@access		public
+	 *	@param		array					$fields			List of fields to return from result
 	 *	@param		string					$key			Key of Index
 	 *	@param		float|array|int|string	$value			Value(s) of Index
 	 *	@param		array					$orders			Map of Orders to include in SQL Query
-	 *	@param		array					$fields			List of fields to return from result
 	 *	@param		boolean					$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		object|array|NULL		Structure depending on fetch type, NULL if no entries
 	 *	@throws		RangeException							If list of fields too small (needs at least 2)
@@ -486,7 +486,7 @@ abstract class BetterTable
 	 *	@throws		RangeException							If a requested field is not within result fields
 	 *	@throws		RangeException							In strict mode if given result list is empty
 	 */
-	public function getFirstFieldsByIndex( string $key, float|array|int|string $value, array $orders = [], array $fields = [], bool $strict = FALSE ): object|array|NULL
+	public function getFirstFieldsByIndex( array $fields, string $key, float|array|int|string $value, array $orders = [], bool $strict = FALSE ): object|array|NULL
 	{
 		if( count( $fields ) < 2 )
 			throw new RangeException( 'No or not enough columns specified' );
@@ -502,8 +502,8 @@ abstract class BetterTable
 	/**
 	 *	Returns data of single line selected by indices.
 	 *	@access		public
-	 *	@param		array				$indices		Map of Index Keys and Values
 	 *	@param		string				$field			Field to return from result
+	 *	@param		array				$indices		Map of Index Keys and Values
 	 *	@param		array				$orders			Map of Orders to include in SQL Query
 	 *	@param		boolean				$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		bool|int|float|string|NULL			Value of field of first found row for index value, NULL if no entries found
@@ -513,7 +513,7 @@ abstract class BetterTable
 	 *	@throws		RangeException						If requested field is not within result fields
 	 *	@throws		RangeException						In strict mode if given result list is empty
 	 */
-	public function getFirstFieldByIndices( array $indices, string $field, array $orders = [], bool $strict = FALSE ): bool|int|float|string|NULL
+	public function getFirstFieldByIndices( string $field, array $indices, array $orders = [], bool $strict = FALSE ): bool|int|float|string|NULL
 	{
 		$this->checkField( $field );
 		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
@@ -528,9 +528,9 @@ abstract class BetterTable
 	/**
 	 *	Returns data of single line selected by indices.
 	 *	@access		public
+	 *	@param		array				$fields			List of fields to return from result
 	 *	@param		array				$indices		Map of Index Keys and Values
 	 *	@param		array				$orders			Map of Orders to include in SQL Query
-	 *	@param		array				$fields			List of fields to return from result
 	 *	@param		boolean				$strict			Flag: throw exception if result is empty (default: FALSE)
 	 *	@return		object|array|NULL	Structure depending on fetch type, NULL if field selected and no entries
 	 *	@throws		RangeException						If less than 2 fields requested
@@ -538,7 +538,7 @@ abstract class BetterTable
 	 *	@throws		RangeException						If index map is empty but mandatory
 	 *	@throws		DomainException						If an index key is not an index column
 	 */
-	public function getFirstFieldsByIndices( array $indices, array $orders = [], array $fields = [], bool $strict = FALSE ): object|array|NULL
+	public function getFirstFieldsByIndices( array $fields, array $indices, array $orders = [], bool $strict = FALSE ): object|array|NULL
 	{
 		if( count( $fields ) < 2 )
 			throw new RangeException( 'No or not enough columns specified' );
