@@ -570,11 +570,15 @@ abstract class Table
 			] ) );
 		$reflection	= new ReflectionObject( $entity );
 		$property	= $reflection->getProperty( $this->primaryKey );
-		/** @var integer|string $id */
+		/** @var int|string $id */
 		$id			= $property->getValue( $entity );
 		return 0 !== $this->edit( $id, $entity, $stripTags );
 	}
 
+	/**
+	 *	@param		SimpleCacheInterface		$cache
+	 *	@return		self<object>
+	 */
 	public function setCache( SimpleCacheInterface $cache ): self
 	{
 		$this->cache	= $cache;
@@ -872,9 +876,9 @@ abstract class Table
 
 	private function checkTableSetup(): void
 	{
-		if( 0 === strlen( trim( $this->name ) ) )
+		if( '' === trim( $this->name ) )
 			throw new RuntimeException( 'No table name set' );
-		if( 0 === count( $this->columns ) )
+		if( [] === $this->columns )
 			throw new RuntimeException( 'No table columns set' );
 	}
 

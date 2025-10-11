@@ -58,8 +58,8 @@ use RuntimeException;
  */
 abstract class BetterTable
 {
-	/**	@var	Connection|NULL								$dbc			PDO database connection object */
-	protected ?Connection $dbc;
+	/**	@var	Connection|PDO|NULL								$dbc			PDO database connection object */
+	protected Connection|PDO|NULL $dbc;
 
 	/**	@var	string										$name			Name of Database Table without Prefix */
 	protected string $name									= '';
@@ -109,13 +109,13 @@ abstract class BetterTable
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		Connection			$dbc		PDO database connection object
+	 *	@param		Connection|PDO			$dbc		PDO database connection object
 	 *	@param		?string				$prefix		Table name prefix
 	 *	@param		int|string|NULL		$id			ID to focus on
 	 *	@return		void
 	 *	@throws		ReflectionException
 	 */
-	public function __construct( Connection $dbc, ?string $prefix = NULL, int|string $id = NULL )
+	public function __construct( Connection|PDO $dbc, ?string $prefix = NULL, int|string $id = NULL )
 	{
 		$this->checkTableSetup();
 		$this->setDatabase( $dbc, $prefix, $id );
@@ -986,12 +986,12 @@ abstract class BetterTable
 
 	/**
 	 *	@access		protected
-	 *	@param		Connection			$dbc		PDO database connection object
+	 *	@param		Connection|PDO			$dbc		PDO database connection object
 	 *	@param		string|NULL			$prefix		Table name prefix
 	 *	@param		int|string|NULL		$id			ID to focus on
 	 *	@return		self<object>
 	 */
-	protected function setDatabase( Connection $dbc, ?string $prefix = NULL, int|string $id = NULL ): self
+	protected function setDatabase( Connection|PDO $dbc, ?string $prefix = NULL, int|string $id = NULL ): self
 	{
 		$this->dbc		= $dbc;
 		$this->prefix	= (string) $prefix;
