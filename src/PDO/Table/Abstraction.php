@@ -21,8 +21,8 @@ abstract class Abstraction
 	/**	@var	int							$defaultFetchMode	Default fetch mode, can be set statically */
 	public static int $defaultFetchMode		= PDO::FETCH_ASSOC;
 
-	/**	@var	Connection					$dbc				Database connection resource object */
-	protected Connection $dbc;
+	/**	@var	Connection|PDO					$dbc				Database connection resource object */
+	protected Connection|PDO $dbc;
 
 	/**	@var	array						$columns			List of table columns */
 	protected array $columns;
@@ -52,14 +52,14 @@ abstract class Abstraction
 	 *	Constructor.
 	 *
 	 *	@access		public
-	 *	@param		Connection		$dbc			Database connection resource object
+	 *	@param		Connection|PDO	$dbc			Database connection resource object
 	 *	@param		string			$tableName		Table name
 	 *	@param		array			$columns		List of table columns
 	 *	@param		string			$primaryKey		Name of the primary key of this table
 	 *	@param		int|string|NULL	$focus			Focused primary key on start up
 	 *	@return		void
 	 */
-	public function __construct( Connection $dbc, string $tableName, array $columns, string $primaryKey, int|string $focus = NULL )
+	public function __construct( Connection|PDO $dbc, string $tableName, array $columns, string $primaryKey, int|string $focus = NULL )
 	{
 		$this->setDbConnection( $dbc );
 		$this->setTableName( $tableName );
@@ -259,10 +259,10 @@ abstract class Abstraction
 	/**
 	 *	Setting a reference to a database connection.
 	 *	@access		public
-	 *	@param		Connection			$dbc			Database connection resource object
+	 *	@param		Connection|PDO		$dbc			Database connection resource object
 	 *	@return		static
 	 */
-	public function setDbConnection( Connection $dbc ): static
+	public function setDbConnection( Connection|PDO $dbc ): static
 	{
 		$this->dbc = $dbc;
 		return $this;
