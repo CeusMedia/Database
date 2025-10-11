@@ -127,9 +127,9 @@ class Reader extends Abstraction
 		//  render HAVING clause if needed
 		$partHaving	= 0 !== count( $having ) ? ' HAVING '.join( ' AND ', $having ) : '';
 		//  get enumeration of masked column names
-		$columns	= $this->getColumnEnumeration( $columns );
+		$columnList	= $this->getColumnEnumeration( $columns );
 		//  render base query
-		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName();
+		$query		= 'SELECT '.$columnList.' FROM '.$this->getTableName();
 
 		//  append rendered conditions, orders, limits, groupings and having
 		$query		= $query.$conditions.$groupings.$partHaving.$orders.$limits;
@@ -225,6 +225,7 @@ class Reader extends Abstraction
 	 *	@param		array	$fields		List of column, otherwise all
 	 *	@return		array|object|NULL
 	 *	@todo		implement using given fields
+	 *	@throws		RuntimeException	If no index has been focused
 	 */
 	public function get( bool $first = TRUE, array $orders = [], array $limits = [], array $fields = [] ): object|array|NULL
 	{
@@ -256,11 +257,11 @@ class Reader extends Abstraction
 	 *	@param		array		$orders			Map of order relations
 	 *	@param		array		$limits			Array of limit conditions
 	 *	@return		array		List of distinct column values
+	 *	@throws		DomainException				If column is neither a defined column nor *
 	 */
 	public function getDistinctColumnValues( string $column, array $conditions = [], array $orders = [], array $limits = [] ): array
 	{
-		$columns	= [$column];
-		$columns	= $this->validateColumns( $columns );
+		$columns	= $this->validateColumns( [$column] );
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		$conditions	= 0 !== strlen( $conditions ) ? ' WHERE '.$conditions : '';
 		$orders		= $this->getOrderCondition( $orders );
@@ -278,14 +279,13 @@ class Reader extends Abstraction
 	 *	Returns data of focused keys.
 	 *	@access		public
 	 *	@return		bool
-	 *	@todo		implement using given fields
 	 */
 	public function has(): bool
 	{
 		$this->validateFocus();
 		$conditions	= $this->getConditionQuery();
 //		$conditions	= $this->getConditionQuery( $conditions, FALSE, TRUE, TRUE );
-		$query		= 'SELECT COUNT(*) FROM '.$this->getTableName().' WHERE '.$conditions;
+		$query		= 'SELECT COUNT('.$this->primaryKey.') FROM '.$this->getTableName().' WHERE '.$conditions;
 		$statement	= $this->dbc->prepare( $query );
 		$statement->execute();
 		/** @var array<int,int> $result */
