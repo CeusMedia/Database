@@ -105,11 +105,11 @@ abstract class Table
 	/**
 	 *	Constructor.
 	 *	@access		public
-	 *	@param		Connection|PDO			$dbc		PDO database connection object
+	 *	@param		Connection|PDO		$dbc		PDO database connection object
 	 *	@param		?string				$prefix		Table name prefix
 	 *	@param		int|string|NULL		$id			ID to focus on
 	 *	@return		void
-	 *	@throws		ReflectionException
+	 *	@throws		ReflectionException	if cache setup fails to create cache backend by set cache adapter class
 	 */
 	public function __construct( Connection|PDO $dbc, ?string $prefix = NULL, int|string $id = NULL )
 	{
@@ -124,12 +124,14 @@ abstract class Table
 	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function add( array|object $data, bool $stripTags = TRUE ): int
 	{
-		$id	= $this->writer->insert( $data, $stripTags );
-		$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
+		try{
+			$id	= $this->writer->insert( $data, $stripTags );
+			$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
+		}
+		catch( SimpleCacheInvalidArgumentException ){}
 		return $id;
 	}
 
@@ -186,7 +188,6 @@ abstract class Table
 	 *	@param		array|object	$data			Data to edit
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
 	 *	@return		integer			Number of changed rows
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function edit( int|string $id, array|object $data, bool $stripTags = TRUE ): int
 	{
@@ -197,7 +198,10 @@ abstract class Table
 			$result	= $this->writer->update( $data, $stripTags );
 		$this->writer->defocus();
 		$this->reader->defocus();
-		$this->cache->delete( $this->cacheKey.$id );
+		try{
+			$this->cache->delete( $this->cacheKey.$id );
+		}
+		catch( SimpleCacheInvalidArgumentException ){}
 		return $result;
 	}
 
@@ -221,7 +225,6 @@ abstract class Table
 	 *	@param		integer|string	$id				ID to focus on
 	 *	@param		string			$field			Single Field to return
 	 *	@return		object|array|string|int|float|bool|NULL
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function get( int|string $id, string $field = '' ): float|object|array|bool|int|string|null
 	{
@@ -236,7 +239,10 @@ abstract class Table
 			/** @var object|array $data */
 			$data	= $this->reader->get();
 			$this->reader->defocus();
-			$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
+			try{
+				$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
+			}
+			catch( SimpleCacheInvalidArgumentException ){}
 		}
 		if( NULL !== $field && 0 !== strlen( trim( $field ) ) )
 			return $this->getFieldFromResult( $data, $field );
@@ -450,12 +456,15 @@ abstract class Table
 	 *	Indicates whether a table row is existing by ID.
 	 *	@param		int|string		$id				ID to focus on
 	 *	@return		boolean
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function has( int|string $id ): bool
 	{
-		if( $this->cache->has( $this->cacheKey.$id ) )
-			return TRUE;
+		try{
+			if( $this->cache->has( $this->cacheKey.$id ) )
+				return TRUE;
+		}
+		catch( SimpleCacheInvalidArgumentException ){}
+
 		$this->reader->focusPrimary( $id );
 		$result	= $this->reader->has();
 		$this->reader->defocus();
@@ -490,7 +499,6 @@ abstract class Table
 	 *	@access		public
 	 *	@param		int|string		$id				ID to focus on
 	 *	@return		boolean
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	public function remove( int|string $id ): bool
 	{
@@ -505,7 +513,11 @@ abstract class Table
 		}
 		$this->reader->defocus();
 		$this->writer->defocus();
-		$this->cache->delete( $this->cacheKey.$id );
+		try{
+			$this->cache->delete( $this->cacheKey.$id );
+		}
+		catch( SimpleCacheInvalidArgumentException ){}
+
 		return $result;
 	}
 
@@ -515,7 +527,7 @@ abstract class Table
 	 *	@param		string					$key			Key of Index
 	 *	@param		float|array|int|string	$value			Value(s) of Index
 	 *	@return		integer
-	 *	@throws		SimpleCacheInvalidArgumentException
+	 *	@throws		DomainException			if given column is not a defined column
 	 */
 	public function removeByIndex( string $key, float|array|int|string $value ): int
 	{
@@ -532,7 +544,7 @@ abstract class Table
 	 *	@access		public
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@return		integer			Number of removed entries
-	 *	@throws		SimpleCacheInvalidArgumentException
+	 *	@throws		DomainException	if a given column is not a defined column
 	 */
 	public function removeByIndices( array $indices ): int
 	{
@@ -552,7 +564,6 @@ abstract class Table
 	 *	@param		object		$entity
 	 *	@param		bool		$stripTags
 	 *	@return		bool
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 *	@throws		ReflectionException
 	 */
 	public function save( object $entity, bool $stripTags = TRUE ): bool
@@ -884,7 +895,6 @@ abstract class Table
 
 	/**
 	 *	@return		int
-	 *	@throws		SimpleCacheInvalidArgumentException
 	 */
 	private function removeBySetFocus(): int
 	{
@@ -898,7 +908,10 @@ abstract class Table
 				PDO::FETCH_CLASS, PDO::FETCH_OBJ	=> get_object_vars( $row )[$this->primaryKey],
 				default								=> $row[$this->primaryKey],
 			};
-			$this->cache->delete( $this->cacheKey.$id );
+			try{
+				$this->cache->delete( $this->cacheKey.$id );
+			} catch ( SimpleCacheInvalidArgumentException $e ){
+			}
 		}
 		return $number;
 	}
