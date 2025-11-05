@@ -95,6 +95,10 @@ class Writer extends Abstraction
 			//  no Data given for Column
 			if( !isset( $data[$column] ) )
 				continue;
+			//  don't write primary key, if set to auto increment
+			if( $column === $this->primaryKey && $this->autoIncrementPrimaryKey )
+				continue;
+
 			$value = $data[$column];
 			if( $stripTags )
 				$value = strip_tags( $value );

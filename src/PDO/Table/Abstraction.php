@@ -48,6 +48,9 @@ abstract class Abstraction
 	/**	@var	object|NULL					$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
 	protected ?object $fetchEntityObject	= NULL;
 
+	/**	@var	bool						$autoIncrementPrimaryKey */
+	protected bool $autoIncrementPrimaryKey	= TRUE;
+
 	/**
 	 *	Constructor.
 	 *
@@ -239,6 +242,19 @@ abstract class Abstraction
 		if( !is_null( $index ) && 0 !== strlen( trim( $index ) ) && !array_key_exists( $index, $this->focusedIndices ) )
 			return FALSE;
 		return TRUE;
+	}
+
+	/**
+	 *	Mark that primary key values will be created by the database system itself, or not.
+	 *	Will remove given primary key values on inserts.
+	 *	Enabled by default.
+	 *	@param		bool		$switch
+	 *	@return		static
+	 */
+	public function setAutoIncrementPrimaryKey( bool $switch ): static
+	{
+		$this->autoIncrementPrimaryKey	= $switch;
+		return $this;
 	}
 
 	/**
