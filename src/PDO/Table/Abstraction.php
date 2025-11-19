@@ -48,9 +48,6 @@ abstract class Abstraction
 	/**	@var	object|NULL					$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
 	protected ?object $fetchEntityObject	= NULL;
 
-	/**	@var	bool						$autoIncrementPrimaryKey */
-	protected bool $autoIncrementPrimaryKey	= TRUE;
-
 	/**
 	 *	Constructor.
 	 *
@@ -100,7 +97,7 @@ abstract class Abstraction
 	 *	@param		string					$column			Index column name
 	 *	@param		string|int|float|array	$value			Index to focus on
 	 *	@return		self
-	 *	@throws		DomainException				if given column is not a defined column
+	 *	@throws		DomainException				if given column is not a defined indexed column
 	 */
 	public function focusIndex( string $column, string|int|float|array $value ): self
 	{
@@ -242,19 +239,6 @@ abstract class Abstraction
 		if( !is_null( $index ) && 0 !== strlen( trim( $index ) ) && !array_key_exists( $index, $this->focusedIndices ) )
 			return FALSE;
 		return TRUE;
-	}
-
-	/**
-	 *	Mark that primary key values will be created by the database system itself, or not.
-	 *	Will remove given primary key values on inserts.
-	 *	Enabled by default.
-	 *	@param		bool		$switch
-	 *	@return		static
-	 */
-	public function setAutoIncrementPrimaryKey( bool $switch ): static
-	{
-		$this->autoIncrementPrimaryKey	= $switch;
-		return $this;
 	}
 
 	/**
@@ -703,6 +687,8 @@ abstract class Abstraction
 
 	/**
 	 *	Checks columns names for querying methods (find,get), sets wildcard if empty or throws an exception if unacceptable.
+	 *	If not wildcard and fetching into entity class is enabled, all mandatory fields of entity are added to the column list.
+	 *	This is necessary to create at least valid entities on fetch.
 	 *	@access		protected
 	 *	@param		array|string|NULL		$columns		String or array of column names to validate
 	 *	@return		array
@@ -727,18 +713,33 @@ abstract class Abstraction
 				continue;
 			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 		}
+
+		if( ['*'] !== $columns && PDO::FETCH_CLASS === $this->fetchMode )
+			if( isset( $this->fetchEntityClass::$mandatoryFields ) )
+				foreach( $this->fetchEntityClass::$mandatoryFields as $column )
+					if( !in_array( $column, $columns, TRUE ) )
+						$columns[] = $column;
+
 		return $columns;
 	}
 
 	/**
-	 *	Checks if a focus is set for following operation and throws an exception if not.
+	 *	Checks if a focus is set for following operation.
+	 *	Throws an exception if not in strict mode.
+	 *	Strict mode is enabled by default.
+	 *
 	 *	@access		protected
-	 *	@throws		RuntimeException
-	 *	@return		void
+	 *	@param		bool		$strict		Flag: throw exception on error, default: yes
+	 *	@throws		RuntimeException		If no index has been focused
+	 *	@return		bool
 	 */
-	protected function validateFocus(): void
+	protected function validateFocus( bool $strict = TRUE ): bool
 	{
-		if( !$this->isFocused() )
-			throw new RuntimeException( 'No Primary Key or Index focused for Table "'.$this->tableName.'"' );
+		if( !$this->isFocused() ){
+			if( $strict )
+				throw new RuntimeException( 'No Primary Key or Index focused for Table "'.$this->tableName.'"' );
+			return FALSE;
+		}
+		return TRUE;
 	}
 }

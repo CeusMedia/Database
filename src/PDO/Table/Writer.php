@@ -45,6 +45,9 @@ use Traversable;
  */
 class Writer extends Abstraction
 {
+	/**	@var	bool						$autoIncrementPrimaryKey */
+	protected bool $autoIncrementPrimaryKey	= TRUE;
+
 	/**
 	 *	Deletes focused Rows in this Table and returns number of affected Rows.
 	 *	@access		public
@@ -130,6 +133,19 @@ class Writer extends Abstraction
 			$values,
 		] ) );
 		return (int) $this->dbc->lastInsertId();
+	}
+
+	/**
+	 *	Mark that primary key values will be created by the database system itself, or not.
+	 *	Will remove given primary key values on inserts.
+	 *	Enabled by default.
+	 *	@param		bool		$switch
+	 *	@return		static
+	 */
+	public function setAutoIncrementPrimaryKey( bool $switch ): static
+	{
+		$this->autoIncrementPrimaryKey	= $switch;
+		return $this;
 	}
 
 	/**

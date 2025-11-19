@@ -69,6 +69,9 @@ abstract class Table
 	/**	@var	string										$primaryKey		Primary Key of Database Table */
 	protected string $primaryKey							= '';
 
+	/**	@var	bool										$autoincrememtPrimaryKey */
+	protected bool $autoIncrementPrimaryKey					= TRUE;
+
 	/**	@var	TableReader									$reader			Database Table Reader Object for reading from Database Table */
 	protected TableReader $reader;
 
@@ -128,6 +131,7 @@ abstract class Table
 	public function add( array|object $data, bool $stripTags = TRUE ): int
 	{
 		try{
+//			$this->removePrimaryKeyValueOnInsertIfAutoIncrement( $data );
 			$id	= $this->writer->insert( $data, $stripTags );
 			$this->cache->set( $this->cacheKey.$id, serialize( $this->get( $id ) ) );
 		}
@@ -581,11 +585,15 @@ abstract class Table
 			] ) );
 		$reflection	= new ReflectionObject( $entity );
 		$property	= $reflection->getProperty( $this->primaryKey );
-		/** @var integer|string $id */
+		/** @var int|string $id */
 		$id			= $property->getValue( $entity );
 		return 0 !== $this->edit( $id, $entity, $stripTags );
 	}
 
+	/**
+	 *	@param		SimpleCacheInterface		$cache
+	 *	@return		self<object>
+	 */
 	public function setCache( SimpleCacheInterface $cache ): self
 	{
 		$this->cache	= $cache;
@@ -824,6 +832,29 @@ abstract class Table
 	}
 
 	/**
+	 *	In INSERT on a table with AUTOINCREMENT primary key, entity data must not have primary key value from entity default (0).
+	 *	Thus, the primary key pair will be removed, if no sane value is set.
+	 *	@param		object|array		$data		Reference to entity object or data array
+	 *	@return		void
+	 * 	@deprecated not needed anymore, done on insert and update in table writer
+	 */
+	protected function removePrimaryKeyValueOnInsertIfAutoIncrement( object|array & $data ): void
+	{
+		if( !$this->autoIncrementPrimaryKey )
+			return;
+
+		if( is_object( $data ) ){
+			if( property_exists( $data, $this->primaryKey ) && isset( $data->{$this->primaryKey} ) )
+				if( '0' === (string) $data->{$this->primaryKey} )
+					unset( $data->{$this->primaryKey} );
+		} else {
+			if( array_key_exists( $this->primaryKey, $data ) )
+				if( '0' === (string) $data[$this->primaryKey] )
+					unset( $data[$this->primaryKey] );
+		}
+	}
+
+	/**
 	 *	@access		protected
 	 *	@return		self
 	 *	@throws		ReflectionException
@@ -868,14 +899,18 @@ abstract class Table
 			$this->primaryKey,
 			$id
 		);
+
 		if( 0 !== $this->fetchMode )
 			$this->reader->setFetchMode($this->fetchMode);
-		$this->reader->setIndices( $this->indices );
-		$this->writer->setIndices( $this->indices );
 		if( NULL !== $this->fetchEntityClass )
 			$this->reader->setFetchEntityClass( $this->fetchEntityClass );
 		if( NULL !== $this->fetchEntityObject )
 			$this->reader->setFetchEntityObject( $this->fetchEntityObject );
+
+		$this->reader->setIndices( $this->indices );
+		$this->writer->setIndices( $this->indices );
+
+		$this->writer->setAutoIncrementPrimaryKey( $this->autoIncrementPrimaryKey );
 		return $this;
 	}
 
@@ -883,9 +918,9 @@ abstract class Table
 
 	private function checkTableSetup(): void
 	{
-		if( 0 === strlen( trim( $this->name ) ) )
+		if( '' === trim( $this->name ) )
 			throw new RuntimeException( 'No table name set' );
-		if( 0 === count( $this->columns ) )
+		if( [] === $this->columns )
 			throw new RuntimeException( 'No table columns set' );
 	}
 
