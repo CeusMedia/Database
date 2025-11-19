@@ -153,6 +153,9 @@ class Writer extends Abstraction
 		foreach( $this->columns as $column ){
 			if( !array_key_exists($column, $data) )
 				continue;
+			//  don't write primary key, if set to auto increment
+			if( $column === $this->primaryKey && $this->autoIncrementPrimaryKey )
+				continue;
 			$value	= $data[$column];
 			if( $stripTags && $value !== NULL )
 				$value	= strip_tags( $value );
