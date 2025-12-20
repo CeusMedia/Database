@@ -234,7 +234,7 @@ class Reader extends Abstraction
 		//  render WHERE clause if needed, cursored, without functions
 		$conditions	= $this->getConditionQuery();
 		$orders		= $this->getOrderCondition( $orders );
-		$limits		= $this->getLimitCondition( $limits );
+		$limits		= $this->getLimitCondition( $first ? [0, 1] : $limits );
 		//  get enumeration of masked column names
 		$columns	= $this->getColumnEnumeration( 0 !== count( $fields ) ? $fields : $this->columns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$orders.$limits;
