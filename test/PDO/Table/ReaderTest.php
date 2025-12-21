@@ -10,8 +10,11 @@
 
 namespace CeusMedia\DatabaseTest\PDO\Table;
 
+use CeusMedia\Common\ADT\Collection\Dictionary;
 use CeusMedia\Database\PDO\Connection as PdoConnection;
 use CeusMedia\Database\PDO\Table\Reader as PdoTableReader;
+use CeusMedia\DatabaseTest\PDO\AdvancedTransactionEntity;
+use CeusMedia\DatabaseTest\PDO\TransactionEntity;
 use CeusMedia\DatabaseTest\PDO\TestCase;
 use mysqli;
 
@@ -480,7 +483,7 @@ class ReaderTest extends TestCase
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithIndexTest');" );
 		$this->reader->focusIndex( 'topic', 'start' );
 
-		/** @var array $result */
+		/** @var int $result */
 		$result		= $this->reader->get();
 		self::assertCount( 4, $result );
 
@@ -494,6 +497,81 @@ class ReaderTest extends TestCase
 		$result		= $this->reader->get( FALSE );
 		self::assertCount( 1, $result );
 		self::assertCount( 4, $result[0] );
+	}
+
+	/**
+	 *	Tests Method 'get' using fetch mode "class" to use advanced entity class.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetWithIndex_withAdvancedEntity()
+	{
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$this->reader->setFetchEntityClass( AdvancedTransactionEntity::class );
+
+		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithIndexTest');" );
+		$this->reader->focusIndex( 'topic', 'start' );
+
+		/** @var AdvancedTransactionEntity $result */
+		$result		= $this->reader->get();
+		self::assertInstanceOf( AdvancedTransactionEntity::class, $result );
+		self::assertCount( 4, $result );
+
+		/** @var AdvancedTransactionEntity $result */
+		$result		= $this->reader->get();
+		self::assertCount( 4, $result );
+
+		self::assertEquals( get_object_vars( $result ), $result->toArray() );
+		self::assertEquals( new Dictionary( get_object_vars( $result ) ), $result->toDictionary() );
+
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE );
+		self::assertCount( 2, $result );
+		self::assertInstanceOf( AdvancedTransactionEntity::class, $result[0] );
+		self::assertCount( 4, $result[0] );
+
+		$this->reader->focusIndex( 'label', 'getWithIndexTest' );
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE );
+		self::assertCount( 1, $result );
+		self::assertInstanceOf( AdvancedTransactionEntity::class, $result[0] );
+		self::assertCount( 4, $result[0] );
+	}
+
+	/**
+	 *	Tests Method 'get' using fetch mode "class" to use pure entity class.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetWithIndex_withPureEntity()
+	{
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$this->reader->setFetchEntityClass( TransactionEntity::class );
+
+		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('start','getWithIndexTest');" );
+		$this->reader->focusIndex( 'topic', 'start' );
+
+		/** @var TransactionEntity $result */
+		$result		= $this->reader->get();
+		self::assertInstanceOf( TransactionEntity::class, $result );
+		self::assertCount( 4, get_object_vars( $result ) );
+
+		/** @var int $result */
+		$result		= $this->reader->get();
+		self::assertCount( 4, get_object_vars( $result ) );
+
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE );
+		self::assertCount( 2, $result );
+		self::assertInstanceOf( TransactionEntity::class, $result[0] );
+		self::assertCount( 4, get_object_vars( $result[0] ) );
+
+		$this->reader->focusIndex( 'label', 'getWithIndexTest' );
+		/** @var array $result */
+		$result		= $this->reader->get( FALSE );
+		self::assertCount( 1, $result );
+		self::assertInstanceOf( TransactionEntity::class, $result[0] );
+		self::assertCount( 4, get_object_vars( $result[0] ) );
 	}
 
 	/**

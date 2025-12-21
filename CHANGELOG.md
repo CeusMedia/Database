@@ -7,13 +7,14 @@ PDO:
 	- Table Writer insert: Clear given primary key value if new flag autoIncrementPrimaryKey
 	- Table: On checkIndices calls, use primary key as index, too.
 	- Table: Catch cache related exceptions.
+	- Add tests for reader with fetched entities.
 	- Move auto increment handling to table writer.
 	- Move fetch handling to table reader.
 	- Fig migration bug.
 - General:
 	- Fix bug in composer file.
 	- Reach PHPStan (v2) level 9+strict.
-	- Test code coverage: 40%
+	- Test code coverage: 41%
 	- Update readme file.
 
 ## Version 0.6.2

@@ -171,7 +171,7 @@ class WriterTest extends TestCase
 	public function testInsert_withAdvancedEntity()
 	{
 		$data	= ['topic' => 'insert', 'label' => 'insertTest'];
-		$entity	= new AdvancedTransactionEntity( $data );
+		$entity	= AdvancedTransactionEntity::fromArray( $data );
 
 		self::assertEquals( 2, $this->writer->insert( $entity ) );
 		self::assertEquals( 2, $this->reader->count() );

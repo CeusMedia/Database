@@ -369,7 +369,7 @@ abstract class Table
 		if( is_string( $fields ) )
 			$fields	= 0 !== strlen( trim( $fields ) ) ? [trim( $fields )] : [];
 		foreach( $fields as $nr => $field )
-			$fields[$nr]	= $this->checkField( $field );
+			$fields[$nr]	= (string) $this->checkField( $field );
 		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
 		foreach( $indices as $key => $value )
 			$this->reader->focusIndex( $key, $value );
