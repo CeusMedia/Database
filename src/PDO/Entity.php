@@ -56,7 +56,9 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	 */
 	public function count(): int
 	{
-		return count( get_object_vars( $this ) );
+		$properties	= get_object_vars( $this );
+		unset( $properties['_iteratorPosition'] );
+		return count( $properties );
 	}
 
 	/**
@@ -79,7 +81,9 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	 */
 	public function getKeys(): array
 	{
-		return array_keys( get_object_vars( $this ) );
+		$properties	= get_object_vars( $this );
+		unset( $properties['_iteratorPosition'] );
+		return array_keys( $properties );
 	}
 
 	/**
@@ -115,9 +119,9 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 		 *	@var		string	$key
 		 *	@var		int|float|string|bool|array|object|NULL		$value
 		 */
-		/** @noinspection PhpLoopCanBeConvertedToArrayMapInspection */
 		foreach( get_object_vars( $this ) as $key => $value )
-			$list[$key]	= $value;
+			if( '_iteratorPosition' !== $key )
+				$list[$key]	= $value;
 		return $list;
 	}
 
