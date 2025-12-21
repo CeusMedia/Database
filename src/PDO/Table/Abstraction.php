@@ -7,14 +7,11 @@ namespace CeusMedia\Database\PDO\Table;
 
 use CeusMedia\Database\PDO\Connection;
 use DomainException;
-use Error;
-use Exception;
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
 use RangeException;
 use RuntimeException;
-use Throwable;
 
 abstract class Abstraction
 {
@@ -137,9 +134,9 @@ abstract class Abstraction
 	/**
 	 *	Returns reference the database connection.
 	 *	@access		public
-	 *	@return		Connection
+	 *	@return		Connection|PDO
 	 */
-	public function getDBConnection(): Connection
+	public function getDBConnection(): Connection|PDO
 	{
 		return $this->dbc;
 	}
@@ -203,7 +200,9 @@ abstract class Abstraction
 	 */
 	public function getLastQuery(): ?string
 	{
-		return $this->dbc->lastQuery;
+		if( $this->dbc instanceof Connection )
+			return $this->dbc->lastQuery;
+		return NULL;
 	}
 
 	/**
@@ -358,101 +357,6 @@ abstract class Abstraction
 	}
 
 	//  --  PROTECTED  --  //
-
-	/**
-	 *	@param		PDOStatement	$resultSet
-	 *	@param		bool			$manuallyOnFail		Fetch manually of PDO fetching failed, default: no
-	 *	@return		array
-	 *	@throws		RuntimeException	if fetching fails
-	 */
-	protected function applyFetchModeOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail = FALSE ): array
-	{
-		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass )
-			return $this->applyFetchModeClassOnResultSet( $resultSet, $manuallyOnFail );
-
-		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
-			return $this->applyFetchModeIntoOnResultSet( $resultSet );
-
-		return $resultSet->fetchAll( $this->fetchMode );
-	}
-
-	/**
-	 *	@param		PDOStatement	$resultSet
-	 *	@param		bool			$manuallyOnFail
-	 *	@return		array
-	 *	@throws		RuntimeException	if fetching fails
-	 */
-	protected function applyFetchModeClassOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail ): array
-	{
-		try{
-			if( NULL === $this->fetchEntityClass )
-				throw new RuntimeException( 'No entity class set' );
-			/** @var array<object> $fetched */
-			$fetched	= $resultSet->fetchAll( PDO::FETCH_CLASS, $this->fetchEntityClass );
-		}
-		/** @phpstan-ignore-next-line  */
-		catch( Error|Exception|Throwable $e ){
-			if( $manuallyOnFail )
-				return $this->applyFetchModeClassOnResultSetManually( $resultSet );
-			throw new RuntimeException( vsprintf( 'Could not create entity of class %s on fetch (%s)', [
-				$this->fetchEntityClass,
-				$e->getMessage()
-			] ), 0, $e );
-		}
-		foreach( $fetched as $entity )
-			if( method_exists( $entity, 'onFetch' ) )
-				$entity->onFetch( $this, $entity );
-		return $fetched;
-	}
-
-	/**
-	 *	Creates list of entities on fetched results.
-	 *	If fetching using PDO failed, this method can try to fetch into a manually created entity object.
-	 *	@param		PDOStatement	$resultSet
-	 *	@return		array
-	 *	@throws		RuntimeException	if fetching fails
-	 */
-	protected function applyFetchModeClassOnResultSetManually( PDOStatement $resultSet ): array
-	{
-		$fetched	= [];
-		foreach( $resultSet->fetchAll( PDO::FETCH_ASSOC ) as $row ){
-			/** @var object $entity */
-			$entity	= new $this->fetchEntityClass();
-			foreach( $row as $key => $value )
-				if( property_exists( $entity, $key ) )
-					/** @phpstan-ignore-next-line  */
-					$entity->{$key} = $value;
-			if( method_exists( $entity, 'onFetch' ) )
-				$entity->onFetch( $this, $entity );
-			$fetched[] = $entity;
-		}
-		return $fetched;
-	}
-
-	/**
-	 *	@param		PDOStatement		$resultSet
-	 *	@return		object[]
-	 *	@throws		RuntimeException	if fetching fails
-	 */
-	protected function applyFetchModeIntoOnResultSet( PDOStatement $resultSet ): array
-	{
-		try{
-			/** @var array<object> $fetched */
-			$fetched	= $resultSet->fetchAll( PDO::FETCH_INTO );
-		}
-		/** @phpstan-ignore-next-line */
-		catch( Error|Exception|Throwable $e ){
-			throw new RuntimeException( vsprintf( 'Could not extend entity object of class %s on fetch (%s)', [
-				/** @phpstan-ignore-next-line */
-				$this->fetchEntityObject::class,
-				$e->getMessage()
-			] ), 0, $e );
-		}
-		foreach( $fetched as $entity )
-			if( method_exists( $entity, 'onFetch' ) )
-				$entity->onFetch( $this, $entity );
-		return $fetched;
-	}
 
 	/**
 	 *	@param		PDOStatement		$statement
@@ -628,7 +532,6 @@ abstract class Abstraction
 			$valueString	= $this->secureValue( $matches[3][0] );
 			if( '' === $matches[2][0] )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value for column '.$column );
-//				trigger_error( 'Missing whitespace between operator and value for column '.$column, E_USER_DEPRECATED );
 		}
 		else if( 1 === preg_match( $patternOperators, $valueString, $result ) ){
 			$matches	= [];
@@ -637,7 +540,6 @@ abstract class Abstraction
 			$valueString	= $this->secureValue( $matches[3][0] );
 			if( '' === $matches[2][0] )
 				throw new InvalidArgumentException( 'Missing whitespace between operator and value for column '.$column );
-//				trigger_error( 'Missing whitespace between operator and value for column '.$column, E_USER_DEPRECATED );
 		}
 		else if( 1 === preg_match( $patternLike, $valueString, $result ) ){
 			$matches	= [];
