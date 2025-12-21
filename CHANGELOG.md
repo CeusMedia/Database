@@ -1,3 +1,21 @@
+## Version 0.6.5
+PDO:
+	- Fix performance bug at Reader::get.
+	- Fix bug in table condition query part for BETWEEN operation.
+	- Table: Allow pure PDO connection.
+	- Table Reader: Add second fetch strategy.
+	- Table Writer insert: Clear given primary key value if new flag autoIncrementPrimaryKey
+	- Table: On checkIndices calls, use primary key as index, too.
+	- Table: Catch cache related exceptions.
+	- Move auto increment handling to table writer.
+	- Move fetch handling to table reader.
+	- Fig migration bug.
+- General:
+	- Fix bug in composer file.
+	- Reach PHPStan (v2) level 9+strict.
+	- Test code coverage: 40%
+	- Update readme file.
+
 ## Version 0.6.2
 - General:
 	- Import SQLSTATE from CeusMedia::Common.

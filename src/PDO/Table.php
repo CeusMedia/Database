@@ -42,6 +42,7 @@ use RangeException;
 use ReflectionException;
 use ReflectionObject;
 use RuntimeException;
+use stdClass;
 
 /**
  *	Abstract database table.
@@ -591,7 +592,7 @@ abstract class Table
 
 	/**
 	 *	@param		SimpleCacheInterface		$cache
-	 *	@return		self<object>
+	 *	@return		self
 	 */
 	public function setCache( SimpleCacheInterface $cache ): self
 	{
@@ -841,8 +842,8 @@ abstract class Table
 	{
 		if( !$this->autoIncrementPrimaryKey )
 			return;
-
 		if( is_object( $data ) ){
+			/** @var stdClass $data */
 			if( property_exists( $data, $this->primaryKey ) && isset( $data->{$this->primaryKey} ) )
 				if( '0' === (string) $data->{$this->primaryKey} )
 					unset( $data->{$this->primaryKey} );
