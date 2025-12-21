@@ -61,7 +61,7 @@ class Writer extends Abstraction
 #		$has	= $this->get( FALSE );
 #		if( !$has )
 #			throw new \InvalidArgumentException( 'Focused Indices are not existing.' );
-		return $this->dbc->exec( $query );
+		return (int) $this->dbc->exec( $query );
 	}
 
 	/**
@@ -75,7 +75,7 @@ class Writer extends Abstraction
 		//  render WHERE conditions, uncursored, without functions
 		$conditions		= $this->getConditionQuery( $where, FALSE, FALSE );
 		$query			= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
-		$affectedRows	= $this->dbc->exec( $query );
+		$affectedRows	= (int) $this->dbc->exec( $query );
 		$this->defocus();
 		return $affectedRows;
 	}
@@ -179,10 +179,10 @@ class Writer extends Abstraction
 			$updates[] = '`'.$column.'`='.$value;
 		}
 		$affectedRows   = 0;
-		if( 0 !== count( $updates ) ){
+		if( [] !== $updates ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$this->getConditionQuery();
-			$affectedRows	= $this->dbc->exec( $query );
+			$affectedRows	= (int) $this->dbc->exec( $query );
 		}
 		return $affectedRows;
 	}
@@ -216,10 +216,10 @@ class Writer extends Abstraction
 			}
 		}
 		$affectedRows   = 0;
-		if( 0 !== count( $updates ) ){
+		if( [] !== $updates ){
 			$updates	= implode( ', ', $updates );
 			$query		= 'UPDATE '.$this->getTableName().' SET '.$updates.' WHERE '.$conditions;
-			$affectedRows		= $this->dbc->exec( $query );
+			$affectedRows	= (int) $this->dbc->exec( $query );
 		}
 		return $affectedRows;
 	}
