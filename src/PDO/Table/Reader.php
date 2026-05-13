@@ -320,10 +320,10 @@ class Reader extends Abstraction
 	 */
 	protected function applyFetchModeOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail = FALSE ): array
 	{
-		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass )
+		if( $this->fetchMode & PDO::FETCH_CLASS && NULL !== $this->fetchEntityClass )
 			return $this->applyFetchModeClassOnResultSet( $resultSet, $manuallyOnFail );
 
-		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
+		if( $this->fetchMode & PDO::FETCH_INTO && NULL !== $this->fetchEntityObject )
 			return $this->applyFetchModeIntoOnResultSet( $resultSet );
 
 		return $resultSet->fetchAll( $this->fetchMode );
@@ -337,13 +337,20 @@ class Reader extends Abstraction
 	 */
 	protected function applyFetchModeClassOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail ): array
 	{
+		if( NULL === $this->fetchEntityClass )
+			throw new RuntimeException( 'No entity class set' );
 		try{
-			if( NULL === $this->fetchEntityClass )
-				throw new RuntimeException( 'No entity class set' );
-			/** @var array<object> $fetched */
-			$fetched	= $resultSet->fetchAll( PDO::FETCH_CLASS, $this->fetchEntityClass );
+			try{
+				/** @var array<object> $fetched */
+				$fetched	= $resultSet->fetchAll( PDO::FETCH_CLASS, $this->fetchEntityClass );
+			}
+			catch( \PDOException $e ){
+				$fetched	= array_map( function( array $fetchedRow ){
+					return new $this->fetchEntityClass( $fetchedRow );
+				}, $resultSet->fetchAll( PDO::FETCH_ASSOC ) );
+			}
 		}
-			/** @phpstan-ignore-next-line  */
+		/** @phpstan-ignore-next-line  */
 		catch( Error|Exception|Throwable $e ){
 			if( $manuallyOnFail )
 				return $this->applyFetchModeClassOnResultSetManually( $resultSet );
@@ -371,10 +378,12 @@ class Reader extends Abstraction
 		foreach( $resultSet->fetchAll( PDO::FETCH_ASSOC ) as $row ){
 			/** @var object $entity */
 			$entity	= new $this->fetchEntityClass();
+			$data = [];
 			foreach( $row as $key => $value )
 				if( property_exists( $entity, $key ) )
-					/** @phpstan-ignore-next-line  */
-					$entity->{$key} = $value;
+					$data[$key]	= $value;
+			$entity	= new $this->fetchEntityClass( $data );
+
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
 			$fetched[] = $entity;

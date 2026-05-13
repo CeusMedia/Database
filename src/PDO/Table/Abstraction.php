@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 namespace CeusMedia\Database\PDO\Table;
 
+use CeusMedia\Common\ADT\Bitmask;
 use CeusMedia\Database\PDO\Connection;
 use DomainException;
 use InvalidArgumentException;
@@ -364,9 +365,10 @@ abstract class Abstraction
 	 */
 	protected function applyFetchModeOnStatement( PDOStatement $statement ): bool
 	{
-		if( PDO::FETCH_INTO === $this->fetchMode && NULL !== $this->fetchEntityObject )
+		$mode	= new Bitmask( $this->fetchMode );
+		if( $mode->has( PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityObject );
-		if( PDO::FETCH_CLASS === $this->fetchMode && NULL !== $this->fetchEntityClass )
+		if( $mode->has( PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityClass );
 		return $statement->setFetchMode( $this->fetchMode );
 	}
@@ -510,7 +512,7 @@ abstract class Abstraction
 	 */
 	protected function realizeConditionQueryPart( string $column, string|int|float|null $value, bool $maskColumn = TRUE ): string
 	{
-		$patternBetween		= '/^(><|!><)( ?)(\d+)( ?)&( ?)(\d+)$/';
+		$patternBetween		= '/^(><|!><)( ?)(\S+)( ?)&( ?)(\S+)$/';
 		$patternBitwise		= '/^(\||&|\^|<<|>>|&~)( ?)(\d+)$/';
 		$patternOperators	= '/^(<=|>=|<|>|!=)( ?)(.+)$/';
 		$patternLike		= '/^(%|!%) (.+)$/';
@@ -616,7 +618,7 @@ abstract class Abstraction
 			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 		}
 
-		if( ['*'] !== $columns && PDO::FETCH_CLASS === $this->fetchMode )
+		if( ['*'] !== $columns && $this->fetchMode & PDO::FETCH_CLASS )
 			if( isset( $this->fetchEntityClass::$mandatoryFields ) )
 				foreach( $this->fetchEntityClass::$mandatoryFields as $column )
 					if( !in_array( $column, $columns, TRUE ) )
