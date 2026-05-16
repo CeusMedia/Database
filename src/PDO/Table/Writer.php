@@ -3,7 +3,7 @@
 /**
  *	Write Access for Database Tables.
  *
- *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2026 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2024 Christian Würker
+ *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -39,7 +39,7 @@ use Traversable;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2024 Christian Würker
+ *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -101,7 +101,9 @@ class Writer extends Abstraction
 			//  don't write primary key, if set to auto increment
 			if( $column === $this->primaryKey && $this->autoIncrementPrimaryKey )
 				continue;
-
+			//  don't write to generated columns
+			if( in_array( $column, $this->generated ) )
+				continue;
 			$value = $data[$column];
 			if( $stripTags )
 				$value = strip_tags( $value );
@@ -172,6 +174,9 @@ class Writer extends Abstraction
 			//  don't write primary key, if set to auto increment
 			if( $column === $this->primaryKey && $this->autoIncrementPrimaryKey )
 				continue;
+			//  don't write to generated columns
+			if( in_array( $column, $this->generated ) )
+				continue;
 			$value	= $data[$column];
 			if( $stripTags && $value !== NULL )
 				$value	= strip_tags( $value );
@@ -208,6 +213,9 @@ class Writer extends Abstraction
 		//  render WHERE conditions, uncursored, without functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		foreach( $this->columns as $column ){
+			//  don't write to generated columns
+			if( in_array( $column, $this->generated ) )
+				continue;
 			if( isset( $data[$column] ) ){
 				if( $stripTags )
 					$data[$column]	= strip_tags( $data[$column] );

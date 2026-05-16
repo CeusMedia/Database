@@ -28,6 +28,9 @@ abstract class Abstraction
 	/**	@var	array						$indices			List of indices of table */
 	protected array $indices				= [];
 
+	/** @var	array						$generated			List of generated columns */
+	protected array $generated				= [];
+
 	/**	@var	array						$focusedIndices		List of focused indices */
 	protected array $focusedIndices			= [];
 
@@ -305,6 +308,17 @@ abstract class Abstraction
 	}
 
 	/**
+	 *	Set list of generated columns.
+	 *	@param		array			$columns
+	 *	@return		static
+	 */
+	public function setGeneratedColumns( array $columns ): static
+	{
+		$this->generated	= $columns;
+		return $this;
+	}
+
+	/**
 	 *	Setting all indices of this table.
 	 *	@access		public
 	 *	@param		array		$indices		List of table indices
@@ -314,8 +328,9 @@ abstract class Abstraction
 	 */
 	public function setIndices( array $indices ): static
 	{
+		$allColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 		foreach( $indices as $index ){
-			if( !in_array( $index, $this->columns, TRUE ) )
+			if( !in_array( $index, $allColumns, TRUE ) )
 				throw new DomainException( 'Column "'.$index.'" is not existing in table "'.$this->tableName.'" and cannot be an index' );
 			if( $index === $this->primaryKey )
 				throw new DomainException( 'Column "'.$index.'" is already primary key and cannot be an index' );
@@ -384,9 +399,10 @@ abstract class Abstraction
 	 */
 	protected function getConditionQuery( array $conditions = [], bool $usePrimary = TRUE, bool $useIndices = TRUE, bool $allowFunctions = FALSE ): string
 	{
-		$columnConditions = [];
+		$columnConditions	= [];
+		$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 		//  iterate all columns
-		foreach( $this->columns as $column ){
+		foreach( $allReadableColumns as $column ){
 			//  if condition given
 			if( isset( $conditions[$column] ) ){
 				//  note condition pair
@@ -608,10 +624,12 @@ abstract class Abstraction
 		else if( NULL === $columns )
 			$columns	= ['*'];
 
+
+		$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 		if( !is_array( $columns ) )
 			throw new InvalidArgumentException( 'Column keys must be an array of column names, a column name string or "*"' );
 		foreach( $columns as $column ){
-			if( '*' === $column || in_array( $column, $this->columns, TRUE ) )
+			if( '*' === $column || in_array( $column, $allReadableColumns, TRUE ) )
 				continue;
 			if( 1 === preg_match( '/ AS /i', $column ) )
 				continue;

@@ -4,7 +4,7 @@
 /**
  *	Abstract database table.
  *
- *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2026 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2024 Christian Würker
+ *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -49,7 +49,7 @@ use stdClass;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2024 Christian Würker
+ *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -66,6 +66,9 @@ abstract class Table
 
 	/**	@var	array										$indices		List of foreign Keys of Database Table */
 	protected array $indices								= [];
+
+	/**	@var	array										$generated		List of generated columns Keys of Database Table */
+	protected array $generated								= [];
 
 	/**	@var	string										$primaryKey		Primary Key of Database Table */
 	protected string $primaryKey							= '';
@@ -909,8 +912,10 @@ abstract class Table
 			$this->reader->setFetchEntityObject( $this->fetchEntityObject );
 
 		$this->reader->setIndices( $this->indices );
-		$this->writer->setIndices( $this->indices );
+		$this->reader->setGeneratedColumns( $this->generated );
 
+		$this->writer->setIndices( $this->indices );
+//		$this->writer->setGeneratedColumns( $this->generated );
 		$this->writer->setAutoIncrementPrimaryKey( $this->autoIncrementPrimaryKey );
 		return $this;
 	}

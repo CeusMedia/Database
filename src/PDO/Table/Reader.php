@@ -6,7 +6,7 @@ declare(strict_types=1);
 /**
  *	Table with column definition and indices.
  *
- *	Copyright (c) 2007-2024 Christian Würker (ceusmedia.de)
+ *	Copyright (c) 2007-2026 Christian Würker (ceusmedia.de)
  *
  *	This program is free software: you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ declare(strict_types=1);
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2024 Christian Würker
+ *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -45,7 +45,7 @@ use Throwable;
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
- *	@copyright		2007-2024 Christian Würker
+ *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
@@ -238,8 +238,9 @@ class Reader extends Abstraction
 		$conditions	= $this->getConditionQuery();
 		$orders		= $this->getOrderCondition( $orders );
 		$limits		= $this->getLimitCondition( $first ? [0, 1] : $limits );
+		$allColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 		//  get enumeration of masked column names
-		$columns	= $this->getColumnEnumeration( 0 !== count( $fields ) ? $fields : $this->columns );
+		$columns	= $this->getColumnEnumeration( 0 !== count( $fields ) ? $fields : $allColumns );
 		$query		= 'SELECT '.$columns.' FROM '.$this->getTableName().' WHERE '.$conditions.$orders.$limits;
 		$statement	= $this->dbc->prepare( $query );
 		if( $statement->execute() ){
