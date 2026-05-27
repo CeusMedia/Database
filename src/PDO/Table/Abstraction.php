@@ -652,7 +652,7 @@ abstract class Abstraction
 			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 		}
 
-		if( ['*'] !== $columns && $this->fetchMode & PDO::FETCH_CLASS )
+		if( ['*'] !== $columns && 0 !== ( $this->fetchMode & PDO::FETCH_CLASS ) )
 			if( isset( $this->fetchEntityClass::$mandatoryFields ) )
 				foreach( $this->fetchEntityClass::$mandatoryFields as $column )
 					if( !in_array( $column, $columns, TRUE ) )
