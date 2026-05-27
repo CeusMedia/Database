@@ -464,6 +464,8 @@ abstract class Abstraction
 				 */
 				foreach( $value as $nr => $part )
 					$value[$nr]	= $this->realizeConditionQueryPart( $column, $part );
+
+				/** @var array<int,string> $value */
 				$part	= '('.implode( ' OR ', $value ).')';
 			}
 			else

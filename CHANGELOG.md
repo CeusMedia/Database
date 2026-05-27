@@ -1,3 +1,10 @@
+## Version 0.6.6
+PDO:
+	- Make table fetch mode a bit mask.
+	- Support MySQL generated columns.
+General:
+	- Update dependencies.
+
 ## Version 0.6.5
 PDO:
 	- Fix performance bug at Reader::get.
