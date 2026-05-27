@@ -12,3 +12,4 @@
 /composer.lock
 /demo/Utility/MySQL/config.ini
 /demo/Utility/MySQL/*.sql
+/.junie/

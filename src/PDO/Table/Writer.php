@@ -102,7 +102,7 @@ class Writer extends Abstraction
 			if( $column === $this->primaryKey && $this->autoIncrementPrimaryKey )
 				continue;
 			//  don't write to generated columns
-			if( in_array( $column, $this->generated ) )
+			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
 			$value = $data[$column];
 			if( $stripTags )
@@ -175,7 +175,7 @@ class Writer extends Abstraction
 			if( $column === $this->primaryKey && $this->autoIncrementPrimaryKey )
 				continue;
 			//  don't write to generated columns
-			if( in_array( $column, $this->generated ) )
+			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
 			$value	= $data[$column];
 			if( $stripTags && $value !== NULL )
@@ -214,7 +214,7 @@ class Writer extends Abstraction
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
 		foreach( $this->columns as $column ){
 			//  don't write to generated columns
-			if( in_array( $column, $this->generated ) )
+			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
 			if( isset( $data[$column] ) ){
 				if( $stripTags )

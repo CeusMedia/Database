@@ -321,10 +321,10 @@ class Reader extends Abstraction
 	 */
 	protected function applyFetchModeOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail = FALSE ): array
 	{
-		if( $this->fetchMode & PDO::FETCH_CLASS && NULL !== $this->fetchEntityClass )
+		if( 0 !== ( $this->fetchMode & PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
 			return $this->applyFetchModeClassOnResultSet( $resultSet, $manuallyOnFail );
 
-		if( $this->fetchMode & PDO::FETCH_INTO && NULL !== $this->fetchEntityObject )
+		if( 0 !== ( $this->fetchMode & PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
 			return $this->applyFetchModeIntoOnResultSet( $resultSet );
 
 		return $resultSet->fetchAll( $this->fetchMode );
@@ -360,6 +360,7 @@ class Reader extends Abstraction
 				$e->getMessage()
 			] ), 0, $e );
 		}
+		/** @var object $entity */
 		foreach( $fetched as $entity )
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
@@ -383,8 +384,9 @@ class Reader extends Abstraction
 			foreach( $row as $key => $value )
 				if( property_exists( $entity, $key ) )
 					$data[$key]	= $value;
-			$entity	= new $this->fetchEntityClass( $data );
 
+			/** @var object $entity */
+			$entity	= new $this->fetchEntityClass( $data );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
 			$fetched[] = $entity;
