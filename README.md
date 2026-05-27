@@ -1,7 +1,7 @@
 # Database
 
 ![Branch](https://img.shields.io/badge/Branch-0.6.x-blue?style=flat-square)
-![Release](https://img.shields.io/badge/Release-0.6.5-blue?style=flat-square)
+![Release](https://img.shields.io/badge/Release-0.6.6-blue?style=flat-square)
 ![PHP version](https://img.shields.io/badge/PHP-%5E8.1-blue?style=flat-square&color=777BB4)
 ![PHPStan level](https://img.shields.io/badge/PHPStan_level-9+strict-darkgreen?style=flat-square)
 [![Monthly downloads](https://img.shields.io/packagist/dt/ceus-media/database.svg?style=flat-square)](https://packagist.org/packages/ceus-media/database)
@@ -81,9 +81,9 @@ The result will be an object of table columns and their values, since the fetch 
 
 ```php
 object stdObject(
-	'id'					=> 1,
-	'maybeSomeForeignId'	=> 123,
-	'content'				=> 'Content of first entry.'
+    'id'                 => 1,
+    'maybeSomeForeignId' => 123,
+    'content'            => 'Content of first entry.'
 )
 ```
 Not having the fetch mode set would result in an associated array, which is set as default fetch mode in underlaying table reader. To change the fetch see below.
@@ -106,9 +106,9 @@ $someEntries	= $table->getAllByIndex( 'maybeSomeForeignId', 123 );
 A group of entries, filtered by several foreign keys:
 
 ```php
-$indices		= [
-	'maybeSomeForeignId'	=> 123,
-	'notExistingKey'		=> 'will result in an exception',
+$indices = [
+    'maybeSomeForeignId' => 123,
+    'notExistingKey'     => 'will result in an exception',
 ];
 $someEntries	= $table->getAllByIndices( $indices );
 ```
@@ -120,11 +120,11 @@ $allEntries	= $table->getAll();
 which may be bad in scaling, so reduce the result set by defining limits and conditions:
 
 ```php
-$conditions	= ['content' => '%test%'];
-$orders		= [];
-$limits		= [$offset = 0, $limit = 10];
+$conditions = ['content' => '%test%'];
+$orders     = [];
+$limits     = [$offset = 0, $limit = 10];
 
-$allEntries	= $table->getAll( $conditions, $orders, $limits );
+$allEntries = $table->getAll( $conditions, $orders, $limits );
 ```
 Conditions can be indices or any other column.
 
@@ -132,8 +132,8 @@ Orders are pairs of columns and directions, like:
 
 ```php
 $orders	= [
-	'maybeSomeForeignId'	=> 'DESC',
-	'content'		=> 'ASC',
+    'maybeSomeForeignId' => 'DESC',
+    'content'            => 'ASC',
 ];
 ```
 There are more parameters possible for each of this indexing methods, which allow:
@@ -153,9 +153,9 @@ $number	= $table->countByIndex( 'maybeSomeForeignId', 123 );
 To count entries, filtered by several foreign keys:
 
 ```php
-$number	= $table->countByIndices( [
-	'maybeSomeForeignId'	=> 123,
-	'notExistingKey'		=> 'will result in an exception',
+$number = $table->countByIndices( [
+    'maybeSomeForeignId' => 123,
+    'notExistingKey'     => 'will result in an exception',
 ] );
 ```
 To get **all entries**, call:
@@ -167,8 +167,8 @@ which may be bad in scaling, so reduce the result set by defining conditions:
 
 ```php
 $Conditions	= [
-	'maybeSomeForeignId'	=> 123,
-	'content'		=> '%test%',
+    'maybeSomeForeignId' => 123,
+    'content'            => '%test%',
 ];
 $number	= $table->count( $conditions );
 ```
@@ -178,9 +178,9 @@ There is a method to count in large tables in a faster way. You will find it.
 #### Adding an entry
 
 ```php
-$data		= [
-	'maybeSomeForeignId'	=> 123,
-	'content'				=> 'Second entry.',
+$data = [
+    'maybeSomeForeignId' => 123,
+    'content'            => 'Second entry.',
 ];
 $entryId	= $table->add( $data );
 ```
@@ -190,10 +190,10 @@ $entryId	= $table->add( $data );
 #### Updating an entry
 
 ```php
-$primaryKey	= 2;
-$data		= [
-	'maybeSomeForeignId'	=> 124,
-	'content'				=> 'Second entry - changed.',
+$primaryKey = 2;
+$data       = [
+    'maybeSomeForeignId' => 124,
+    'content'            => 'Second entry - changed.',
 ];
 $result	= $table->edit( $primaryKey, $data );
 ```
@@ -204,13 +204,13 @@ where the result will be the number of changed entries.
 #### Updating several entries
 
 ```php
-$indices	= [
-	'maybeSomeForeignId'	=> 123,
+$indices = [
+    'maybeSomeForeignId' => 123,
 ];
-$data		= [
-	'maybeSomeForeignId'	=> 124,
+$data    = [
+    'maybeSomeForeignId' => 124,
 ];
-$result	= $table->editByIndices( $indices, $data );
+$result  = $table->editByIndices( $indices, $data );
 ```
 where the result will be the number of changed entries.
 
@@ -219,18 +219,18 @@ where the result will be the number of changed entries.
 #### Removing an entry
 
 ```php
-$primaryKey	= 2;
-$result	= $table->remove( $primaryKey );
+$primaryKey = 2;
+$result     = $table->remove( $primaryKey );
 ```
 where the result will be the number of removed entries.
 
 #### Removing several entry
 
 ```php
-$indices	= [
-	'maybeSomeForeignId'	=> 123,
+$indices = [
+    'maybeSomeForeignId' => 123,
 ];
-$result	= $table->removeByIndices( $indices );
+$result  = $table->removeByIndices( $indices );
 ```
 where the result will be the number of removed entries.
 
@@ -239,7 +239,7 @@ where the result will be the number of removed entries.
 In your table structure class, set:
 
 ```php
-	protected int $fetchMode		= \PDO::[YOUR_FETCH_MODE];
+    protected int $fetchMode = \PDO::[YOUR_FETCH_MODE];
 ```
 where YOUR_FETCH_MODE is one of these standard PDO fetch modes:
 
@@ -269,7 +269,7 @@ This entity class can be linked within the table as class to use on fetch:
 class MyFirstTable extends Table
 {
     ...
-    public ?string $fetchEntityClass    = '\\MyProject\\MyFirstTableEntity';
+    public ?string $fetchEntityClass = '\\MyProject\\MyFirstTableEntity';
 }
 ```
 Now, all indexing methods will return lists of filled entity classes. 
@@ -278,12 +278,12 @@ Now, all indexing methods will return lists of filled entity classes.
 
 Having a config file like this:
 ```php
-driver		= 'mysql';
-host		= 'myHost';
-port		= 'myPort';
-database	= 'myDatabase';
-username	= 'myDatabaseUser';
-password	= 'myDatabasePassword';
+driver   = 'mysql';
+host     = 'myHost';
+port     = 'myPort';
+database = 'myDatabase';
+username = 'myDatabaseUser';
+password = 'myDatabasePassword';
 ```
 and assuming that you load things up like this:
 ```php
@@ -301,20 +301,20 @@ $config	= (object) parse_ini_file( 'myConfigFile.ini' );
 you can connect to a database like this:
 ```php
 $client	= new Client( new Connection( DataSourceName::renderStatic(
-	$config->driver,
-	$config->database,
-	$config->host,
-	$config->port,
-	$config->username,
-	$config->password
+    $config->driver,
+    $config->database,
+    $config->host,
+    $config->port,
+    $config->username,
+    $config->password
 ), $config->username, $config->password ) );
 ```
 Now you can query the database like this:
 ```php
 $result	= Select::create( $client )
-	->from( new Table( 'galleries', 'g' ) )
-	->where( new Condition( 'galleryId', 1, Condition::OP_EQ ) )
-	->execute();
+    ->from( new Table( 'galleries', 'g' ) )
+    ->where( new Condition( 'galleryId', 1, Condition::OP_EQ ) )
+    ->execute();
 ```
 The result will contain the requested rows (only one in this example):
 ```php
