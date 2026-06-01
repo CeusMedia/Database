@@ -59,13 +59,18 @@ class Php81 extends Base
 		$this->numberStatements++;
 		try{
 			if( NULL !== $fetchMode )
-				return parent::query( $query, $fetchMode, ...$fetchModeArgs );
-			return parent::query( $query );
+				$result	= parent::query( $query, $fetchMode, ...$fetchModeArgs );
+			$result	= parent::query( $query );
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
+			return $result;
 		}
 		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $query );
 		}
+		if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
+			$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
 		return FALSE;
 	}
 }

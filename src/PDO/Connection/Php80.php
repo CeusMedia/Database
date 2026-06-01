@@ -59,12 +59,17 @@ class Php80 extends Base
 		$this->lastQuery	= $query;
 		$this->numberStatements++;
 		try{
-			return parent::query( $query, $fetchMode );
+			$result	= parent::query( $query, $fetchMode );
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
+			return $result;
 		}
 		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $query );
 		}
+		if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
+			$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
 		return FALSE;
 	}
 }
