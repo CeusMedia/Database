@@ -53,6 +53,9 @@ class Reader extends Abstraction
 {
 	//	public $undoStorage;
 
+	/**	@var	string[]	$jsonColumns	List of columns to be JSON-decoded on fetch */
+	protected array $jsonColumns	= [];
+
 	/**
 	 *	Returns count of all entries of this table covered by conditions.
 	 *	@access		public
@@ -298,6 +301,38 @@ class Reader extends Abstraction
 	}
 
 	/**
+	 *	Returns list of columns to be JSON-decoded on fetch.
+	 *	@access		public
+	 *	@return		string[]
+	 */
+	public function getJsonColumns(): array
+	{
+		return $this->jsonColumns;
+	}
+
+	/**
+	 *	Sets list of columns to be transparently JSON-decoded on fetch.
+	 *	Only applies to plain array/object fetch modes (eg. FETCH_ASSOC, FETCH_OBJ);
+	 *	entity fetch modes (FETCH_CLASS, FETCH_INTO) receive the raw JSON string and
+	 *	may decode it themselves, eg. within an "onFetch" hook.
+	 *	Values written via the table writer are JSON-encoded automatically for any
+	 *	column given an array or object value, no matter this list.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of column names
+	 *	@return		static
+	 *	@throws		DomainException					if a given column is not an existing column
+	 */
+	public function setJsonColumns( array $columns ): static
+	{
+		$allColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
+		foreach( $columns as $column )
+			if( !in_array( $column, $allColumns, TRUE ) )
+				throw new DomainException( 'Column "'.$column.'" is not existing in table "'.$this->tableName.'" and cannot be a JSON column' );
+		$this->jsonColumns	= array_unique( $columns );
+		return $this;
+	}
+
+	/**
 	 *	Setting UNDO storage.
 	 *	@access		public
 	 *	@param		object		$storage		Object for UNDO storage
@@ -327,7 +362,54 @@ class Reader extends Abstraction
 		if( 0 !== ( $this->fetchMode & PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
 			return $this->applyFetchModeIntoOnResultSet( $resultSet );
 
-		return $resultSet->fetchAll( $this->fetchMode );
+		$rows	= $resultSet->fetchAll( $this->fetchMode );
+		if( [] === $this->jsonColumns )
+			return $rows;
+		foreach( $rows as $nr => $row )
+			$rows[$nr]	= $this->decodeJsonColumns( $row );
+		return $rows;
+	}
+
+	/**
+	 *	Decodes configured JSON columns of a fetched row back into arrays.
+	 *	Applies to array rows (eg. FETCH_ASSOC) and object rows (eg. FETCH_OBJ) alike;
+	 *	rows without string keys (eg. FETCH_NUM) are returned unchanged.
+	 *	A column value that is not a (decodable) JSON string is left untouched.
+	 *	@access		protected
+	 *	@param		mixed		$row		Fetched row, of a shape depending on fetch mode
+	 *	@return		mixed		Row with configured JSON columns decoded, same shape as given
+	 */
+	protected function decodeJsonColumns( mixed $row ): mixed
+	{
+		foreach( $this->jsonColumns as $column ){
+			if( is_array( $row ) ){
+				if( isset( $row[$column] ) && is_string( $row[$column] ) )
+					$row[$column]	= $this->decodeJsonColumnValue( $row[$column] );
+			}
+			else if( is_object( $row ) ){
+				/** @phpstan-ignore-next-line */
+				$value	= $row->$column ?? NULL;
+				if( is_string( $value ) )
+					/** @phpstan-ignore-next-line */
+					$row->$column	= $this->decodeJsonColumnValue( $value );
+			}
+		}
+		return $row;
+	}
+
+	/**
+	 *	Decodes a single JSON column value, unless it is not a (decodable) JSON string,
+	 *	in which case it is returned unchanged.
+	 *	@access		protected
+	 *	@param		string		$value		Raw fetched column value
+	 *	@return		mixed		Decoded value, or the original string if not JSON
+	 */
+	protected function decodeJsonColumnValue( string $value ): mixed
+	{
+		$decoded	= json_decode( $value, TRUE );
+		if( NULL !== $decoded || 'null' === strtolower( trim( $value ) ) )
+			return $decoded;
+		return $value;
 	}
 
 	/**

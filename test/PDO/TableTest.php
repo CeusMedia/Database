@@ -114,6 +114,25 @@ class TableTest extends TestCase
 		self::assertEquals( 'label1', $data );
 	}
 
+	public function testJsonColumns(): void
+	{
+		self::assertEquals( [], $this->table->getJsonColumns() );
+		$this->table->setJsonColumns( ['label'] );
+		self::assertEquals( ['label'], $this->table->getJsonColumns() );
+
+		$data	= ['a' => 1, 'b' => ['c', 'd'], 'e' => NULL];
+		$id		= $this->table->add( ['topic' => 'start', 'label' => $data] );
+
+		/** @var object $result */
+		$result	= $this->table->get( $id );
+		self::assertEquals( $data, $result->label );
+
+		self::assertEquals( 1, $this->table->edit( $id, ['label' => (object) ['x' => 'y']] ) );
+		/** @var object $result */
+		$result	= $this->table->get( $id );
+		self::assertEquals( ['x' => 'y'], $result->label );
+	}
+
 	public function testGetAll(): void
 	{
 		$this->table->add( ['topic' => 'start', 'label' => 'label1'] );
