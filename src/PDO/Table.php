@@ -109,6 +109,9 @@ abstract class Table
 	/**	@var	object|NULL									$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
 	protected ?object $fetchEntityObject					= NULL;
 
+	/**	@var	string[]									$jsonColumns	List of columns to be JSON-(de|en)coded */
+	protected array $jsonColumns							= [];
+
 	/**
 	 *	Constructor.
 	 *	@access		public
@@ -417,6 +420,16 @@ abstract class Table
 	}
 
 	/**
+	 *	Returns list of columns to be JSON-decoded on fetch.
+	 *	@access		public
+	 *	@return		string[]
+	 */
+	public function getJsonColumns(): array
+	{
+		return $this->reader->getJsonColumns();
+	}
+
+	/**
 	 *	Returns list of table index columns.
 	 *	@access		public
 	 *	@return		array
@@ -639,6 +652,22 @@ abstract class Table
 	{
 		$this->fetchEntityObject	= $object;
 		$this->reader->setFetchEntityObject( $this->fetchEntityObject );
+		return $this;
+	}
+
+	/**
+	 *	Sets list of columns to be transparently JSON-decoded on fetch.
+	 *	Values are JSON-encoded automatically on write for any column given an array
+	 *	or object value, no matter this list - it only controls decoding on read.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of column names
+	 *	@return		self
+	 *	@throws		DomainException					if a given column is not an existing column
+	 */
+	public function setJsonColumns( array $columns ): self
+	{
+		$this->jsonColumns	= $columns;
+		$this->reader->setJsonColumns( $this->jsonColumns );
 		return $this;
 	}
 
@@ -912,6 +941,7 @@ abstract class Table
 
 		$this->reader->setIndices( $this->indices );
 		$this->reader->setGeneratedColumns( $this->generated );
+		$this->reader->setJsonColumns( $this->jsonColumns );
 
 		$this->writer->setIndices( $this->indices );
 //		$this->writer->setGeneratedColumns( $this->generated );

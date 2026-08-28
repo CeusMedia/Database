@@ -625,21 +625,41 @@ abstract class Abstraction
 	}
 
 	/**
-	 *	Secures Conditions Value by adding slashes or quoting.
+	 *	Secures a value by adding slashes or quoting.
+	 *	Array and object values (eg. for a JSON-capable column) are JSON-encoded first.
 	 *	@access		protected
-	 *	@param		string|int|float|NULL	$value		String, integer, float or NULL to be secured
+	 *	@param		string|int|float|array|object|NULL	$value		Value to be secured
 	 *	@return		string
+	 *	@throws		RuntimeException	if JSON-encoding an array or object value fails
+	 *	@throws		RuntimeException	if quoting the value fails
 	 */
-	protected function secureValue( string|int|float|null $value ): string
+	protected function secureValue( string|int|float|array|object|null $value ): string
 	{
 		if( NULL === $value )
 			return "NULL";
+		if( is_array( $value ) || is_object( $value ) )
+			$value	= $this->encodeJsonValue( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
 		$result	= $this->dbc->quote( $value );
 		if( FALSE === $result )
 			throw new RuntimeException( 'Securing value failed' );
 		return $result;
+	}
+
+	/**
+	 *	Encodes an array or object value as a JSON string, eg. for storage in a JSON-capable column.
+	 *	@access		protected
+	 *	@param		array|object	$value		Value to encode
+	 *	@return		string			JSON encoded value
+	 *	@throws		RuntimeException			if JSON encoding fails
+	 */
+	protected function encodeJsonValue( array|object $value ): string
+	{
+		$json	= json_encode( $value );
+		if( FALSE === $json )
+			throw new RuntimeException( 'Encoding value as JSON failed: '.json_last_error_msg() );
+		return $json;
 	}
 
 	/**
