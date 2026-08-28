@@ -28,6 +28,8 @@
  */
 namespace CeusMedia\Database\PDO\Connection;
 
+use CeusMedia\Common\Exception\SQL as SqlException;
+
 use PDOException;
 use PDOStatement;
 
@@ -51,6 +53,7 @@ class Php81 extends Base
 	 *	@param		int|NULL	$fetchMode		... (default: 2)
 	 *	@param		mixed		$fetchModeArgs	Arguments of custom class constructor when the mode parameter is set to PDO::FETCH_CLASS.
 	 *	@return		PDOStatement|false			PDO statement containing fetchable results
+	 *	@throws		SqlException				if the query fails
 	 */
 	public function query( string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs ): PDOStatement|false
 	{

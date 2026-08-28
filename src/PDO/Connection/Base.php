@@ -160,6 +160,7 @@ abstract class Base extends PDO
 	 *	@access		public
 	 *	@param		string		$statement		SQL statement to execute
 	 *	@return		integer		Number of affected rows
+	 *	@throws		SqlException	if the statement fails
 	 */
 	public function exec( string $statement ): int
 	{
@@ -232,37 +233,37 @@ abstract class Base extends PDO
 	}
 
 	/**
-	 *	Notes Information from PDO Exception in Error Log File and throw SQL Exception.
+	 *	Notes Information from PDO Exception in Error Log File, if configured, and always throws SQL Exception.
 	 *	@access		protected
 	 *	@param		PDOException	$exception		PDO Exception thrown by invalid SQL Statement
 	 *	@param		string			$statement		SQL Statement which originated PDO Exception
 	 *	@return		void
+	 *	@throws		SqlException	always, so that a failed statement is never silently swallowed
 	 */
 	protected function logError( PDOException $exception, string $statement ): void
 	{
-		if( $this->logFileErrors === NULL )
-			return;
-//			throw $exception;
-
 		$info		= $exception->errorInfo;
 		$sqlError	= $info[2] ?? '';
 		$sqlCode	= $info[1] ?? NULL;
 		$pdoCode	= $info[0] ?? NULL;
 		$message	= $exception->getMessage();
-		/** @var string $statement */
-		$statement	= preg_replace( "@\r?\n@", " ", $statement );
-		/** @var string $statement */
-		$statement	= preg_replace( "@  +@", " ", $statement );
 
-		$note	= self::$errorTemplate;
-		$note	= str_replace( "{time}", (string) time(), $note );
-		$note	= str_replace( "{sqlError}", $sqlError, $note );
-		$note	= str_replace( "{sqlCode}", $sqlCode, $note );
-		$note	= str_replace( "{pdoCode}", $pdoCode, $note );
-		$note	= str_replace( "{message}", $message, $note );
-		$note	= str_replace( "{statement}", $statement, $note );
+		if( NULL !== $this->logFileErrors ){
+			/** @var string $statement */
+			$statement	= preg_replace( "@\r?\n@", " ", $statement );
+			/** @var string $statement */
+			$statement	= preg_replace( "@  +@", " ", $statement );
 
-		error_log( $note, 3, $this->logFileErrors );
+			$note	= self::$errorTemplate;
+			$note	= str_replace( "{time}", (string) time(), $note );
+			$note	= str_replace( "{sqlError}", $sqlError, $note );
+			$note	= str_replace( "{sqlCode}", $sqlCode, $note );
+			$note	= str_replace( "{pdoCode}", $pdoCode, $note );
+			$note	= str_replace( "{message}", $message, $note );
+			$note	= str_replace( "{statement}", $statement, $note );
+
+			error_log( $note, 3, $this->logFileErrors );
+		}
 		throw new SqlException( $message, $sqlCode, $pdoCode );
 	}
 

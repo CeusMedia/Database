@@ -28,6 +28,8 @@
  */
 namespace CeusMedia\Database\PDO\Connection;
 
+use CeusMedia\Common\Exception\SQL as SqlException;
+
 use PDOException;
 use PDOStatement;
 
@@ -51,6 +53,7 @@ class Php80 extends Base
 	 *	@param		string		$query			SQL statement to query
 	 *	@param		integer		$fetchMode		... (default: 2)
 	 *	@return		PDOStatement|FALSE			PDO statement containing fetchable results
+	 *	@throws		SqlException				if the query fails
 	 *	@noinspection	PhpHierarchyChecksInspection
 	 */
 	public function query( string $query, int $fetchMode = 2 ): PDOStatement|false
