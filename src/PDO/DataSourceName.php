@@ -356,13 +356,41 @@ class DataSourceName
 	 *	@param		array		$map			DSN Parts Map
 	 *	@param		string		$delimiter		Delimiter between DSN Parts
 	 *	@return		string
+	 *	@throws		RuntimeException			if a value cannot be safely represented using this delimiter style
 	 */
 	protected function renderDsnParts( array $map, string $delimiter = '; ' ): string
 	{
 		$list	= [];
 		foreach( $map as $key => $value )
 			if( !is_null( $value ) )
-				$list[]	= $key.'='.$value;
+				$list[]	= $key.'='.$this->quoteDsnValue( (string) $value, $delimiter );
 		return implode( $delimiter, $list );
+	}
+
+	/**
+	 *	Quotes or validates a single DSN value depending on the delimiter style in use.
+	 *	Space-delimited DSNs (pgsql/libpq style) support single-quoting a value, with
+	 *	backslash and single quote characters escaped by a leading backslash.
+	 *	Semicolon-delimited DSNs (the PDO-native default, firebird, informix) have no
+	 *	quoting mechanism at all, so a value containing the delimiter or "=" would
+	 *	silently corrupt or truncate the resulting DSN - this is rejected instead.
+	 *	@access		protected
+	 *	@param		string		$value			DSN part value to quote or validate
+	 *	@param		string		$delimiter		Delimiter between DSN parts
+	 *	@return		string
+	 *	@throws		RuntimeException			if a semicolon-style value contains ";" or "="
+	 */
+	protected function quoteDsnValue( string $value, string $delimiter ): string
+	{
+		if( ' ' === $delimiter ){
+			if( '' === $value || 1 === preg_match( '/[\s\'\\\\]/', $value ) ){
+				$escaped	= str_replace( ['\\', "'"], ['\\\\', "\\'"], $value );
+				return "'".$escaped."'";
+			}
+			return $value;
+		}
+		if( 1 === preg_match( '/[;=]/', $value ) )
+			throw new RuntimeException( 'DSN value "'.$value.'" must not contain ";" or "="' );
+		return $value;
 	}
 }

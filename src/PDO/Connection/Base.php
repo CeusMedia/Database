@@ -33,6 +33,7 @@ use CeusMedia\Common\Exception\SQL as SqlException;
 use PDO;
 use PDOException;
 use PDOStatement;
+use RuntimeException;
 
 /**
  *	Enhanced PDO Connection.
@@ -137,6 +138,7 @@ abstract class Base extends PDO
 	 *	Commits a Transaction.
 	 *	@access		public
 	 *	@return		bool
+	 *	@throws		RuntimeException	if commit failed because a nested (inner) transaction has failed
 	 */
 	public function commit(): bool
 	{
@@ -150,9 +152,8 @@ abstract class Base extends PDO
 			if( $this->innerTransactionFail ){
 				//  rollback outer Transaction instead of committing
 				$this->rollBack();
-//				throw new RuntimeException( 'Commit failed due to a nested transaction failed' );
-				//  indicated that the Transaction has failed
-				return FALSE;
+				//  make the failure visible instead of silently pretending success
+				throw new RuntimeException( 'Commit failed due to a nested transaction having failed' );
 			}
 			//  no failed inner Transaction
 			else
@@ -233,7 +234,9 @@ abstract class Base extends PDO
 	 */
 	public function getTables( ?string $prefix = NULL ): array
 	{
-		$query	= "SHOW TABLES" . ( !is_null( $prefix ) ? " LIKE '".$prefix."%'" : "" );
+		$query	= "SHOW TABLES";
+		if( !is_null( $prefix ) )
+			$query	.= " LIKE ".$this->quote( $prefix."%" );
 		$result	= parent::query( $query );
 		if( FALSE === $result )
 			return [];

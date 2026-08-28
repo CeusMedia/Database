@@ -42,7 +42,7 @@ use DomainException;
 class Pool
 {
 	/** @var		string|NULL		$default		Name of default connection */
-	protected ?string $default;
+	protected ?string $default		= NULL;
 
 	/** @var		array			$connections	Map of connections by name */
 	protected array $connections	= [];
@@ -84,7 +84,7 @@ class Pool
 		}
 		if( !isset( $this->connections[$name] ) )
 			throw new DomainException( 'No connection set by this name' );
-		return $this->get( $name );
+		return $this->connections[$name];
 	}
 
 	/**

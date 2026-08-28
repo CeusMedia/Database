@@ -60,7 +60,8 @@ class Php81 extends Base
 		try{
 			if( NULL !== $fetchMode )
 				$result	= parent::query( $query, $fetchMode, ...$fetchModeArgs );
-			$result	= parent::query( $query );
+			else
+				$result	= parent::query( $query );
 			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
 				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
 			return $result;

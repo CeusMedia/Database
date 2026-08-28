@@ -506,14 +506,23 @@ abstract class Abstraction
 	 *	@access		protected
 	 *	@param		array		$orders			Associative Array with Orders
 	 *	@return		string
+	 *	@throws		DomainException				if a given order column is not an existing column
+	 *	@throws		InvalidArgumentException	if a given order direction is neither ASC nor DESC
 	 */
 	protected function getOrderCondition( array $orders = [] ): string
 	{
 		$order	= '';
 		if( 0 !== count( $orders ) ){
+			$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 			$list	= [];
-			foreach( $orders as $column => $direction )
-				$list[] = '`'.$column.'` '.strtoupper( $direction );
+			foreach( $orders as $column => $direction ){
+				if( !in_array( $column, $allReadableColumns, TRUE ) )
+					throw new DomainException( 'Column "'.$column.'" is not an existing column of table "'.$this->tableName.'"' );
+				$direction	= strtoupper( (string) $direction );
+				if( !in_array( $direction, ['ASC', 'DESC'], TRUE ) )
+					throw new InvalidArgumentException( 'Order direction must be ASC or DESC, "'.$direction.'" given for column "'.$column.'"' );
+				$list[] = '`'.$column.'` '.$direction;
+			}
 			$order	= ' ORDER BY '.implode( ', ', $list );
 		}
 		return $order;
