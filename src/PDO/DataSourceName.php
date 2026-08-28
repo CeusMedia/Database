@@ -189,10 +189,11 @@ class DataSourceName
 	 *	@access		public
 	 *	@param		string		$database		Database Name
 	 *	@return		self
+	 *	@throws		RuntimeException	if database name contains a NUL byte
 	 */
 	public function setDatabase( string $database ): self
 	{
-		$this->database	= $database;
+		$this->database	= $this->rejectNullByte( $database, 'database' );
 		return $this;
 	}
 
@@ -201,10 +202,11 @@ class DataSourceName
 	 *	@access		public
 	 *	@param		string		$host 			Host Name or URI
 	 *	@return		self
+	 *	@throws		RuntimeException	if host contains a NUL byte
 	 */
 	public function setHost( string $host ): self
 	{
-		$this->host	= $host;
+		$this->host	= $this->rejectNullByte( $host, 'host' );
 		return $this;
 	}
 
@@ -213,10 +215,11 @@ class DataSourceName
 	 *	@access		public
 	 *	@param		string		$password		Password
 	 *	@return		self
+	 *	@throws		RuntimeException	if password contains a NUL byte
 	 */
 	public function setPassword( string $password ): self
 	{
-		$this->password	= $password;
+		$this->password	= $this->rejectNullByte( $password, 'password' );
 		return $this;
 	}
 
@@ -237,10 +240,11 @@ class DataSourceName
 	 *	@access		public
 	 *	@param		string		$username		Username
 	 *	@return		self
+	 *	@throws		RuntimeException	if username contains a NUL byte
 	 */
 	public function setUsername( string $username ): self
 	{
-		$this->username	= $username;
+		$this->username	= $this->rejectNullByte( $username, 'username' );
 		return $this;
 	}
 
@@ -391,6 +395,25 @@ class DataSourceName
 		}
 		if( 1 === preg_match( '/[;=]/', $value ) )
 			throw new RuntimeException( 'DSN value "'.$value.'" must not contain ";" or "="' );
+		return $value;
+	}
+
+	/**
+	 *	Rejects NUL bytes in a DSN part value.
+	 *	Applies to all drivers, including "oci" and "sqlite" whose DSN strings are not
+	 *	built via renderDsnParts()/quoteDsnValue() and would otherwise pass such a value
+	 *	through unchecked - relevant eg. for sqlite file paths, where a NUL byte could
+	 *	be used to truncate the path in a downstream C-level call.
+	 *	@access		protected
+	 *	@param		string		$value		Value to check
+	 *	@param		string		$label		Label of the value for the exception message
+	 *	@return		string		The unchanged value, if valid
+	 *	@throws		RuntimeException		if the value contains a NUL byte
+	 */
+	protected function rejectNullByte( string $value, string $label ): string
+	{
+		if( str_contains( $value, "\0" ) )
+			throw new RuntimeException( 'DSN value "'.$label.'" must not contain a NUL byte' );
 		return $value;
 	}
 }

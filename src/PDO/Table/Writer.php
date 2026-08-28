@@ -105,7 +105,7 @@ class Writer extends Abstraction
 			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
 			$value = $data[$column];
-			if( $stripTags )
+			if( $stripTags && is_string( $value ) )
 				$value = strip_tags( $value );
 			$columns[$column]	= $column;
 			$values[$column]	= $this->secureValue( $value );
@@ -178,7 +178,7 @@ class Writer extends Abstraction
 			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
 			$value	= $data[$column];
-			if( $stripTags && $value !== NULL )
+			if( $stripTags && is_string( $value ) )
 				$value	= strip_tags( $value );
 			$value	= $this->secureValue( $value );
 			$updates[] = '`'.$column.'`='.$value;
@@ -217,7 +217,7 @@ class Writer extends Abstraction
 			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
 			if( isset( $data[$column] ) ){
-				if( $stripTags )
+				if( $stripTags && is_string( $data[$column] ) )
 					$data[$column]	= strip_tags( $data[$column] );
 				$data[$column]	= $this->secureValue( $data[$column] );
 				$updates[] = '`'.$column.'`='.$data[$column];

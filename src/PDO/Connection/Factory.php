@@ -105,7 +105,8 @@ class Factory
 	 */
 	public function create( array $driverOptions = [] ): Base
 	{
-		$driverOptions	= array_merge( $this->driverOptions, $driverOptions );
+		//  union (not array_merge!) to preserve PDO's integer attribute constants as keys
+		$driverOptions	= $driverOptions + $this->driverOptions;
 		$strategy		= $this->strategy;
 		if( self::STRATEGY_BY_VERSION === $this->strategy )
 			$strategy	= $this->detectStrategyByPhpVersion();

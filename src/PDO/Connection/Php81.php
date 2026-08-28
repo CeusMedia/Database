@@ -28,6 +28,8 @@
  */
 namespace CeusMedia\Database\PDO\Connection;
 
+use CeusMedia\Common\Exception\SQL as SqlException;
+
 use PDOException;
 use PDOStatement;
 
@@ -51,6 +53,7 @@ class Php81 extends Base
 	 *	@param		int|NULL	$fetchMode		... (default: 2)
 	 *	@param		mixed		$fetchModeArgs	Arguments of custom class constructor when the mode parameter is set to PDO::FETCH_CLASS.
 	 *	@return		PDOStatement|false			PDO statement containing fetchable results
+	 *	@throws		SqlException				if the query fails
 	 */
 	public function query( string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs ): PDOStatement|false
 	{
@@ -59,19 +62,17 @@ class Php81 extends Base
 		$this->numberStatements++;
 		try{
 			if( NULL !== $fetchMode )
-				$result	= parent::query( $query, $fetchMode, ...$fetchModeArgs );
-			else
-				$result	= parent::query( $query );
-			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
-				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
-			return $result;
+				return parent::query( $query, $fetchMode, ...$fetchModeArgs );
+			return parent::query( $query );
 		}
 		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $query );
 		}
-		if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )						//  one-time log level is set
-			$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;						//  reset
+		finally{
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )					//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;					//  reset, even if the query failed
+		}
 		return FALSE;
 	}
 }

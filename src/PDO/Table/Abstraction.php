@@ -16,6 +16,12 @@ use RuntimeException;
 
 abstract class Abstraction
 {
+	/**	@var	string[]	ALLOWED_CONDITION_FUNCTIONS		Whitelisted SQL functions allowed as function condition keys */
+	protected const ALLOWED_CONDITION_FUNCTIONS	= ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
+
+	/**	@var	string		PATTERN_CONDITION_FUNCTION			Pattern of a function condition key, eg. "COUNT(*)" or "SUM(amount)" */
+	protected const PATTERN_CONDITION_FUNCTION		= '/^([a-zA-Z]+)\(\s*(\*|[a-zA-Z0-9_]+)\s*\)$/';
+
 	/**	@var	int							$defaultFetchMode	Default fetch mode, can be set statically */
 	public static int $defaultFetchMode		= PDO::FETCH_ASSOC;
 
@@ -396,6 +402,7 @@ abstract class Abstraction
 	 *	@param		bool		$useIndices			Flag: use focused indices
 	 *	@param		bool		$allowFunctions		Flag: use focused indices
 	 *	@return		string
+	 *	@throws		DomainException		if a function condition key names a function or column that is not whitelisted
 	 */
 	protected function getConditionQuery( array $conditions = [], bool $usePrimary = TRUE, bool $useIndices = TRUE, bool $allowFunctions = FALSE ): string
 	{
@@ -413,8 +420,8 @@ abstract class Abstraction
 		$functionConditions = [];
 		//  iterate remaining conditions
 		foreach( $conditions as $key => $value )
-			//  column key is an aggregate function
-			if( 1 === preg_match( "/^[a-z]+\(.+\)$/i", $key ) )
+			//  column key looks like a whitelisted aggregate function call, eg. "COUNT(*)"
+			if( 1 === preg_match( self::PATTERN_CONDITION_FUNCTION, $key ) )
 				$functionConditions[$key]	= $value;
 
 		//  if using primary key & is focused primary
@@ -458,13 +465,16 @@ abstract class Abstraction
 
 		}
 
-		/*  --  THIS IS NEW, UNDER DEVELOPMENT, UNSECURE AND UNSTABLE  --  */
-		//  function are allowed
+		//  function conditions are allowed: rebuild each as a whitelisted function over a validated column
 		if( $allowFunctions )
 			//  iterate noted functions
 			foreach( $functionConditions as $function => $value ){
 				//  extend conditions
-				$conditions[]	= $this->realizeConditionQueryPart( $function, $value, FALSE );
+				$conditions[]	= $this->realizeConditionQueryPart(
+					$this->secureFunctionCondition( $function, $allReadableColumns ),
+					$value,
+					FALSE
+				);
 			}
 
 		//  return AND combined conditions
@@ -614,6 +624,32 @@ abstract class Abstraction
 		if( FALSE === $result )
 			throw new RuntimeException( 'Securing value failed' );
 		return $result;
+	}
+
+	/**
+	 *	Validates a function condition key (eg. "COUNT(*)", "SUM(amount)") against a whitelist
+	 *	of allowed functions and a validated column (or "*"), and returns it rebuilt with a
+	 *	masked column name, safe to embed in a query.
+	 *	@access		protected
+	 *	@param		string		$function				Function condition key, eg. "SUM(amount)"
+	 *	@param		array		$allReadableColumns		List of columns allowed as function argument
+	 *	@return		string		Rebuilt, safe function call, eg. "SUM(`amount`)"
+	 *	@throws		DomainException				if the function condition key has an invalid shape
+	 *	@throws		DomainException				if the function name is not whitelisted
+	 *	@throws		DomainException				if the function argument is not an existing column nor "*"
+	 */
+	protected function secureFunctionCondition( string $function, array $allReadableColumns ): string
+	{
+		if( 1 !== preg_match( self::PATTERN_CONDITION_FUNCTION, $function, $matches ) )
+			throw new DomainException( 'Invalid function condition "'.$function.'"' );
+		$name		= strtoupper( $matches[1] );
+		$argument	= $matches[2];
+		if( !in_array( $name, self::ALLOWED_CONDITION_FUNCTIONS, TRUE ) )
+			throw new DomainException( 'Function "'.$name.'" is not allowed in conditions' );
+		if( '*' !== $argument && !in_array( $argument, $allReadableColumns, TRUE ) )
+			throw new DomainException( 'Column "'.$argument.'" used in function condition is not an existing column' );
+		$argument	= '*' === $argument ? '*' : '`'.$argument.'`';
+		return $name.'('.$argument.')';
 	}
 
 	/**
