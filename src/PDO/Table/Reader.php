@@ -39,6 +39,7 @@ use PDOStatement;
 use RangeException;
 use RuntimeException;
 use Throwable;
+use TypeError;
 
 /**
  *	Table with column definition and indices.
@@ -276,9 +277,15 @@ class Reader extends Abstraction
 		$query		= 'SELECT DISTINCT('.reset( $columns ).') FROM '.$this->getTableName().$conditions.$orders.$limits;
 		$list		= [];
 		$resultSet	= $this->dbc->query( $query );
+		//  this bypasses applyFetchModeOnResultSet(), so JSON columns need decoding here, too
+		$isJsonColumn	= in_array( $column, $this->jsonColumns, TRUE );
 		if( $resultSet instanceof PDOStatement )
-			foreach( $resultSet->fetchAll( PDO::FETCH_NUM ) as $row )
-				$list[]	= $row[0];
+			foreach( $resultSet->fetchAll( PDO::FETCH_NUM ) as $row ){
+				$value	= $row[0];
+				if( $isJsonColumn && is_string( $value ) )
+					$value	= $this->decodeJsonColumnValue( $value, TRUE );
+				$list[]	= $value;
+			}
 		return $list;
 	}
 
@@ -382,6 +389,7 @@ class Reader extends Abstraction
 	 *	@access		protected
 	 *	@param		mixed		$row		Fetched row or entity, of a shape depending on fetch mode
 	 *	@return		mixed		Row with configured JSON columns decoded, same shape as given
+	 *	@throws		RuntimeException	if an entity's property type rejects the decoded value
 	 */
 	protected function decodeJsonColumns( mixed $row ): mixed
 	{
@@ -393,9 +401,20 @@ class Reader extends Abstraction
 			else if( is_object( $row ) ){
 				/** @phpstan-ignore-next-line */
 				$value	= $row->$column ?? NULL;
-				if( is_string( $value ) )
-					/** @phpstan-ignore-next-line */
-					$row->$column	= $this->decodeJsonColumnValue( $value, FALSE );
+				if( is_string( $value ) ){
+					$decoded	= $this->decodeJsonColumnValue( $value, FALSE );
+					try{
+						/** @phpstan-ignore-next-line */
+						$row->$column	= $decoded;
+					}
+					catch( TypeError $e ){
+						throw new RuntimeException( vsprintf(
+							'Cannot assign decoded JSON value to property "%s" of class %s: %s. '
+							.'The property type must accept the decoded value (eg. "string|object|null"), not just "string".',
+							[$column, get_class( $row ), $e->getMessage()]
+						), 0, $e );
+					}
+				}
 			}
 		}
 		return $row;

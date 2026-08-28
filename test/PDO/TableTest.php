@@ -174,6 +174,34 @@ class TableTest extends TestCase
 		self::assertEquals( (object) ['k' => 'changed'], $resultsAfter[0]->label );
 	}
 
+	public function testJsonColumnsWithMistypedEntityProperty(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$this->table->setFetchEntityClass( JsonLabelEntityNarrowType::class );
+		$this->table->setFetchMode( \PDO::FETCH_CLASS );
+
+		//	Table::add() primes the cache via an internal get(), so the mistyped
+		//	property already surfaces here, not only on an explicit later fetch
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessageMatches( '/property "label" of class .*JsonLabelEntityNarrowType/' );
+		$this->table->add( ['topic' => 'start', 'label' => ['a' => 1]] );
+	}
+
+	public function testGetDistinctWithJsonColumn(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+
+		$this->table->add( ['topic' => 'distinct', 'label' => ['a' => 1]] );
+		$this->table->add( ['topic' => 'distinct', 'label' => ['a' => 1]] );
+		$this->table->add( ['topic' => 'distinct', 'label' => ['b' => 2]] );
+
+		$values	= $this->table->getDistinct( 'label', ['topic' => 'distinct'] );
+
+		self::assertCount( 2, $values );
+		self::assertContainsEquals( ['a' => 1], $values );
+		self::assertContainsEquals( ['b' => 2], $values );
+	}
+
 	public function testGetAll(): void
 	{
 		$this->table->add( ['topic' => 'start', 'label' => 'label1'] );
