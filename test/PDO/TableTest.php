@@ -149,6 +149,31 @@ class TableTest extends TestCase
 		self::assertEquals( (object) $data, $result->label );
 	}
 
+	public function testJsonColumnsWithFetchClassViaFindAndSave(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$this->table->setFetchEntityClass( JsonLabelEntity::class );
+		$this->table->setFetchMode( \PDO::FETCH_CLASS );
+
+		$data	= ['k' => 'v', 'n' => 2];
+		$this->table->add( ['topic' => 'find-json', 'label' => $data] );
+
+		//	find(): same decode path as get(), verified here explicitly
+		$results	= $this->table->getAll( ['topic' => 'find-json'] );
+		self::assertCount( 1, $results );
+		/** @var JsonLabelEntity $result */
+		$result	= $results[0];
+		self::assertInstanceOf( JsonLabelEntity::class, $result );
+		self::assertEquals( (object) $data, $result->label );
+
+		//	set a (changed) object on the entity and persist it via save()
+		$result->label	= (object) ['k' => 'changed'];
+		self::assertTrue( $this->table->save( $result ) );
+
+		$resultsAfter	= $this->table->getAll( ['topic' => 'find-json'] );
+		self::assertEquals( (object) ['k' => 'changed'], $resultsAfter[0]->label );
+	}
+
 	public function testGetAll(): void
 	{
 		$this->table->add( ['topic' => 'start', 'label' => 'label1'] );
