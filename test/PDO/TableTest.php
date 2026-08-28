@@ -123,14 +123,30 @@ class TableTest extends TestCase
 		$data	= ['a' => 1, 'b' => ['c', 'd'], 'e' => NULL];
 		$id		= $this->table->add( ['topic' => 'start', 'label' => $data] );
 
+		//	fetch mode is FETCH_OBJ here, so the decoded value is an object, too
 		/** @var object $result */
 		$result	= $this->table->get( $id );
-		self::assertEquals( $data, $result->label );
+		self::assertEquals( (object) $data, $result->label );
 
 		self::assertEquals( 1, $this->table->edit( $id, ['label' => (object) ['x' => 'y']] ) );
 		/** @var object $result */
 		$result	= $this->table->get( $id );
-		self::assertEquals( ['x' => 'y'], $result->label );
+		self::assertEquals( (object) ['x' => 'y'], $result->label );
+	}
+
+	public function testJsonColumnsWithFetchClass(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$this->table->setFetchEntityClass( JsonLabelEntity::class );
+		$this->table->setFetchMode( \PDO::FETCH_CLASS );
+
+		$data	= ['a' => 1, 'b' => ['c', 'd']];
+		$id		= $this->table->add( ['topic' => 'start', 'label' => $data] );
+
+		/** @var JsonLabelEntity $result */
+		$result	= $this->table->get( $id );
+		self::assertInstanceOf( JsonLabelEntity::class, $result );
+		self::assertEquals( (object) $data, $result->label );
 	}
 
 	public function testGetAll(): void

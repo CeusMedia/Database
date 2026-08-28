@@ -312,9 +312,11 @@ class Reader extends Abstraction
 
 	/**
 	 *	Sets list of columns to be transparently JSON-decoded on fetch.
-	 *	Only applies to plain array/object fetch modes (eg. FETCH_ASSOC, FETCH_OBJ);
-	 *	entity fetch modes (FETCH_CLASS, FETCH_INTO) receive the raw JSON string and
-	 *	may decode it themselves, eg. within an "onFetch" hook.
+	 *	Applies to every fetch mode: plain array/object rows (eg. FETCH_ASSOC,
+	 *	FETCH_OBJ) get the column decoded in place, and entities (FETCH_CLASS,
+	 *	FETCH_INTO) get the matching member overwritten with the decoded value,
+	 *	before any "onFetch" hook runs. Array rows are decoded into arrays, object
+	 *	rows and entities are decoded into stdClass objects.
 	 *	Values written via the table writer are JSON-encoded automatically for any
 	 *	column given an array or object value, no matter this list.
 	 *	@access		public
@@ -371,12 +373,14 @@ class Reader extends Abstraction
 	}
 
 	/**
-	 *	Decodes configured JSON columns of a fetched row back into arrays.
-	 *	Applies to array rows (eg. FETCH_ASSOC) and object rows (eg. FETCH_OBJ) alike;
-	 *	rows without string keys (eg. FETCH_NUM) are returned unchanged.
-	 *	A column value that is not a (decodable) JSON string is left untouched.
+	 *	Decodes configured JSON columns of a fetched row back into arrays or objects.
+	 *	Row and value shape are kept consistent: array rows (eg. FETCH_ASSOC) get
+	 *	array-decoded values, object rows (eg. FETCH_OBJ, entities of FETCH_CLASS or
+	 *	FETCH_INTO) get object-decoded (stdClass) values; rows without string keys
+	 *	(eg. FETCH_NUM) are returned unchanged. A column value that is not a
+	 *	(decodable) JSON string is left untouched.
 	 *	@access		protected
-	 *	@param		mixed		$row		Fetched row, of a shape depending on fetch mode
+	 *	@param		mixed		$row		Fetched row or entity, of a shape depending on fetch mode
 	 *	@return		mixed		Row with configured JSON columns decoded, same shape as given
 	 */
 	protected function decodeJsonColumns( mixed $row ): mixed
@@ -384,14 +388,14 @@ class Reader extends Abstraction
 		foreach( $this->jsonColumns as $column ){
 			if( is_array( $row ) ){
 				if( isset( $row[$column] ) && is_string( $row[$column] ) )
-					$row[$column]	= $this->decodeJsonColumnValue( $row[$column] );
+					$row[$column]	= $this->decodeJsonColumnValue( $row[$column], TRUE );
 			}
 			else if( is_object( $row ) ){
 				/** @phpstan-ignore-next-line */
 				$value	= $row->$column ?? NULL;
 				if( is_string( $value ) )
 					/** @phpstan-ignore-next-line */
-					$row->$column	= $this->decodeJsonColumnValue( $value );
+					$row->$column	= $this->decodeJsonColumnValue( $value, FALSE );
 			}
 		}
 		return $row;
@@ -402,11 +406,12 @@ class Reader extends Abstraction
 	 *	in which case it is returned unchanged.
 	 *	@access		protected
 	 *	@param		string		$value		Raw fetched column value
+	 *	@param		bool		$asArray	Flag: decode JSON objects as arrays instead of stdClass objects
 	 *	@return		mixed		Decoded value, or the original string if not JSON
 	 */
-	protected function decodeJsonColumnValue( string $value ): mixed
+	protected function decodeJsonColumnValue( string $value, bool $asArray ): mixed
 	{
-		$decoded	= json_decode( $value, TRUE );
+		$decoded	= json_decode( $value, $asArray );
 		if( NULL !== $decoded || 'null' === strtolower( trim( $value ) ) )
 			return $decoded;
 		return $value;
@@ -443,9 +448,12 @@ class Reader extends Abstraction
 			] ), 0, $e );
 		}
 		/** @var object $entity */
-		foreach( $fetched as $entity )
+		foreach( $fetched as $entity ){
+			//  objects are mutated in place, no reassignment needed
+			$this->decodeJsonColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
+		}
 		return $fetched;
 	}
 
@@ -469,6 +477,7 @@ class Reader extends Abstraction
 
 			/** @var object $entity */
 			$entity	= new $this->fetchEntityClass( $data );
+			$this->decodeJsonColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
 			$fetched[] = $entity;
@@ -495,9 +504,12 @@ class Reader extends Abstraction
 				$e->getMessage()
 			] ), 0, $e );
 		}
-		foreach( $fetched as $entity )
+		foreach( $fetched as $entity ){
+			//  objects are mutated in place, no reassignment needed
+			$this->decodeJsonColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
+		}
 		return $fetched;
 	}
 }
