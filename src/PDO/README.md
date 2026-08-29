@@ -396,3 +396,28 @@ class MyFirstTable extends Table
 }
 ```
 Now, all indexing methods will return lists of filled entity classes. 
+
+## JSON columns
+
+Array and object values are written transparently as JSON, for **any** column, without any configuration:
+
+```php
+$table->add( [
+    'maybeSomeForeignId' => 123,
+    'content'            => 'Second entry.',
+    'meta'               => ['tags' => ['a', 'b'], 'archived' => FALSE],
+] );
+```
+Reading it back, however, is opt-in per column - without configuration, you would just get the raw JSON string back:
+
+```php
+$table->setJsonColumns( ['meta'] );
+
+$entry = $table->get( $entryId );
+$entry->meta;    // (object) ['tags' => ['a', 'b'], 'archived' => FALSE]
+```
+`getJsonColumns()` returns the currently configured list. Configuring an unknown column throws a `DomainException`.
+
+Decoding matches the shape of the surrounding row: array rows (eg. `FETCH_ASSOC`) decode a JSON column into an array, object rows and entities (`FETCH_OBJ`, `FETCH_CLASS`, `FETCH_INTO`) decode it into a `stdClass` object. This also applies to `getDistinct()`.
+
+**Attention when using JSON columns together with `FETCH_CLASS`:** the entity's property for that column is first assigned the *raw* JSON string by PDO, and only afterward overwritten with the decoded value - so the property's type must accept both, eg. `string|object|null`, not just `string`. A too-narrow property type raises a clear `RuntimeException` naming the offending class and property, instead of a confusing raw `TypeError`.
