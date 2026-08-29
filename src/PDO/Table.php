@@ -112,6 +112,9 @@ abstract class Table
 	/**	@var	string[]									$jsonColumns	List of columns to be JSON-(de|en)coded */
 	protected array $jsonColumns							= [];
 
+	/**	@var	string[]									$dateTimeColumns	List of columns to be (de|en)coded as DateTime */
+	protected array $dateTimeColumns						= [];
+
 	/**
 	 *	Constructor.
 	 *	@access		public
@@ -431,6 +434,16 @@ abstract class Table
 	}
 
 	/**
+	 *	Returns list of columns to be decoded into DateTime objects on fetch.
+	 *	@access		public
+	 *	@return		string[]
+	 */
+	public function getDateTimeColumns(): array
+	{
+		return $this->reader->getDateTimeColumns();
+	}
+
+	/**
 	 *	Returns list of table index columns.
 	 *	@access		public
 	 *	@return		array
@@ -669,6 +682,22 @@ abstract class Table
 	{
 		$this->jsonColumns	= $columns;
 		$this->reader->setJsonColumns( $this->jsonColumns );
+		return $this;
+	}
+
+	/**
+	 *	Sets list of columns to be transparently decoded into DateTime objects on fetch.
+	 *	Values are encoded automatically on write for any column given a DateTimeInterface
+	 *	value, no matter this list - it only controls decoding on read.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of column names
+	 *	@return		self
+	 *	@throws		DomainException					if a given column is not an existing column
+	 */
+	public function setDateTimeColumns( array $columns ): self
+	{
+		$this->dateTimeColumns	= $columns;
+		$this->reader->setDateTimeColumns( $this->dateTimeColumns );
 		return $this;
 	}
 
@@ -943,6 +972,7 @@ abstract class Table
 		$this->reader->setIndices( $this->indices );
 		$this->reader->setGeneratedColumns( $this->generated );
 		$this->reader->setJsonColumns( $this->jsonColumns );
+		$this->reader->setDateTimeColumns( $this->dateTimeColumns );
 
 		$this->writer->setIndices( $this->indices );
 //		$this->writer->setGeneratedColumns( $this->generated );

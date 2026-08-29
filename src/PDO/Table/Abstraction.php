@@ -7,6 +7,7 @@ namespace CeusMedia\Database\PDO\Table;
 
 use CeusMedia\Common\ADT\Bitmask;
 use CeusMedia\Database\PDO\Connection;
+use DateTimeInterface;
 use DomainException;
 use InvalidArgumentException;
 use PDO;
@@ -621,7 +622,9 @@ abstract class Abstraction
 	{
 		if( NULL === $value )
 			return "NULL";
-		if( is_array( $value ) || is_object( $value ) )
+		if( $value instanceof DateTimeInterface )
+			$value	= $this->encodeDateTimeValue( $value );
+		else if( is_array( $value ) || is_object( $value ) )
 			$value	= $this->encodeJsonValue( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
@@ -644,6 +647,20 @@ abstract class Abstraction
 		if( FALSE === $json )
 			throw new RuntimeException( 'Encoding value as JSON failed: '.json_last_error_msg() );
 		return $json;
+	}
+
+	/**
+	 *	Encodes a DateTime(Immutable) value as a MySQL-compatible datetime string, always
+	 *	including microseconds. Columns not supporting fractional seconds (plain DATETIME/
+	 *	TIMESTAMP instead of DATETIME(6)/TIMESTAMP(6)) silently truncate them on the database
+	 *	side - no column-specific handling is needed here.
+	 *	@access		protected
+	 *	@param		DateTimeInterface	$value		Value to encode
+	 *	@return		string				Encoded value, eg. "2026-08-29 14:30:00.123456"
+	 */
+	protected function encodeDateTimeValue( DateTimeInterface $value ): string
+	{
+		return $value->format( 'Y-m-d H:i:s.u' );
 	}
 
 	/**

@@ -421,3 +421,34 @@ $entry->meta;    // (object) ['tags' => ['a', 'b'], 'archived' => FALSE]
 Decoding matches the shape of the surrounding row: array rows (eg. `FETCH_ASSOC`) decode a JSON column into an array, object rows and entities (`FETCH_OBJ`, `FETCH_CLASS`, `FETCH_INTO`) decode it into a `stdClass` object. This also applies to `getDistinct()`.
 
 **Attention when using JSON columns together with `FETCH_CLASS`:** the entity's property for that column is first assigned the *raw* JSON string by PDO, and only afterward overwritten with the decoded value - so the property's type must accept both, eg. `string|object|null`, not just `string`. A too-narrow property type raises a clear `RuntimeException` naming the offending class and property, instead of a confusing raw `TypeError`.
+
+## DateTime columns
+
+`DateTime` (and `DateTimeImmutable`) values are written transparently, for **any** column, without any configuration - fractional seconds (microtime) are always included:
+
+```php
+$table->add( [
+    'maybeSomeForeignId' => 123,
+    'content'            => 'Second entry.',
+    'occurredAt'         => new \DateTime( '2026-08-29 14:30:00.123456' ),
+] );
+```
+Whether the microseconds actually get stored depends only on the database column, not on anything configured here: a plain `DATETIME`/`TIMESTAMP` column silently truncates to whole seconds, a `DATETIME(6)`/`TIMESTAMP(6)` column keeps them - no error either way.
+
+Reading it back, as with JSON, is opt-in per column:
+
+```php
+$table->setDateTimeColumns( ['occurredAt'] );
+
+$entry = $table->get( $entryId );
+$entry->occurredAt;    // a DateTime instance, with or without microseconds, matching what the column stored
+```
+`getDateTimeColumns()` returns the currently configured list. Configuring an unknown column throws a `DomainException`. There is no separate "has microtime" setting to configure: PHP's `DateTime` constructor detects a fractional part in the fetched string automatically, whether it is there or not. This also applies to `getDistinct()`. A column value that cannot be parsed as a date/time is returned unchanged as a string, rather than throwing.
+
+The same `FETCH_CLASS` caveat as for JSON columns applies here: the entity's property must accept both the initial raw string and the decoded `DateTime`, eg. `string|DateTime|null`, not just `string` - otherwise a clear `RuntimeException` is raised instead of a raw `TypeError`.
+
+`DateTime` (mutable) is used, not `DateTimeImmutable`, so an entity's date can be changed in place and saved back directly:
+```php
+$entry->occurredAt->modify( '+1 day' );
+$table->save( $entry );
+```

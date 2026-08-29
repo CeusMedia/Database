@@ -31,6 +31,7 @@ declare(strict_types=1);
 
 namespace CeusMedia\Database\PDO\Table;
 
+use DateTime;
 use DomainException;
 use Error;
 use Exception;
@@ -56,6 +57,9 @@ class Reader extends Abstraction
 
 	/**	@var	string[]	$jsonColumns	List of columns to be JSON-decoded on fetch */
 	protected array $jsonColumns	= [];
+
+	/**	@var	string[]	$dateTimeColumns	List of columns to be decoded into DateTime objects on fetch */
+	protected array $dateTimeColumns	= [];
 
 	/**
 	 *	Returns count of all entries of this table covered by conditions.
@@ -277,13 +281,16 @@ class Reader extends Abstraction
 		$query		= 'SELECT DISTINCT('.reset( $columns ).') FROM '.$this->getTableName().$conditions.$orders.$limits;
 		$list		= [];
 		$resultSet	= $this->dbc->query( $query );
-		//  this bypasses applyFetchModeOnResultSet(), so JSON columns need decoding here, too
-		$isJsonColumn	= in_array( $column, $this->jsonColumns, TRUE );
+		//  this bypasses applyFetchModeOnResultSet(), so JSON/DateTime columns need decoding here, too
+		$isJsonColumn		= in_array( $column, $this->jsonColumns, TRUE );
+		$isDateTimeColumn	= in_array( $column, $this->dateTimeColumns, TRUE );
 		if( $resultSet instanceof PDOStatement )
 			foreach( $resultSet->fetchAll( PDO::FETCH_NUM ) as $row ){
 				$value	= $row[0];
 				if( $isJsonColumn && is_string( $value ) )
 					$value	= $this->decodeJsonColumnValue( $value, TRUE );
+				else if( $isDateTimeColumn && is_string( $value ) )
+					$value	= $this->decodeDateTimeColumnValue( $value );
 				$list[]	= $value;
 			}
 		return $list;
@@ -342,6 +349,41 @@ class Reader extends Abstraction
 	}
 
 	/**
+	 *	Returns list of columns to be decoded into DateTime objects on fetch.
+	 *	@access		public
+	 *	@return		string[]
+	 */
+	public function getDateTimeColumns(): array
+	{
+		return $this->dateTimeColumns;
+	}
+
+	/**
+	 *	Sets list of columns to be transparently decoded into DateTime objects on fetch.
+	 *	Applies to every fetch mode, the same way as setJsonColumns() does. Fractional
+	 *	seconds (microtime) are handled automatically in both directions: writing always
+	 *	includes them, and the database silently truncates them if the column does not
+	 *	support them (plain DATETIME/TIMESTAMP instead of DATETIME(6)/TIMESTAMP(6)); on
+	 *	read, PHP's DateTime constructor detects whether the fetched string has a
+	 *	fractional part or not, so no separate "has microtime" configuration is needed.
+	 *	Values written via the table writer are encoded automatically for any column
+	 *	given a DateTimeInterface value, no matter this list.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of column names
+	 *	@return		static
+	 *	@throws		DomainException					if a given column is not an existing column
+	 */
+	public function setDateTimeColumns( array $columns ): static
+	{
+		$allColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
+		foreach( $columns as $column )
+			if( !in_array( $column, $allColumns, TRUE ) )
+				throw new DomainException( 'Column "'.$column.'" is not existing in table "'.$this->tableName.'" and cannot be a DateTime column' );
+		$this->dateTimeColumns	= array_unique( $columns );
+		return $this;
+	}
+
+	/**
 	 *	Setting UNDO storage.
 	 *	@access		public
 	 *	@param		object		$storage		Object for UNDO storage
@@ -372,10 +414,13 @@ class Reader extends Abstraction
 			return $this->applyFetchModeIntoOnResultSet( $resultSet );
 
 		$rows	= $resultSet->fetchAll( $this->fetchMode );
-		if( [] === $this->jsonColumns )
+		if( [] === $this->jsonColumns && [] === $this->dateTimeColumns )
 			return $rows;
-		foreach( $rows as $nr => $row )
-			$rows[$nr]	= $this->decodeJsonColumns( $row );
+		foreach( $rows as $nr => $row ){
+			$row	= $this->decodeJsonColumns( $row );
+			$row	= $this->decodeDateTimeColumns( $row );
+			$rows[$nr]	= $row;
+		}
 		return $rows;
 	}
 
@@ -437,6 +482,64 @@ class Reader extends Abstraction
 	}
 
 	/**
+	 *	Decodes configured DateTime columns of a fetched row into DateTime objects.
+	 *	Applies to array rows and object rows/entities alike, the same way as
+	 *	decodeJsonColumns() does. A column value that is not a parseable date/time
+	 *	string is left untouched.
+	 *	@access		protected
+	 *	@param		mixed		$row		Fetched row or entity, of a shape depending on fetch mode
+	 *	@return		mixed		Row with configured DateTime columns decoded, same shape as given
+	 *	@throws		RuntimeException	if an entity's property type rejects the decoded value
+	 */
+	protected function decodeDateTimeColumns( mixed $row ): mixed
+	{
+		foreach( $this->dateTimeColumns as $column ){
+			if( is_array( $row ) ){
+				if( isset( $row[$column] ) && is_string( $row[$column] ) )
+					$row[$column]	= $this->decodeDateTimeColumnValue( $row[$column] );
+			}
+			else if( is_object( $row ) ){
+				/** @phpstan-ignore-next-line */
+				$value	= $row->$column ?? NULL;
+				if( is_string( $value ) ){
+					$decoded	= $this->decodeDateTimeColumnValue( $value );
+					try{
+						/** @phpstan-ignore-next-line */
+						$row->$column	= $decoded;
+					}
+					catch( TypeError $e ){
+						throw new RuntimeException( vsprintf(
+							'Cannot assign decoded DateTime value to property "%s" of class %s: %s. '
+							.'The property type must accept the decoded value (eg. "string|DateTime|null"), not just "string".',
+							[$column, get_class( $row ), $e->getMessage()]
+						), 0, $e );
+					}
+				}
+			}
+		}
+		return $row;
+	}
+
+	/**
+	 *	Decodes a single DateTime column value, unless it is not a parseable date/time
+	 *	string, in which case it is returned unchanged. Fractional seconds (microtime)
+	 *	are picked up automatically if present in the fetched string, no configuration
+	 *	needed.
+	 *	@access		protected
+	 *	@param		string		$value		Raw fetched column value
+	 *	@return		DateTime|string		Decoded value, or the original string if not parseable
+	 */
+	protected function decodeDateTimeColumnValue( string $value ): DateTime|string
+	{
+		try{
+			return new DateTime( $value );
+		}
+		catch( Exception ){
+			return $value;
+		}
+	}
+
+	/**
 	 *	@param		PDOStatement	$resultSet
 	 *	@param		bool			$manuallyOnFail
 	 *	@return		array
@@ -470,6 +573,7 @@ class Reader extends Abstraction
 		foreach( $fetched as $entity ){
 			//  objects are mutated in place, no reassignment needed
 			$this->decodeJsonColumns( $entity );
+			$this->decodeDateTimeColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
 		}
@@ -497,6 +601,7 @@ class Reader extends Abstraction
 			/** @var object $entity */
 			$entity	= new $this->fetchEntityClass( $data );
 			$this->decodeJsonColumns( $entity );
+			$this->decodeDateTimeColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
 			$fetched[] = $entity;
@@ -526,6 +631,7 @@ class Reader extends Abstraction
 		foreach( $fetched as $entity ){
 			//  objects are mutated in place, no reassignment needed
 			$this->decodeJsonColumns( $entity );
+			$this->decodeDateTimeColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
 		}
