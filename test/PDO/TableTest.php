@@ -114,6 +114,94 @@ class TableTest extends TestCase
 		self::assertEquals( 'label1', $data );
 	}
 
+	public function testJsonColumns(): void
+	{
+		self::assertEquals( [], $this->table->getJsonColumns() );
+		$this->table->setJsonColumns( ['label'] );
+		self::assertEquals( ['label'], $this->table->getJsonColumns() );
+
+		$data	= ['a' => 1, 'b' => ['c', 'd'], 'e' => NULL];
+		$id		= $this->table->add( ['topic' => 'start', 'label' => $data] );
+
+		//	fetch mode is FETCH_OBJ here, so the decoded value is an object, too
+		/** @var object $result */
+		$result	= $this->table->get( $id );
+		self::assertEquals( (object) $data, $result->label );
+
+		self::assertEquals( 1, $this->table->edit( $id, ['label' => (object) ['x' => 'y']] ) );
+		/** @var object $result */
+		$result	= $this->table->get( $id );
+		self::assertEquals( (object) ['x' => 'y'], $result->label );
+	}
+
+	public function testJsonColumnsWithFetchClass(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$this->table->setFetchEntityClass( JsonLabelEntity::class );
+		$this->table->setFetchMode( \PDO::FETCH_CLASS );
+
+		$data	= ['a' => 1, 'b' => ['c', 'd']];
+		$id		= $this->table->add( ['topic' => 'start', 'label' => $data] );
+
+		/** @var JsonLabelEntity $result */
+		$result	= $this->table->get( $id );
+		self::assertInstanceOf( JsonLabelEntity::class, $result );
+		self::assertEquals( (object) $data, $result->label );
+	}
+
+	public function testJsonColumnsWithFetchClassViaFindAndSave(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$this->table->setFetchEntityClass( JsonLabelEntity::class );
+		$this->table->setFetchMode( \PDO::FETCH_CLASS );
+
+		$data	= ['k' => 'v', 'n' => 2];
+		$this->table->add( ['topic' => 'find-json', 'label' => $data] );
+
+		//	find(): same decode path as get(), verified here explicitly
+		$results	= $this->table->getAll( ['topic' => 'find-json'] );
+		self::assertCount( 1, $results );
+		/** @var JsonLabelEntity $result */
+		$result	= $results[0];
+		self::assertInstanceOf( JsonLabelEntity::class, $result );
+		self::assertEquals( (object) $data, $result->label );
+
+		//	set a (changed) object on the entity and persist it via save()
+		$result->label	= (object) ['k' => 'changed'];
+		self::assertTrue( $this->table->save( $result ) );
+
+		$resultsAfter	= $this->table->getAll( ['topic' => 'find-json'] );
+		self::assertEquals( (object) ['k' => 'changed'], $resultsAfter[0]->label );
+	}
+
+	public function testJsonColumnsWithMistypedEntityProperty(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$this->table->setFetchEntityClass( JsonLabelEntityNarrowType::class );
+		$this->table->setFetchMode( \PDO::FETCH_CLASS );
+
+		//	Table::add() primes the cache via an internal get(), so the mistyped
+		//	property already surfaces here, not only on an explicit later fetch
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessageMatches( '/property "label" of class .*JsonLabelEntityNarrowType/' );
+		$this->table->add( ['topic' => 'start', 'label' => ['a' => 1]] );
+	}
+
+	public function testGetDistinctWithJsonColumn(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+
+		$this->table->add( ['topic' => 'distinct', 'label' => ['a' => 1]] );
+		$this->table->add( ['topic' => 'distinct', 'label' => ['a' => 1]] );
+		$this->table->add( ['topic' => 'distinct', 'label' => ['b' => 2]] );
+
+		$values	= $this->table->getDistinct( 'label', ['topic' => 'distinct'] );
+
+		self::assertCount( 2, $values );
+		self::assertContainsEquals( ['a' => 1], $values );
+		self::assertContainsEquals( ['b' => 2], $values );
+	}
+
 	public function testGetAll(): void
 	{
 		$this->table->add( ['topic' => 'start', 'label' => 'label1'] );
