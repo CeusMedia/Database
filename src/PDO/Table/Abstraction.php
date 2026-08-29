@@ -5,7 +5,6 @@ declare(strict_types=1);
 
 namespace CeusMedia\Database\PDO\Table;
 
-use CeusMedia\Common\ADT\Bitmask;
 use CeusMedia\Database\PDO\Connection;
 use DateTimeInterface;
 use DomainException;
@@ -387,10 +386,14 @@ abstract class Abstraction
 	 */
 	protected function applyFetchModeOnStatement( PDOStatement $statement ): bool
 	{
-		$mode	= new Bitmask( $this->fetchMode );
-		if( $mode->has( PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
+		//  FETCH_INTO must be checked before FETCH_CLASS: PDO::FETCH_INTO (9) has
+		//  all the bits of PDO::FETCH_CLASS (8) plus one, so "fetchMode & FETCH_CLASS
+		//  === FETCH_CLASS" would also be true when the mode is actually FETCH_INTO -
+		//  checking FETCH_INTO first and exiting on match avoids ever reaching that
+		//  false positive
+		if( PDO::FETCH_INTO === ( $this->fetchMode & PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityObject );
-		if( $mode->has( PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
+		if( PDO::FETCH_CLASS === ( $this->fetchMode & PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityClass );
 		return $statement->setFetchMode( $this->fetchMode );
 	}
