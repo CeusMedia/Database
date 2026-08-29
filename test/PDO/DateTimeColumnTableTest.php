@@ -18,6 +18,29 @@ class DateTimeColumnTableTest extends TestCase
 {
 	protected DateTimeColumnTable $table;
 
+	public function testGetAndSetDateTimeColumns(): void
+	{
+		self::assertEquals( [], $this->table->getDateTimeColumns() );
+
+		$this->table->setDateTimeColumns( ['preciseAt', 'plainAt'] );
+
+		self::assertEquals( ['preciseAt', 'plainAt'], $this->table->getDateTimeColumns() );
+	}
+
+	public function testNonParseableValueIsReturnedUnchanged(): void
+	{
+		//	"topic" is a plain VARCHAR column, not really a date/time column -
+		//	setDateTimeColumns() only checks that the column exists, so this is
+		//	a valid (if pointless) configuration to exercise the fallback path
+		$this->table->setDateTimeColumns( ['topic'] );
+
+		$id	= $this->table->add( ['topic' => 'not-a-date'] );
+
+		$entry	= $this->table->get( $id );
+
+		self::assertSame( 'not-a-date', $entry->topic );
+	}
+
 	public function testMicrosecondsArePreservedWhenColumnSupportsThem(): void
 	{
 		$this->table->setDateTimeColumns( ['preciseAt', 'plainAt'] );
