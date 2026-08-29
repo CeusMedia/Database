@@ -575,6 +575,35 @@ class ReaderTest extends TestCase
 	}
 
 	/**
+	 *	FETCH_INTO must be dispatched even if fetchEntityClass is also still set
+	 *	(and vice versa): PDO::FETCH_INTO (9) has all the bits of PDO::FETCH_CLASS
+	 *	(8) plus one, so a naive "fetchMode & PDO::FETCH_CLASS" check is also true
+	 *	when the mode is actually FETCH_INTO. Sets both sibling properties at
+	 *	once to prove the dispatch in Abstraction::applyFetchModeOnStatement() and
+	 *	Reader::applyFetchModeOnResultSet() picks the right style from fetchMode
+	 *	alone, not just because one of the two properties happens to be NULL.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetFetchModeDispatchIsCorrectEvenWithStaleSiblingState(): void
+	{
+		$this->reader->focusPrimary( 1 );
+
+		$entityObject	= new AdvancedTransactionEntity();
+		$this->reader->setFetchEntityClass( AdvancedTransactionEntity::class );
+		$this->reader->setFetchEntityObject( $entityObject );
+
+		$this->reader->setFetchMode( \PDO::FETCH_INTO );
+		$intoResult		= $this->reader->get();
+		self::assertSame( $entityObject, $intoResult, 'FETCH_INTO must fetch into the bound object, not create a class instance' );
+
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$classResult	= $this->reader->get();
+		self::assertNotSame( $entityObject, $classResult, 'FETCH_CLASS must create a fresh instance, not reuse the bound object' );
+		self::assertInstanceOf( AdvancedTransactionEntity::class, $classResult );
+	}
+
+	/**
 	 *	Tests Method 'get'.
 	 *	@access		public
 	 *	@return		void

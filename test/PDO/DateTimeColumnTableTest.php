@@ -4,7 +4,6 @@ namespace CeusMedia\DatabaseTest\PDO;
 
 use DateTime;
 use PDO;
-use ReflectionObject;
 
 /**
  *	Verifies DateTime column support end-to-end against a real table with
@@ -110,42 +109,6 @@ class DateTimeColumnTableTest extends TestCase
 		self::assertCount( 2, $values );
 		foreach( $values as $value )
 			self::assertInstanceOf( DateTime::class, $value );
-	}
-
-	public function testFetchStyleDispatchIsCorrectEvenWithStaleSiblingState(): void
-	{
-		$id	= $this->table->add( ['topic' => 'start', 'preciseAt' => new DateTime( '2026-08-29 14:30:00.123456' )] );
-
-		//	reach into the Reader directly and set BOTH sibling properties at
-		//	once - this isolates and proves the dispatch logic in
-		//	Abstraction::applyFetchModeOnStatement() and
-		//	Reader::applyFetchModeOnResultSet() picks the right style from
-		//	fetchMode alone, not just because one property happens to be NULL.
-		//	Ported from 0.6.x-generics, where this exact bug was found: PDO::FETCH_INTO
-		//	(9) has all the bits of PDO::FETCH_CLASS (8) plus one, so a naive
-		//	"fetchMode & FETCH_CLASS" check is also true when the mode is FETCH_INTO.
-		$reflection	= new ReflectionObject( $this->table );
-		$readerProp	= $reflection->getProperty( 'reader' );
-		$readerProp->setAccessible( TRUE );
-		/** @var \CeusMedia\Database\PDO\Table\Reader $reader */
-		$reader	= $readerProp->getValue( $this->table );
-
-		$entityObject	= new DateTimeColumnEntity();
-		$reader->setFetchEntityClass( DateTimeColumnEntity::class );
-		$reader->setFetchEntityObject( $entityObject );
-
-		$reader->setFetchMode( PDO::FETCH_INTO );
-		$reader->focusPrimary( $id );
-		$intoResult	= $reader->get();
-		$reader->defocus();
-		self::assertSame( $entityObject, $intoResult, 'FETCH_INTO must fetch into the bound object, not create a class instance' );
-
-		$reader->setFetchMode( PDO::FETCH_CLASS );
-		$reader->focusPrimary( $id );
-		$classResult	= $reader->get();
-		$reader->defocus();
-		self::assertNotSame( $entityObject, $classResult, 'FETCH_CLASS must create a fresh instance, not reuse the bound object' );
-		self::assertInstanceOf( DateTimeColumnEntity::class, $classResult );
 	}
 
 	protected function setUp(): void
