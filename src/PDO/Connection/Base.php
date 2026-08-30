@@ -33,6 +33,7 @@ use CeusMedia\Common\Exception\SQL as SqlException;
 use PDO;
 use PDOException;
 use PDOStatement;
+use RuntimeException;
 
 /**
  *	Enhanced PDO Connection.
@@ -46,14 +47,21 @@ use PDOStatement;
  */
 abstract class Base extends PDO
 {
-	/**	@var	string|NULL					$driver					PDO driver */
-	protected ?string $driver				= NULL;
+	public const LOG_LEVEL_UNSPECIFIED	= 0;
+	public const LOG_LEVEL_NONE			= 1;
+	public const LOG_LEVEL_ERROR		= 2;
+	public const LOG_LEVEL_STATEMENT	= 4;
 
-	/**	@var	integer						$numberExecutes			Number of execute calls */
-	public int $numberExecutes				= 0;
+	/** @var	array						$defaultOptions			Map of default options */
+	public static array $defaultOptions		= [
+		PDO::ATTR_ERRMODE   => PDO::ERRMODE_EXCEPTION,
+	];
 
-	/**	@var	integer						$numberStatements		Number of executed statements */
-	public int $numberStatements			= 0;
+	/** @var	string						$errorTemplate			Template for error log */
+	public static string $errorTemplate		= "{time}: PDO:{pdoCode} SQL:{sqlCode} {sqlError} ({statement})\n";
+
+	/** @var	?string						$lastQuery				Latest executed query */
+	public ?string $lastQuery				= NULL;
 
 	/** @var	?string						$logFileErrors			Path of error log file, eg. logs/db/pdo/error.log */
 	public ?string $logFileErrors			= NULL;
@@ -61,22 +69,26 @@ abstract class Base extends PDO
 	/** @var	?string						$logFileStatements		Path of statement log file, eg. logs/db/pdo/query.log */
 	public ?string $logFileStatements		= NULL;
 
-	/**	@var	integer						$openTransactions		Number of opened nested transactions */
-	protected int $openTransactions			= 0;
+	/**	@var	integer						$numberExecutes			Number of execute calls */
+	public int $numberExecutes				= 0;
 
-	/** @var	?string						$lastQuery				Latest executed query */
-	public ?string $lastQuery				= NULL;
+	/**	@var	integer						$numberStatements		Number of executed statements */
+	public int $numberStatements			= 0;
+
+	/**	@var	string|NULL					$driver					PDO driver */
+	protected ?string $driver				= NULL;
 
 	/** @var	boolean						$innerTransactionFail	Flag: inner (nested) Transaction has failed */
 	protected bool $innerTransactionFail	= FALSE;
 
-	/** @var	string						$errorTemplate			Template for error log */
-	public static string $errorTemplate		= "{time}: PDO:{pdoCode} SQL:{sqlCode} {sqlError} ({statement})\n";
+	/** @var	int							$logLevel				Bitmask of log level(s), default: log errors */
+	protected int $logLevel					= self::LOG_LEVEL_ERROR;
 
-	/** @var	array						$defaultOptions			Map of default options */
-	public static array $defaultOptions		= [
-		PDO::ATTR_ERRMODE   => PDO::ERRMODE_EXCEPTION,
-	];
+	/** @var	int							$logLevel				Bitmask of log level(s) only for next statement/query */
+	protected int $logLevelForNextStatement	= self::LOG_LEVEL_UNSPECIFIED;
+
+	/**	@var	integer						$openTransactions		Number of opened nested transactions */
+	protected int $openTransactions			= 0;
 
 	/**
 	 *	Constructor, establishes Database Connection using a DSN. Set Error Handling to use Exceptions.
@@ -126,6 +138,7 @@ abstract class Base extends PDO
 	 *	Commits a Transaction.
 	 *	@access		public
 	 *	@return		bool
+	 *	@throws		RuntimeException	if commit failed because a nested (inner) transaction has failed
 	 */
 	public function commit(): bool
 	{
@@ -139,9 +152,8 @@ abstract class Base extends PDO
 			if( $this->innerTransactionFail ){
 				//  rollback outer Transaction instead of committing
 				$this->rollBack();
-//				throw new RuntimeException( 'Commit failed due to a nested transaction failed' );
-				//  indicated that the Transaction has failed
-				return FALSE;
+				//  make the failure visible instead of silently pretending success
+				throw new RuntimeException( 'Commit failed due to a nested transaction having failed' );
 			}
 			//  no failed inner Transaction
 			else
@@ -159,6 +171,7 @@ abstract class Base extends PDO
 	 *	@access		public
 	 *	@param		string		$statement		SQL statement to execute
 	 *	@return		integer		Number of affected rows
+	 *	@throws		SqlException	if the statement fails
 	 */
 	public function exec( string $statement ): int
 	{
@@ -174,6 +187,10 @@ abstract class Base extends PDO
 		catch( PDOException $e ){
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $statement );
+		}
+		finally{
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )					//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;					//  reset, even if the statement failed
 		}
 		return $affectedRows;
 	}
@@ -220,7 +237,9 @@ abstract class Base extends PDO
 	 */
 	public function getTables( ?string $prefix = NULL ): array
 	{
-		$query	= "SHOW TABLES" . ( !is_null( $prefix ) ? " LIKE '".$prefix."%'" : "" );
+		$query	= "SHOW TABLES";
+		if( !is_null( $prefix ) )
+			$query	.= " LIKE ".$this->quote( $prefix."%" );
 		$result	= parent::query( $query );
 		if( FALSE === $result )
 			return [];
@@ -228,56 +247,6 @@ abstract class Base extends PDO
 		if( FALSE === $tables )
 			return [];
 		return $tables;
-	}
-
-	/**
-	 *	Notes Information from PDO Exception in Error Log File and throw SQL Exception.
-	 *	@access		protected
-	 *	@param		PDOException	$exception		PDO Exception thrown by invalid SQL Statement
-	 *	@param		string			$statement		SQL Statement which originated PDO Exception
-	 *	@return		void
-	 */
-	protected function logError( PDOException $exception, string $statement ): void
-	{
-		if( $this->logFileErrors === NULL )
-			return;
-//			throw $exception;
-
-		$info		= $exception->errorInfo;
-		$sqlError	= $info[2] ?? '';
-		$sqlCode	= $info[1] ?? NULL;
-		$pdoCode	= $info[0] ?? NULL;
-		$message	= $exception->getMessage();
-		/** @var string $statement */
-		$statement	= preg_replace( "@\r?\n@", " ", $statement );
-		/** @var string $statement */
-		$statement	= preg_replace( "@  +@", " ", $statement );
-
-		$note	= self::$errorTemplate;
-		$note	= str_replace( "{time}", (string) time(), $note );
-		$note	= str_replace( "{sqlError}", $sqlError, $note );
-		$note	= str_replace( "{sqlCode}", $sqlCode, $note );
-		$note	= str_replace( "{pdoCode}", $pdoCode, $note );
-		$note	= str_replace( "{message}", $message, $note );
-		$note	= str_replace( "{statement}", $statement, $note );
-
-		error_log( $note, 3, $this->logFileErrors );
-		throw new SqlException( $message, $sqlCode, $pdoCode );
-	}
-
-	/**
-	 *	Notes a SQL Statement in Statement Log File.
-	 *	@access		protected
-	 *	@param		string		$statement		SQL Statement
-	 *	@return		void
-	 */
-	protected function logStatement( string $statement ): void
-	{
-		if( $this->logFileStatements === NULL )
-			return;
-		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
-		$message	= time()." ".getenv( 'REMOTE_ADDR' )." ".$statement."\n";
-		error_log( $message, 3, $this->logFileStatements);
 	}
 
 	/**
@@ -335,6 +304,31 @@ abstract class Base extends PDO
 	}
 
 	/**
+	 *	Sets log level.
+	 *	@access		public
+	 *	@param		int		$logLevel		Log level, one or many
+	 *	@return		self
+	 */
+	public function setLogLevel( int $logLevel ): self
+	{
+		$this->logLevel	= $logLevel;
+		return $this;
+	}
+
+	/**
+	 *	Sets log level only for next statement or query.
+	 *	Will be reset after next exec call.
+	 *	@access		public
+	 *	@param		int		$logLevel		Log level, one or many
+	 *	@return		self
+	 */
+	public function setLogLevelForNextStatement( int $logLevel ): self
+	{
+		$this->logLevelForNextStatement	= $logLevel;
+		return $this;
+	}
+
+	/**
 	 *	Sets File Name of Statement Log.
 	 *	@access		public
 	 *	@param		string		$fileName		File Name of Statement Log File
@@ -346,5 +340,77 @@ abstract class Base extends PDO
 		if( 0 !== strlen( trim( $fileName ) ) && !file_exists( dirname( $fileName ) ) )
 			mkdir( dirname( $fileName ), 0700, TRUE );
 		return $this;
+	}
+
+
+	//  --  PROTECTED  --  //
+
+	/**
+	 *	Checks whether set log level or log level for next statement is matching given log level.
+	 *	@param		int		$logLevel		Log level to check against, one level is typical, many are possible
+	 *	@return		bool
+	 */
+	protected function hasLogLevel( int $logLevel ): bool
+	{
+		if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement ){
+			if( 0 !== ( $this->logLevelForNextStatement & $logLevel ) )
+				return TRUE;
+		}
+		else if( 0 !== ( $this->logLevel & $logLevel ) )
+			return TRUE;
+		return FALSE;
+	}
+
+	/**
+	 *	Notes Information from PDO Exception in Error Log File, if configured, and always throws SQL Exception.
+	 *	@access		protected
+	 *	@param		PDOException	$exception		PDO Exception thrown by invalid SQL Statement
+	 *	@param		string			$statement		SQL Statement which originated PDO Exception
+	 *	@return		void
+	 *	@throws		SqlException	always, so that a failed statement is never silently swallowed
+	 */
+	protected function logError( PDOException $exception, string $statement ): void
+	{
+		$info		= $exception->errorInfo;
+		$sqlError	= $info[2] ?? '';
+		$sqlCode	= $info[1] ?? NULL;
+		$pdoCode	= $info[0] ?? NULL;
+		$message	= $exception->getMessage();
+
+		if( NULL !== $this->logFileErrors && $this->hasLogLevel( static::LOG_LEVEL_ERROR ) ){
+			/** @var string $statement */
+			$statement	= preg_replace( "@\r?\n@", " ", $statement );
+			/** @var string $statement */
+			$statement	= preg_replace( "@  +@", " ", $statement );
+
+			$note	= self::$errorTemplate;
+			$note	= str_replace( "{time}", (string) time(), $note );
+			$note	= str_replace( "{sqlError}", $sqlError, $note );
+			$note	= str_replace( "{sqlCode}", $sqlCode, $note );
+			$note	= str_replace( "{pdoCode}", $pdoCode, $note );
+			$note	= str_replace( "{message}", $message, $note );
+			$note	= str_replace( "{statement}", $statement, $note );
+
+			error_log( $note, 3, $this->logFileErrors );
+		}
+		throw new SqlException( $message, $sqlCode, $pdoCode );
+	}
+
+	/**
+	 *	Notes a SQL Statement in Statement Log File.
+	 *	@access		protected
+	 *	@param		string		$statement		SQL Statement
+	 *	@return		void
+	 */
+	protected function logStatement( string $statement ): void
+	{
+		if( $this->logFileStatements === NULL )
+			return;
+		if( !$this->hasLogLevel( static::LOG_LEVEL_STATEMENT ) )
+			return;
+
+		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
+		$message	= time()." ".getenv( 'REMOTE_ADDR' )." ".$statement."\n";
+		error_log( $message, 3, $this->logFileStatements);
 	}
 }

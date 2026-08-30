@@ -14,6 +14,9 @@ use CeusMedia\Common\ADT\Collection\Dictionary;
 use CeusMedia\Database\PDO\Connection as PdoConnection;
 use CeusMedia\Database\PDO\Table\Reader as PdoTableReader;
 use CeusMedia\DatabaseTest\PDO\AdvancedTransactionEntity;
+use CeusMedia\DatabaseTest\PDO\NarrowIntoEntity;
+use CeusMedia\DatabaseTest\PDO\OnFetchTrackingEntity;
+use CeusMedia\DatabaseTest\PDO\ThrowingConstructorEntity;
 use CeusMedia\DatabaseTest\PDO\TransactionEntity;
 use CeusMedia\DatabaseTest\PDO\TestCase;
 use mysqli;
@@ -90,6 +93,40 @@ class ReaderTest extends TestCase
 
 		$actual		= $this->reader->count( ['label' => 'not_existing'] );
 		self::assertEquals( 0, $actual );
+	}
+
+	/**
+	 *	Tests Method 'countFast'. Unlike count(), this is based on EXPLAIN's
+	 *	estimated row count, which is only reliable without a WHERE condition
+	 *	(hence no assertion against a filtered condition here, see the method's
+	 *	own "may be inaccurate" caveat).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testCountFast()
+	{
+		self::assertEquals( 1, $this->reader->countFast() );
+
+		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'countFastTest');" );
+
+		self::assertEquals( 2, $this->reader->countFast() );
+	}
+
+	/**
+	 *	'count' and 'countFast' return 0 if their query fails to execute -
+	 *	only reachable with a connection not configured for
+	 *	PDO::ERRMODE_EXCEPTION, see testFindFamilyThrowsRuntimeExceptionOnExecutionFailure().
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testCountAndCountFastReturnZeroOnExecutionFailure(): void
+	{
+		$dbc	= new PdoConnection( $this->dsn, $this->username, $this->password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT] );
+		$reader	= new PdoTableReader( $dbc, 'does_not_exist_table_xyz', $this->columns, $this->primaryKey );
+		$reader->setIndices( $this->indices );
+
+		self::assertEquals( 0, $reader->count() );
+		self::assertEquals( 0, $reader->countFast() );
 	}
 
 	/**
@@ -333,6 +370,32 @@ class ReaderTest extends TestCase
 	}
 
 	/**
+	 *	NULL columns must fall back to an empty list (ie. all columns), just
+	 *	like an empty array would.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindWhereInWithNullColumns(): void
+	{
+		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInNullColumnsTest');" );
+
+		$result	= $this->reader->findWhereIn( NULL, "topic", ['test'] );
+		self::assertCount( 1, $result );
+		self::assertCount( 4, $result[0] );
+	}
+
+	/**
+	 *	Tests Exception of Method 'findWhereIn'.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindWhereInExceptionInvalidIndex(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->reader->findWhereIn( ['id'], "timestamp", ['2026-08-30 00:00:00'] );
+	}
+
+	/**
 	 *	Tests Method 'findWhereInAnd'.
 	 *	@access		public
 	 *	@return		void
@@ -377,6 +440,94 @@ class ReaderTest extends TestCase
 
 		$result		= $this->reader->findWhereInAnd( ['id'], "topic", ['start'], ["label" => "findWhereInAndTest"], ['id' => 'ASC'] );
 		self::assertCount( 0, $result );
+	}
+
+	/**
+	 *	NULL columns must fall back to an empty list (ie. all columns), just
+	 *	like an empty array would.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindWhereInAndWithNullColumns(): void
+	{
+		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInAndNullColumnsTest');" );
+
+		$result	= $this->reader->findWhereInAnd( NULL, "topic", ['test'], ["label" => "findWhereInAndNullColumnsTest"] );
+		self::assertCount( 1, $result );
+		self::assertCount( 4, $result[0] );
+	}
+
+	/**
+	 *	Tests Exception of Method 'findWhereInAnd'.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindWhereInAndExceptionInvalidIndex(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->reader->findWhereInAnd( ['id'], "timestamp", ['2026-08-30 00:00:00'] );
+	}
+
+	/**
+	 *	'find', 'findWhereIn' and 'findWhereInAnd' throw a RuntimeException if
+	 *	executing the built statement fails. Under the connection's default
+	 *	PDO::ERRMODE_EXCEPTION this never happens (PDO itself throws first), so
+	 *	this is only reachable with a connection configured for
+	 *	PDO::ERRMODE_SILENT or PDO::ERRMODE_WARNING - reproduced here via a
+	 *	non-existing table name, which fails only at execute(), not at prepare().
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindFamilyThrowsRuntimeExceptionOnExecutionFailure(): void
+	{
+		$dbc	= new PdoConnection( $this->dsn, $this->username, $this->password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT] );
+		$reader	= new PdoTableReader( $dbc, 'does_not_exist_table_xyz', $this->columns, $this->primaryKey );
+		$reader->setIndices( $this->indices );
+
+		try{
+			$reader->find();
+			self::fail( 'Expected RuntimeException was not thrown' );
+		}
+		catch( \RuntimeException $e ){
+			self::assertEquals( 'Executing failed', $e->getMessage() );
+		}
+
+		try{
+			$reader->findWhereIn( ['id'], 'topic', ['test'] );
+			self::fail( 'Expected RuntimeException was not thrown' );
+		}
+		catch( \RuntimeException $e ){
+			self::assertEquals( 'Executing failed', $e->getMessage() );
+		}
+
+		try{
+			$reader->findWhereInAnd( ['id'], 'topic', ['test'] );
+			self::fail( 'Expected RuntimeException was not thrown' );
+		}
+		catch( \RuntimeException $e ){
+			self::assertEquals( 'Executing failed', $e->getMessage() );
+		}
+	}
+
+	/**
+	 *	decodeJsonColumns()/decodeDateTimeColumns() must also handle array rows
+	 *	(eg. FETCH_ASSOC), not just object rows/entities - which is what every
+	 *	other JSON/DateTime test in this codebase exercises (FETCH_OBJ/FETCH_CLASS).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindWithArrayFetchModeDecodesConfiguredColumns(): void
+	{
+		$this->reader->setFetchMode( \PDO::FETCH_ASSOC );
+		$this->reader->setJsonColumns( ['label', 'topic'] );
+		$this->reader->setDateTimeColumns( ['timestamp'] );
+
+		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', '{\"a\":1}');" );
+
+		$result	= $this->reader->findWhereIn( ['topic', 'label', 'timestamp'], 'topic', ['test'] );
+		self::assertEquals( ['a' => 1], $result[0]['label'] );
+		self::assertSame( 'test', $result[0]['topic'], 'a plain non-JSON string must be returned unchanged' );
+		self::assertInstanceOf( \DateTime::class, $result[0]['timestamp'] );
 	}
 
 	/**
@@ -575,6 +726,94 @@ class ReaderTest extends TestCase
 	}
 
 	/**
+	 *	FETCH_INTO must be dispatched even if fetchEntityClass is also still set
+	 *	(and vice versa): PDO::FETCH_INTO (9) has all the bits of PDO::FETCH_CLASS
+	 *	(8) plus one, so a naive "fetchMode & PDO::FETCH_CLASS" check is also true
+	 *	when the mode is actually FETCH_INTO. Sets both sibling properties at
+	 *	once to prove the dispatch in Abstraction::applyFetchModeOnStatement() and
+	 *	Reader::applyFetchModeOnResultSet() picks the right style from fetchMode
+	 *	alone, not just because one of the two properties happens to be NULL.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetFetchModeDispatchIsCorrectEvenWithStaleSiblingState(): void
+	{
+		$this->reader->focusPrimary( 1 );
+
+		$entityObject	= new AdvancedTransactionEntity();
+		$this->reader->setFetchEntityClass( AdvancedTransactionEntity::class );
+		$this->reader->setFetchEntityObject( $entityObject );
+
+		$this->reader->setFetchMode( \PDO::FETCH_INTO );
+		$intoResult		= $this->reader->get();
+		self::assertSame( $entityObject, $intoResult, 'FETCH_INTO must fetch into the bound object, not create a class instance' );
+
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$classResult	= $this->reader->get();
+		self::assertNotSame( $entityObject, $classResult, 'FETCH_CLASS must create a fresh instance, not reuse the bound object' );
+		self::assertInstanceOf( AdvancedTransactionEntity::class, $classResult );
+	}
+
+	/**
+	 *	Reader::applyFetchModeClassOnResultSet() must wrap any failure while
+	 *	creating entity instances (here: a constructor that always throws)
+	 *	into a clear RuntimeException naming the entity class.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetWithClassFetchModeThrowsRuntimeExceptionOnConstructorFailure(): void
+	{
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$this->reader->setFetchEntityClass( ThrowingConstructorEntity::class );
+		$this->reader->focusPrimary( 1 );
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessageMatches( '/Could not create entity of class .*ThrowingConstructorEntity/' );
+		$this->reader->get();
+	}
+
+	/**
+	 *	Reader::applyFetchModeIntoOnResultSet() must wrap any failure while
+	 *	fetching into the bound object (here: a property type PDO itself
+	 *	cannot assign to) into a clear RuntimeException naming the entity class.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetWithIntoFetchModeThrowsRuntimeExceptionOnTypeMismatch(): void
+	{
+		$this->reader->setFetchMode( \PDO::FETCH_INTO );
+		$this->reader->setFetchEntityObject( new NarrowIntoEntity() );
+		$this->reader->focusPrimary( 1 );
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessageMatches( '/Could not extend entity object of class .*NarrowIntoEntity/' );
+		$this->reader->get();
+	}
+
+	/**
+	 *	Both applyFetchModeClassOnResultSet() and applyFetchModeIntoOnResultSet()
+	 *	must call an entity's optional "onFetch" hook, if present.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetCallsOnFetchHookOnBothClassAndIntoFetchMode(): void
+	{
+		$this->reader->focusPrimary( 1 );
+
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$this->reader->setFetchEntityClass( OnFetchTrackingEntity::class );
+		/** @var OnFetchTrackingEntity $classResult */
+		$classResult	= $this->reader->get();
+		self::assertTrue( $classResult->onFetchCalled );
+
+		$entityObject	= new OnFetchTrackingEntity();
+		$this->reader->setFetchMode( \PDO::FETCH_INTO );
+		$this->reader->setFetchEntityObject( $entityObject );
+		$this->reader->get();
+		self::assertTrue( $entityObject->onFetchCalled );
+	}
+
+	/**
 	 *	Tests Method 'get'.
 	 *	@access		public
 	 *	@return		void
@@ -629,6 +868,25 @@ class ReaderTest extends TestCase
 	{
 		$this->expectException( 'RuntimeException' );
 		$this->reader->get();
+	}
+
+	/**
+	 *	Unlike 'find'/'findWhereIn'/'findWhereInAnd', 'get' does not throw on a
+	 *	failed execution, it just returns an empty result - same situation as
+	 *	testFindFamilyThrowsRuntimeExceptionOnExecutionFailure(), only reachable
+	 *	with a connection not configured for PDO::ERRMODE_EXCEPTION.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetReturnsEmptyResultOnExecutionFailure(): void
+	{
+		$dbc	= new PdoConnection( $this->dsn, $this->username, $this->password, [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT] );
+		$reader	= new PdoTableReader( $dbc, 'does_not_exist_table_xyz', $this->columns, $this->primaryKey );
+		$reader->setIndices( $this->indices );
+		$reader->focusPrimary( 1 );
+
+		self::assertNull( $reader->get() );
+		self::assertEquals( [], $reader->get( FALSE ) );
 	}
 
 	/**
@@ -811,6 +1069,28 @@ class ReaderTest extends TestCase
 		$object	= new class(){ public $content	= 'testA'; };
 		$this->reader->setFetchEntityObject( $object );
 		self::assertEquals( $object, $this->reader->getFetchEntityObject() );
+	}
+
+	/**
+	 *	Tests Exception of Method 'setJsonColumns'.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testSetJsonColumnsException(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->reader->setJsonColumns( ['not_existing'] );
+	}
+
+	/**
+	 *	Tests Exception of Method 'setDateTimeColumns'.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testSetDateTimeColumnsException(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->reader->setDateTimeColumns( ['not_existing'] );
 	}
 
 	/**

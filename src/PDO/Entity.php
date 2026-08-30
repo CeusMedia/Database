@@ -142,8 +142,10 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	 */
 	public function has( string $key ): bool
 	{
+		//  isset() (unlike a direct property read) safely reports FALSE for a declared
+		//  but not-yet-initialized typed property, instead of throwing an Error
 		/** @phpstan-ignore-next-line */
-		return property_exists( $this, $key ) && NULL !== $this->$key;
+		return isset( $this->$key );
 	}
 
 	/**
@@ -233,8 +235,11 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	 */
 	public function offsetExists( mixed $offset ): bool
 	{
+		//  isset() mirrors normal ArrayAccess semantics (a NULL or not-yet-initialized
+		//  property counts as "not set"), and is safe for typed properties
 		/** @var string $offset */
-		return property_exists( $this, $offset );
+		/** @phpstan-ignore-next-line */
+		return isset( $this->$offset );
 	}
 
 	/**

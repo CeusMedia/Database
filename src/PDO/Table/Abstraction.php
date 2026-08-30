@@ -5,8 +5,8 @@ declare(strict_types=1);
 
 namespace CeusMedia\Database\PDO\Table;
 
-use CeusMedia\Common\ADT\Bitmask;
 use CeusMedia\Database\PDO\Connection;
+use DateTimeInterface;
 use DomainException;
 use InvalidArgumentException;
 use PDO;
@@ -16,6 +16,12 @@ use RuntimeException;
 
 abstract class Abstraction
 {
+	/**	@var	string[]	ALLOWED_CONDITION_FUNCTIONS		Whitelisted SQL functions allowed as function condition keys */
+	protected const ALLOWED_CONDITION_FUNCTIONS	= ['COUNT', 'SUM', 'AVG', 'MIN', 'MAX'];
+
+	/**	@var	string		PATTERN_CONDITION_FUNCTION			Pattern of a function condition key, eg. "COUNT(*)" or "SUM(amount)" */
+	protected const PATTERN_CONDITION_FUNCTION		= '/^([a-zA-Z]+)\(\s*(\*|[a-zA-Z0-9_]+)\s*\)$/';
+
 	/**	@var	int							$defaultFetchMode	Default fetch mode, can be set statically */
 	public static int $defaultFetchMode		= PDO::FETCH_ASSOC;
 
@@ -380,10 +386,14 @@ abstract class Abstraction
 	 */
 	protected function applyFetchModeOnStatement( PDOStatement $statement ): bool
 	{
-		$mode	= new Bitmask( $this->fetchMode );
-		if( $mode->has( PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
+		//  FETCH_INTO must be checked before FETCH_CLASS: PDO::FETCH_INTO (9) has
+		//  all the bits of PDO::FETCH_CLASS (8) plus one, so "fetchMode & FETCH_CLASS
+		//  === FETCH_CLASS" would also be true when the mode is actually FETCH_INTO -
+		//  checking FETCH_INTO first and exiting on match avoids ever reaching that
+		//  false positive
+		if( PDO::FETCH_INTO === ( $this->fetchMode & PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityObject );
-		if( $mode->has( PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
+		if( PDO::FETCH_CLASS === ( $this->fetchMode & PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityClass );
 		return $statement->setFetchMode( $this->fetchMode );
 	}
@@ -396,6 +406,7 @@ abstract class Abstraction
 	 *	@param		bool		$useIndices			Flag: use focused indices
 	 *	@param		bool		$allowFunctions		Flag: use focused indices
 	 *	@return		string
+	 *	@throws		DomainException		if a function condition key names a function or column that is not whitelisted
 	 */
 	protected function getConditionQuery( array $conditions = [], bool $usePrimary = TRUE, bool $useIndices = TRUE, bool $allowFunctions = FALSE ): string
 	{
@@ -413,8 +424,8 @@ abstract class Abstraction
 		$functionConditions = [];
 		//  iterate remaining conditions
 		foreach( $conditions as $key => $value )
-			//  column key is an aggregate function
-			if( 1 === preg_match( "/^[a-z]+\(.+\)$/i", $key ) )
+			//  column key looks like a whitelisted aggregate function call, eg. "COUNT(*)"
+			if( 1 === preg_match( self::PATTERN_CONDITION_FUNCTION, $key ) )
 				$functionConditions[$key]	= $value;
 
 		//  if using primary key & is focused primary
@@ -458,13 +469,16 @@ abstract class Abstraction
 
 		}
 
-		/*  --  THIS IS NEW, UNDER DEVELOPMENT, UNSECURE AND UNSTABLE  --  */
-		//  function are allowed
+		//  function conditions are allowed: rebuild each as a whitelisted function over a validated column
 		if( $allowFunctions )
 			//  iterate noted functions
 			foreach( $functionConditions as $function => $value ){
 				//  extend conditions
-				$conditions[]	= $this->realizeConditionQueryPart( $function, $value, FALSE );
+				$conditions[]	= $this->realizeConditionQueryPart(
+					$this->secureFunctionCondition( $function, $allReadableColumns ),
+					$value,
+					FALSE
+				);
 			}
 
 		//  return AND combined conditions
@@ -506,14 +520,23 @@ abstract class Abstraction
 	 *	@access		protected
 	 *	@param		array		$orders			Associative Array with Orders
 	 *	@return		string
+	 *	@throws		DomainException				if a given order column is not an existing column
+	 *	@throws		InvalidArgumentException	if a given order direction is neither ASC nor DESC
 	 */
 	protected function getOrderCondition( array $orders = [] ): string
 	{
 		$order	= '';
 		if( 0 !== count( $orders ) ){
+			$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 			$list	= [];
-			foreach( $orders as $column => $direction )
-				$list[] = '`'.$column.'` '.strtoupper( $direction );
+			foreach( $orders as $column => $direction ){
+				if( !in_array( $column, $allReadableColumns, TRUE ) )
+					throw new DomainException( 'Column "'.$column.'" is not an existing column of table "'.$this->tableName.'"' );
+				$direction	= strtoupper( (string) $direction );
+				if( !in_array( $direction, ['ASC', 'DESC'], TRUE ) )
+					throw new InvalidArgumentException( 'Order direction must be ASC or DESC, "'.$direction.'" given for column "'.$column.'"' );
+				$list[] = '`'.$column.'` '.$direction;
+			}
 			$order	= ' ORDER BY '.implode( ', ', $list );
 		}
 		return $order;
@@ -590,21 +613,83 @@ abstract class Abstraction
 	}
 
 	/**
-	 *	Secures Conditions Value by adding slashes or quoting.
+	 *	Secures a value by adding slashes or quoting.
+	 *	Array and object values (eg. for a JSON-capable column) are JSON-encoded first.
 	 *	@access		protected
-	 *	@param		string|int|float|NULL	$value		String, integer, float or NULL to be secured
+	 *	@param		string|int|float|array|object|NULL	$value		Value to be secured
 	 *	@return		string
+	 *	@throws		RuntimeException	if JSON-encoding an array or object value fails
+	 *	@throws		RuntimeException	if quoting the value fails
 	 */
-	protected function secureValue( string|int|float|null $value ): string
+	protected function secureValue( string|int|float|array|object|null $value ): string
 	{
 		if( NULL === $value )
 			return "NULL";
+		if( $value instanceof DateTimeInterface )
+			$value	= $this->encodeDateTimeValue( $value );
+		else if( is_array( $value ) || is_object( $value ) )
+			$value	= $this->encodeJsonValue( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
 		$result	= $this->dbc->quote( $value );
 		if( FALSE === $result )
 			throw new RuntimeException( 'Securing value failed' );
 		return $result;
+	}
+
+	/**
+	 *	Encodes an array or object value as a JSON string, eg. for storage in a JSON-capable column.
+	 *	@access		protected
+	 *	@param		array|object	$value		Value to encode
+	 *	@return		string			JSON encoded value
+	 *	@throws		RuntimeException			if JSON encoding fails
+	 */
+	protected function encodeJsonValue( array|object $value ): string
+	{
+		$json	= json_encode( $value );
+		if( FALSE === $json )
+			throw new RuntimeException( 'Encoding value as JSON failed: '.json_last_error_msg() );
+		return $json;
+	}
+
+	/**
+	 *	Encodes a DateTime(Immutable) value as a MySQL-compatible datetime string, always
+	 *	including microseconds. Columns not supporting fractional seconds (plain DATETIME/
+	 *	TIMESTAMP instead of DATETIME(6)/TIMESTAMP(6)) silently truncate them on the database
+	 *	side - no column-specific handling is needed here.
+	 *	@access		protected
+	 *	@param		DateTimeInterface	$value		Value to encode
+	 *	@return		string				Encoded value, eg. "2026-08-29 14:30:00.123456"
+	 */
+	protected function encodeDateTimeValue( DateTimeInterface $value ): string
+	{
+		return $value->format( 'Y-m-d H:i:s.u' );
+	}
+
+	/**
+	 *	Validates a function condition key (eg. "COUNT(*)", "SUM(amount)") against a whitelist
+	 *	of allowed functions and a validated column (or "*"), and returns it rebuilt with a
+	 *	masked column name, safe to embed in a query.
+	 *	@access		protected
+	 *	@param		string		$function				Function condition key, eg. "SUM(amount)"
+	 *	@param		array		$allReadableColumns		List of columns allowed as function argument
+	 *	@return		string		Rebuilt, safe function call, eg. "SUM(`amount`)"
+	 *	@throws		DomainException				if the function condition key has an invalid shape
+	 *	@throws		DomainException				if the function name is not whitelisted
+	 *	@throws		DomainException				if the function argument is not an existing column nor "*"
+	 */
+	protected function secureFunctionCondition( string $function, array $allReadableColumns ): string
+	{
+		if( 1 !== preg_match( self::PATTERN_CONDITION_FUNCTION, $function, $matches ) )
+			throw new DomainException( 'Invalid function condition "'.$function.'"' );
+		$name		= strtoupper( $matches[1] );
+		$argument	= $matches[2];
+		if( !in_array( $name, self::ALLOWED_CONDITION_FUNCTIONS, TRUE ) )
+			throw new DomainException( 'Function "'.$name.'" is not allowed in conditions' );
+		if( '*' !== $argument && !in_array( $argument, $allReadableColumns, TRUE ) )
+			throw new DomainException( 'Column "'.$argument.'" used in function condition is not an existing column' );
+		$argument	= '*' === $argument ? '*' : '`'.$argument.'`';
+		return $name.'('.$argument.')';
 	}
 
 	/**

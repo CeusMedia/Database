@@ -1,12 +1,39 @@
+## Version 0.6.8
+- PDO:
+	- Add JSON column support: array/object values are JSON-encoded transparently on write, for any column, without configuration; reading them back decoded is opt-in per column via `Table::setJsonColumns()`/`getJsonColumns()`, matching the shape of the surrounding row (array or `stdClass`) and also applying to `getDistinct()`. A too-narrow `FETCH_CLASS` entity property type raises a clear `RuntimeException` naming the offending class and property instead of a raw `TypeError`.
+	- Add DateTime column support, analogous to JSON columns: `DateTime`/`DateTimeImmutable` values are encoded transparently on write (always including microseconds; the database silently truncates them if the column does not support fractional seconds), and opt-in per column on read via `Table::setDateTimeColumns()`/`getDateTimeColumns()` - no separate "has microtime" configuration is needed, PHP's `DateTime` constructor detects it automatically. Decoded values are mutable `DateTime` instances, so an entity's date can be changed in place and saved back directly.
+	- Fix `Table\Abstraction::applyFetchModeOnStatement()` and `Table\Reader::applyFetchModeOnResultSet()` dispatching `FETCH_INTO` as `FETCH_CLASS` whenever both `fetchEntityClass` and `fetchEntityObject` were set on the same reader, since `PDO::FETCH_INTO`'s bits are a superset of `PDO::FETCH_CLASS`'s.
+	- Fix `Table::getFieldFromResult()` validating a `"column AS alias"` field against the column whitelist before parsing out the alias, so an aliased field could never actually resolve; alias parsing now happens first, matching `getFieldsFromResult()`'s already-correct order.
+	- Substantially raise unit test coverage of `Table`, `Table\Reader`, `Pool` and `DataSourceName` (the latter two now at 100% line coverage); document the few remaining uncovered lines as unreachable/dead code rather than papering over them with contrived tests.
+
+## Version 0.6.7
+- PDO:
+	- Add log levels ("none", "error", "statement") and a one-time log level override for the next statement or query.
+	- Fix SQL errors being silently swallowed by Connection::exec()/query() whenever no error log file was configured; a failed statement now always throws instead of quietly reporting 0 affected rows or FALSE.
+	- Fix SQL injection via unvalidated ORDER BY column and direction in Table\Abstraction::getOrderCondition(); column and direction are now checked against the table's columns and a fixed ASC/DESC whitelist.
+	- Fix SQL injection via unvalidated "function condition" keys (eg. "COUNT(*)") in Table\Abstraction::getConditionQuery(); function name and column are now checked against a whitelist instead of a permissive regex.
+	- Fix SQL injection via unescaped table name prefix in Connection\Base::getTables().
+	- Fix Pool::get() recursing into itself indefinitely instead of returning the requested connection, which made the class unusable.
+	- Fix Pool::$default being an uninitialized typed property, causing a raw Error instead of the intended RuntimeException on first use.
+	- Fix Connection\Factory::create() destroying PDO driver option keys via array_merge() (which reindexes integer keys) instead of array union; a passed-in ATTR_ERRMODE or similar option was silently lost.
+	- Fix Connection\Php81::query() executing a given statement twice when a fetch mode was passed.
+	- Fix Connection\Base::commit() silently returning FALSE on a failed nested transaction instead of surfacing the failure; it now throws a RuntimeException.
+	- Fix Entity::has()/offsetExists() throwing an uncaught Error for a declared but not-yet-initialized typed property, instead of reporting FALSE.
+	- Fix Table\Writer::insert()/update()/updateByConditions() calling strip_tags() on non-string column values (eg. arrays or objects), causing an uncaught TypeError.
+	- Harden DataSourceName: reject NUL bytes in any DSN part (relevant eg. for SQLite file paths), and safely quote or reject values containing DSN delimiters instead of silently corrupting the resulting DSN string.
+- General:
+	- Update dependencies and unit tests.
+	- Clean up a stale PHPStan baseline entry that no longer matched any real error.
+
 ## Version 0.6.6
-PDO:
+- PDO:
 	- Make table fetch mode a bit mask.
 	- Support MySQL generated columns.
-General:
+- General:
 	- Update dependencies.
 
 ## Version 0.6.5
-PDO:
+- PDO:
 	- Fix performance bug at Reader::get.
 	- Fix bug in table condition query part for BETWEEN operation.
 	- Table: Allow pure PDO connection.

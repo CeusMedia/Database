@@ -109,6 +109,12 @@ abstract class Table
 	/**	@var	object|NULL									$fetchEntityObject	Entity object for PDO fetch mode FETCH_INTO */
 	protected ?object $fetchEntityObject					= NULL;
 
+	/**	@var	string[]									$jsonColumns	List of columns to be JSON-(de|en)coded */
+	protected array $jsonColumns							= [];
+
+	/**	@var	string[]									$dateTimeColumns	List of columns to be (de|en)coded as DateTime */
+	protected array $dateTimeColumns						= [];
+
 	/**
 	 *	Constructor.
 	 *	@access		public
@@ -238,7 +244,12 @@ abstract class Table
 	{
 		/** @var string $field */
 		$field		= $this->checkField( $field );
-		$cacheData	= $this->cache->get($this->cacheKey . $id );
+		try{
+			$cacheData	= $this->cache->get( $this->cacheKey.$id );
+		}
+		catch( SimpleCacheInvalidArgumentException ){
+			$cacheData	= NULL;
+		}
 		if( is_string( $cacheData ) )
 			/** @var object|array $data */
 			$data = unserialize( $cacheData );
@@ -415,6 +426,26 @@ abstract class Table
 	public function getFetchMode(): int
 	{
 		return $this->reader->getFetchMode();
+	}
+
+	/**
+	 *	Returns list of columns to be JSON-decoded on fetch.
+	 *	@access		public
+	 *	@return		string[]
+	 */
+	public function getJsonColumns(): array
+	{
+		return $this->reader->getJsonColumns();
+	}
+
+	/**
+	 *	Returns list of columns to be decoded into DateTime objects on fetch.
+	 *	@access		public
+	 *	@return		string[]
+	 */
+	public function getDateTimeColumns(): array
+	{
+		return $this->reader->getDateTimeColumns();
 	}
 
 	/**
@@ -643,6 +674,38 @@ abstract class Table
 		return $this;
 	}
 
+	/**
+	 *	Sets list of columns to be transparently JSON-decoded on fetch.
+	 *	Values are JSON-encoded automatically on write for any column given an array
+	 *	or object value, no matter this list - it only controls decoding on read.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of column names
+	 *	@return		self
+	 *	@throws		DomainException					if a given column is not an existing column
+	 */
+	public function setJsonColumns( array $columns ): self
+	{
+		$this->jsonColumns	= $columns;
+		$this->reader->setJsonColumns( $this->jsonColumns );
+		return $this;
+	}
+
+	/**
+	 *	Sets list of columns to be transparently decoded into DateTime objects on fetch.
+	 *	Values are encoded automatically on write for any column given a DateTimeInterface
+	 *	value, no matter this list - it only controls decoding on read.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of column names
+	 *	@return		self
+	 *	@throws		DomainException					if a given column is not an existing column
+	 */
+	public function setDateTimeColumns( array $columns ): self
+	{
+		$this->dateTimeColumns	= $columns;
+		$this->reader->setDateTimeColumns( $this->dateTimeColumns );
+		return $this;
+	}
+
 /*	public function setUndoStorage( $storage ): self
 	{
 		$this->table->setUndoStorage( $storage );
@@ -754,14 +817,13 @@ abstract class Table
 				throw new RangeException( 'Result is empty' );
 			return NULL;
 		}
-		if( !in_array( $field, $this->columns, TRUE ) )
-			throw new DomainException( 'Field "'.$field.'" is not an existing column' );
-
 		if( 1 === preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) ){
 			if( in_array( $matches[2], $this->columns, TRUE ) )
 				throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2].' is a column' );
 			$field	= $matches[2];
 		}
+		else if( !in_array( $field, $this->columns, TRUE ) )
+			throw new DomainException( 'Field "'.$field.'" is not an existing column' );
 
 		if( is_object( $result ) ){
 			if( !property_exists( $result, $field ) )
@@ -913,6 +975,8 @@ abstract class Table
 
 		$this->reader->setIndices( $this->indices );
 		$this->reader->setGeneratedColumns( $this->generated );
+		$this->reader->setJsonColumns( $this->jsonColumns );
+		$this->reader->setDateTimeColumns( $this->dateTimeColumns );
 
 		$this->writer->setIndices( $this->indices );
 //		$this->writer->setGeneratedColumns( $this->generated );
