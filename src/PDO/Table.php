@@ -244,7 +244,12 @@ abstract class Table
 	{
 		/** @var string $field */
 		$field		= $this->checkField( $field );
-		$cacheData	= $this->cache->get($this->cacheKey . $id );
+		try{
+			$cacheData	= $this->cache->get( $this->cacheKey.$id );
+		}
+		catch( SimpleCacheInvalidArgumentException ){
+			$cacheData	= NULL;
+		}
 		if( is_string( $cacheData ) )
 			/** @var object|array $data */
 			$data = unserialize( $cacheData );
@@ -812,14 +817,13 @@ abstract class Table
 				throw new RangeException( 'Result is empty' );
 			return NULL;
 		}
-		if( !in_array( $field, $this->columns, TRUE ) )
-			throw new DomainException( 'Field "'.$field.'" is not an existing column' );
-
 		if( 1 === preg_match( '/^(.+) AS (.+)$/i', $field, $matches ) ){
 			if( in_array( $matches[2], $this->columns, TRUE ) )
 				throw new DomainException( 'Field "'.$field.'" is not possible since '.$matches[2].' is a column' );
 			$field	= $matches[2];
 		}
+		else if( !in_array( $field, $this->columns, TRUE ) )
+			throw new DomainException( 'Field "'.$field.'" is not an existing column' );
 
 		if( is_object( $result ) ){
 			if( !property_exists( $result, $field ) )
