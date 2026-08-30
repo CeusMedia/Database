@@ -42,7 +42,17 @@ Transactions can be nested safely: only the outermost `beginTransaction()` call 
 ```php
 $dbc->setErrorLogFile( 'logs/db/error.log' );
 $dbc->setStatementLogFile( 'logs/db/statement.log' );
+$dbc->setLogLevel( \CeusMedia\Database\PDO\Connection\Base::LOG_LEVEL_ERROR );
 ```
+Available log levels (constants on `Connection\Base`, combinable as a bitmask):
+
+- `LOG_LEVEL_NONE`
+- `LOG_LEVEL_ERROR` (default)
+- `LOG_LEVEL_STATEMENT`
+
+Use `setLogLevelForNextStatement()` to temporarily override the log level for a single upcoming statement or query; it resets itself automatically afterward.
+
+**Noteworthy:** `$dbc->lastQuery` (and `$table->getLastQuery()`, which reads it from the table's reader) is only updated by `query()` calls, not by `prepare()`/`execute()`. Most `Table` read methods (`get()`, `find()`, ...) use `prepare()`/`execute()` internally, so `getLastQuery()` stays `NULL` after them; only methods using `query()` directly (eg. `count()`, `countFast()`) update it.
 
 ### Using a connection pool
 
@@ -83,6 +93,7 @@ $dsnString	= \CeusMedia\Database\PDO\DataSourceName::renderStatic(
 	'pgsql', 'myDatabase', 'myHost', 5432, 'myUser', 'myPassword'
 );
 ```
+Every part (host, database, username, password) is checked for NUL bytes and, depending on the DSN's delimiter style, either safely quoted (`pgsql`'s space-delimited style) or rejected if it contains a character that would otherwise silently corrupt or truncate the resulting DSN (the semicolon-delimited style used by `mysql`, `firebird`, `informix`, ... has no quoting mechanism at all).
 
 ## Tables
 
@@ -139,6 +150,11 @@ or share one already-built cache instance across all tables:
 ```php
 \CeusMedia\Database\PDO\Table::$cacheInstance	= $myCache;
 ```
+or set one on a single table instance only, overriding the static configuration:
+```php
+$table->setCache( $myCache );
+```
+A misbehaving cache (eg. one that rejects a particular key as invalid per PSR-16) never breaks reading or writing - every cache call is guarded and treated as a cache miss/no-op on failure, not surfaced to the caller.
 
 ### Reading an entry
 
@@ -266,6 +282,17 @@ $number	= $table->count( $conditions );
 $approximateNumber	= $table->countFast( $conditions );
 ```
 
+### Checking existence
+
+Without fetching the entry itself:
+
+```php
+$exists	= $table->has( $primaryKey );
+$exists	= $table->hasByIndex( 'maybeSomeForeignId', 123 );
+$exists	= $table->hasByIndices( ['maybeSomeForeignId' => 123] );
+```
+`has()` consults the cache first (if a fetched entry for that primary key is already cached, no query is made at all).
+
 ### Adding an entry
 
 ```php
@@ -325,9 +352,11 @@ $result     = $table->remove( $primaryKey );
 ```
 where the result will be the number of removed entries.
 
-### Removing several entry
+### Removing several entries
 
 ```php
+$result  = $table->removeByIndex( 'maybeSomeForeignId', 123 );
+
 $indices = [
     'maybeSomeForeignId' => 123,
 ];
@@ -356,6 +385,10 @@ where YOUR_FETCH_MODE is one of these standard PDO fetch modes:
 - FETCH_NUM
 - FETCH_BOTH
 - FETCH_OBJ
+
+(`FETCH_CLASS` and `FETCH_INTO` are covered under "Entities" below.)
+
+The currently set mode can be read back with `$table->getFetchMode()`.
 
 ## Entities
 
@@ -388,3 +421,77 @@ class MyFirstTable extends Table
 }
 ```
 Now, all indexing methods will return lists of filled entity classes. 
+
+### The "onFetch" hook
+
+If an entity class (used with `FETCH_CLASS` or `FETCH_INTO`) defines a public `onFetch()` method, it is called right after fetching (and after JSON/DateTime column decoding), once per entity:
+
+```php
+class MyFirstTableEntity extends Entity
+{
+    public string $id;
+    public string $content;
+
+    public function onFetch( \CeusMedia\Database\PDO\Table\Reader $reader, self $entity ): void
+    {
+        //  eg. derive a computed property, or lazy-load a related entity
+    }
+}
+```
+This is entirely optional - entities without an `onFetch()` method are unaffected.
+
+## JSON columns
+
+Array and object values are written transparently as JSON, for **any** column, without any configuration:
+
+```php
+$table->add( [
+    'maybeSomeForeignId' => 123,
+    'content'            => 'Second entry.',
+    'meta'               => ['tags' => ['a', 'b'], 'archived' => FALSE],
+] );
+```
+Reading it back, however, is opt-in per column - without configuration, you would just get the raw JSON string back:
+
+```php
+$table->setJsonColumns( ['meta'] );
+
+$entry = $table->get( $entryId );
+$entry->meta;    // (object) ['tags' => ['a', 'b'], 'archived' => FALSE]
+```
+`getJsonColumns()` returns the currently configured list. Configuring an unknown column throws a `DomainException`.
+
+Decoding matches the shape of the surrounding row: array rows (eg. `FETCH_ASSOC`) decode a JSON column into an array, object rows and entities (`FETCH_OBJ`, `FETCH_CLASS`, `FETCH_INTO`) decode it into a `stdClass` object. This also applies to `getDistinct()`.
+
+**Attention when using JSON columns together with `FETCH_CLASS`:** the entity's property for that column is first assigned the *raw* JSON string by PDO, and only afterward overwritten with the decoded value - so the property's type must accept both, eg. `string|object|null`, not just `string`. A too-narrow property type raises a clear `RuntimeException` naming the offending class and property, instead of a confusing raw `TypeError`.
+
+## DateTime columns
+
+`DateTime` (and `DateTimeImmutable`) values are written transparently, for **any** column, without any configuration - fractional seconds (microtime) are always included:
+
+```php
+$table->add( [
+    'maybeSomeForeignId' => 123,
+    'content'            => 'Second entry.',
+    'occurredAt'         => new \DateTime( '2026-08-29 14:30:00.123456' ),
+] );
+```
+Whether the microseconds actually get stored depends only on the database column, not on anything configured here: a plain `DATETIME`/`TIMESTAMP` column silently truncates to whole seconds, a `DATETIME(6)`/`TIMESTAMP(6)` column keeps them - no error either way.
+
+Reading it back, as with JSON, is opt-in per column:
+
+```php
+$table->setDateTimeColumns( ['occurredAt'] );
+
+$entry = $table->get( $entryId );
+$entry->occurredAt;    // a DateTime instance, with or without microseconds, matching what the column stored
+```
+`getDateTimeColumns()` returns the currently configured list. Configuring an unknown column throws a `DomainException`. There is no separate "has microtime" setting to configure: PHP's `DateTime` constructor detects a fractional part in the fetched string automatically, whether it is there or not. This also applies to `getDistinct()`. A column value that cannot be parsed as a date/time is returned unchanged as a string, rather than throwing.
+
+The same `FETCH_CLASS` caveat as for JSON columns applies here: the entity's property must accept both the initial raw string and the decoded `DateTime`, eg. `string|DateTime|null`, not just `string` - otherwise a clear `RuntimeException` is raised instead of a raw `TypeError`.
+
+`DateTime` (mutable) is used, not `DateTimeImmutable`, so an entity's date can be changed in place and saved back directly:
+```php
+$entry->occurredAt->modify( '+1 day' );
+$table->save( $entry );
+```

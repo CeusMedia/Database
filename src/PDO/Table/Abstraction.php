@@ -5,8 +5,8 @@ declare(strict_types=1);
 
 namespace CeusMedia\Database\PDO\Table;
 
-use CeusMedia\Common\ADT\Bitmask;
 use CeusMedia\Database\PDO\Connection;
+use DateTimeInterface;
 use DomainException;
 use InvalidArgumentException;
 use PDO;
@@ -402,10 +402,14 @@ abstract class Abstraction
 	 */
 	protected function applyFetchModeOnStatement( PDOStatement $statement ): bool
 	{
-		$mode	= new Bitmask( $this->fetchMode );
-		if( $mode->has( PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
+		//  FETCH_INTO must be checked before FETCH_CLASS: PDO::FETCH_INTO (9) has
+		//  all the bits of PDO::FETCH_CLASS (8) plus one, so "fetchMode & FETCH_CLASS
+		//  === FETCH_CLASS" would also be true when the mode is actually FETCH_INTO -
+		//  checking FETCH_INTO first and exiting on match avoids ever reaching that
+		//  false positive
+		if( PDO::FETCH_INTO === ( $this->fetchMode & PDO::FETCH_INTO ) && NULL !== $this->fetchEntityObject )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityObject );
-		if( $mode->has( PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
+		if( PDO::FETCH_CLASS === ( $this->fetchMode & PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
 			return $statement->setFetchMode( $this->fetchMode, $this->fetchEntityClass );
 		return $statement->setFetchMode( $this->fetchMode );
 	}
@@ -625,21 +629,57 @@ abstract class Abstraction
 	}
 
 	/**
-	 *	Secures Conditions Value by adding slashes or quoting.
+	 *	Secures a value by adding slashes or quoting.
+	 *	Array and object values (eg. for a JSON-capable column) are JSON-encoded first.
 	 *	@access		protected
-	 *	@param		string|int|float|NULL	$value		String, integer, float or NULL to be secured
+	 *	@param		string|int|float|array|object|NULL	$value		Value to be secured
 	 *	@return		string
+	 *	@throws		RuntimeException	if JSON-encoding an array or object value fails
+	 *	@throws		RuntimeException	if quoting the value fails
 	 */
-	protected function secureValue( string|int|float|null $value ): string
+	protected function secureValue( string|int|float|array|object|null $value ): string
 	{
 		if( NULL === $value )
 			return "NULL";
+		if( $value instanceof DateTimeInterface )
+			$value	= $this->encodeDateTimeValue( $value );
+		else if( is_array( $value ) || is_object( $value ) )
+			$value	= $this->encodeJsonValue( $value );
 		if( is_numeric( $value ) )
 			return (string) $value;
 		$result	= $this->dbc->quote( $value );
 		if( FALSE === $result )
 			throw new RuntimeException( 'Securing value failed' );
 		return $result;
+	}
+
+	/**
+	 *	Encodes an array or object value as a JSON string, eg. for storage in a JSON-capable column.
+	 *	@access		protected
+	 *	@param		array|object	$value		Value to encode
+	 *	@return		string			JSON encoded value
+	 *	@throws		RuntimeException			if JSON encoding fails
+	 */
+	protected function encodeJsonValue( array|object $value ): string
+	{
+		$json	= json_encode( $value );
+		if( FALSE === $json )
+			throw new RuntimeException( 'Encoding value as JSON failed: '.json_last_error_msg() );
+		return $json;
+	}
+
+	/**
+	 *	Encodes a DateTime(Immutable) value as a MySQL-compatible datetime string, always
+	 *	including microseconds. Columns not supporting fractional seconds (plain DATETIME/
+	 *	TIMESTAMP instead of DATETIME(6)/TIMESTAMP(6)) silently truncate them on the database
+	 *	side - no column-specific handling is needed here.
+	 *	@access		protected
+	 *	@param		DateTimeInterface	$value		Value to encode
+	 *	@return		string				Encoded value, eg. "2026-08-29 14:30:00.123456"
+	 */
+	protected function encodeDateTimeValue( DateTimeInterface $value ): string
+	{
+		return $value->format( 'Y-m-d H:i:s.u' );
 	}
 
 	/**

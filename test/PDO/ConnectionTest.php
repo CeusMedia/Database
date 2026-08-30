@@ -11,6 +11,7 @@
 namespace CeusMedia\DatabaseTest\PDO;
 
 use CeusMedia\Common\Exception\SQL as SqlException;
+use CeusMedia\Database\PDO\Connection\Base;
 use Exception;
 use PDOStatement;
 
@@ -100,7 +101,7 @@ class ConnectionTest extends TestCase
 		$statement	= $this->connection->prepare( "SELECT * FROM transactions" );
 		self::assertIsObject( $statement );
 		self::assertInstanceOf( 'PDOStatement', $statement );
-		self::assertFileExists( $this->queryLog );
+		self::assertFileDoesNotExist( $this->queryLog );
 		self::assertEquals( 1, $this->connection->numberStatements );
 
 		$this->connection->prepare( "SELECT * FROM transactions" );
@@ -177,6 +178,7 @@ class ConnectionTest extends TestCase
 	{
 		$logFile	= $this->path."statement_log";
 		$this->connection->setStatementLogFile( $logFile );
+		$this->connection->setLogLevel( Base::LOG_LEVEL_ERROR | Base::LOG_LEVEL_STATEMENT );
 		try{
 			$this->connection->query( "SELECT none FROM nowhere" );
 		}

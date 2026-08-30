@@ -69,6 +69,10 @@ class Php81 extends Base
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $query );
 		}
+		finally{
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )					//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;					//  reset, even if the query failed
+		}
 		return FALSE;
 	}
 }

@@ -1,7 +1,20 @@
 parameters:
 	ignoreErrors:
 		-
-			message: "#^PHPDoc tag @throws with type Psr\\\\SimpleCache\\\\InvalidArgumentException is not subtype of Throwable$#"
-			count: 8
-			path: ../src/PDO/Table.php
+			message: '#^Method CeusMedia\\Database\\PDO\\BetterTable\:\:getColumnsOfAllByConditions\(\) should return array\<array\|object\> but returns array\<array\|object\|null\>\.$#'
+			identifier: return.type
+			count: 1
+			path: ../src/PDO/BetterTable.php
+
+		-
+			message: '#^PHPDoc tag @return with type array\|DatabaseEntityTemplate\|object\|null is not subtype of native type array\|object\|null\.$#'
+			identifier: return.phpDocType
+			count: 3
+			path: ../src/PDO/BetterTable.php
+
+		-
+			message: '#^Parameter \#2 \$fields of method CeusMedia\\Database\\PDO\\BetterTable\<DatabaseEntityTemplate\>\:\:getFieldsFromResult\(\) expects array\<string\>, array\<bool\|string\|null\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: ../src/PDO/BetterTable.php
 

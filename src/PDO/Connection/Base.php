@@ -47,8 +47,19 @@ use RuntimeException;
  */
 abstract class Base extends PDO
 {
+	public const LOG_LEVEL_UNSPECIFIED	= 0;
+	public const LOG_LEVEL_NONE			= 1;
+	public const LOG_LEVEL_ERROR		= 2;
+	public const LOG_LEVEL_STATEMENT	= 4;
+
 	/**	@var	string|NULL					$driver					PDO driver */
 	protected ?string $driver				= NULL;
+
+	/** @var	int							$logLevel				Bitmask of log level(s), default: log errors */
+	protected int $logLevel					= self::LOG_LEVEL_ERROR;
+
+	/** @var	int							$logLevel				Bitmask of log level(s) only for next statement/query */
+	protected int $logLevelForNextStatement	= self::LOG_LEVEL_UNSPECIFIED;
 
 	/**	@var	integer						$numberExecutes			Number of execute calls */
 	public int $numberExecutes				= 0;
@@ -177,6 +188,10 @@ abstract class Base extends PDO
 			//  logs Error and throws SQL Exception
 			$this->logError( $e, $statement );
 		}
+		finally{
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )					//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;					//  reset, even if the statement failed
+		}
 		return $affectedRows;
 	}
 
@@ -233,6 +248,22 @@ abstract class Base extends PDO
 	}
 
 	/**
+	 *	Checks whether set log level or log level for next statement is matching given log level.
+	 *	@param		int		$logLevel		Log level to check against, one level is typical, many are possible
+	 *	@return		bool
+	 */
+	protected function hasLogLevel( int $logLevel ): bool
+	{
+		if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement ){
+			if( 0 !== ( $this->logLevelForNextStatement & $logLevel ) )
+				return TRUE;
+		}
+		else if( 0 !== ( $this->logLevel & $logLevel ) )
+			return TRUE;
+		return FALSE;
+	}
+
+	/**
 	 *	Notes Information from PDO Exception in Error Log File, if configured, and always throws SQL Exception.
 	 *	@access		protected
 	 *	@param		PDOException	$exception		PDO Exception thrown by invalid SQL Statement
@@ -248,7 +279,7 @@ abstract class Base extends PDO
 		$pdoCode	= $info[0] ?? NULL;
 		$message	= $exception->getMessage();
 
-		if( NULL !== $this->logFileErrors ){
+		if( NULL !== $this->logFileErrors && $this->hasLogLevel( static::LOG_LEVEL_ERROR ) ){
 			/** @var string $statement */
 			$statement	= preg_replace( "@\r?\n@", " ", $statement );
 			/** @var string $statement */
@@ -277,6 +308,9 @@ abstract class Base extends PDO
 	{
 		if( $this->logFileStatements === NULL )
 			return;
+		if( !$this->hasLogLevel( static::LOG_LEVEL_STATEMENT ) )
+			return;
+
 		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
 		$message	= time()." ".getenv( 'REMOTE_ADDR' )." ".$statement."\n";
 		error_log( $message, 3, $this->logFileStatements);
@@ -333,6 +367,31 @@ abstract class Base extends PDO
 		$this->logFileErrors	= $fileName;
 		if( 0 !== strlen( trim( $fileName ) ) && !file_exists( dirname( $fileName ) ) )
 			mkdir( dirname( $fileName ), 0700, TRUE );
+		return $this;
+	}
+
+	/**
+	 *	Sets log level.
+	 *	@access		public
+	 *	@param		int		$logLevel		Log level, one or many
+	 *	@return		self
+	 */
+	public function setLogLevel( int $logLevel ): self
+	{
+		$this->logLevel	= $logLevel;
+		return $this;
+	}
+
+	/**
+	 *	Sets log level only for next statement or query.
+	 *	Will be reset after next exec call.
+	 *	@access		public
+	 *	@param		int		$logLevel		Log level, one or many
+	 *	@return		self
+	 */
+	public function setLogLevelForNextStatement( int $logLevel ): self
+	{
+		$this->logLevelForNextStatement	= $logLevel;
 		return $this;
 	}
 

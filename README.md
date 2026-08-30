@@ -1,7 +1,7 @@
 # Database
 
 ![Branch](https://img.shields.io/badge/Branch-0.7.x-blue?style=flat-square)
-![Release](https://img.shields.io/badge/Release-0.7.1-blue?style=flat-square)
+![Release](https://img.shields.io/badge/Release-0.7.2-blue?style=flat-square)
 ![PHP version](https://img.shields.io/badge/PHP-%5E8.3-blue?style=flat-square&color=777BB4)
 ![PHPStan level](https://img.shields.io/badge/PHPStan_level-9+strict-darkgreen?style=flat-square)
 [![Monthly downloads](https://img.shields.io/packagist/dt/ceus-media/database.svg?style=flat-square)](https://packagist.org/packages/ceus-media/database)

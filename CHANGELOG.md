@@ -1,3 +1,13 @@
+## Version 0.7.2
+- PDO:
+	- Add log levels ("none", "error", "statement") and a one-time log level override for the next statement or query (this was already part of 0.6.7, but had been missed when 0.6.x's fixes were ported to 0.7.1).
+	- Add JSON column support: array/object values are JSON-encoded transparently on write, for any column, without configuration; reading them back decoded is opt-in per column via `Table::setJsonColumns()`/`getJsonColumns()`, matching the shape of the surrounding row (array or `stdClass`) and also applying to `getDistinct()`. A too-narrow `FETCH_CLASS` entity property type raises a clear `RuntimeException` naming the offending class and property instead of a raw `TypeError`.
+	- Add DateTime column support, analogous to JSON columns: `DateTime`/`DateTimeImmutable` values are encoded transparently on write (always including microseconds; the database silently truncates them if the column does not support fractional seconds), and opt-in per column on read via `Table::setDateTimeColumns()`/`getDateTimeColumns()` - no separate "has microtime" configuration is needed, PHP's `DateTime` constructor detects it automatically. Decoded values are mutable `DateTime` instances, so an entity's date can be changed in place and saved back directly.
+	- Fix `Table\Abstraction::applyFetchModeOnStatement()` and `Table\Reader::applyFetchModeOnResultSet()` dispatching `FETCH_INTO` as `FETCH_CLASS` whenever both `fetchEntityClass` and `fetchEntityObject` were set on the same reader, since `PDO::FETCH_INTO`'s bits are a superset of `PDO::FETCH_CLASS`'s.
+	- Fix `Table::getFieldFromResult()` validating a `"column AS alias"` field against the column whitelist before parsing out the alias, so an aliased field could never actually resolve; alias parsing now happens first, matching `getFieldsFromResult()`'s already-correct order.
+	- Fix `Table::get()`'s cache lookup not being guarded against a cache's `SimpleCacheInvalidArgumentException`, unlike every other cache call in the class; an invalid cache key is now treated as a cache miss like everywhere else.
+	- Substantially raise unit test coverage of `Table`, `Table\Reader`, `Pool` and `DataSourceName` (the latter two now at 100% line coverage); document the few remaining uncovered lines as unreachable/dead code rather than papering over them with contrived tests.
+
 ## Version 0.7.1
 - PDO:
 	- Fix SQL errors being silently swallowed by Connection::exec()/query() whenever no error log file was configured; a failed statement now always throws instead of quietly reporting 0 affected rows or FALSE.
