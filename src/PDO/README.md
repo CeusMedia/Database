@@ -52,6 +52,8 @@ Available log levels (constants on `Connection\Base`, combinable as a bitmask):
 
 Use `setLogLevelForNextStatement()` to temporarily override the log level for a single upcoming statement or query; it resets itself automatically afterward.
 
+**Noteworthy:** `$dbc->lastQuery` (and `$table->getLastQuery()`, which reads it from the table's reader) is only updated by `query()` calls, not by `prepare()`/`execute()`. Most `Table` read methods (`get()`, `find()`, ...) use `prepare()`/`execute()` internally, so `getLastQuery()` stays `NULL` after them; only methods using `query()` directly (eg. `count()`, `countFast()`) update it.
+
 ### Using a connection pool
 
 To manage several named connections (eg. read/write splitting, or several databases):
@@ -91,6 +93,7 @@ $dsnString	= \CeusMedia\Database\PDO\DataSourceName::renderStatic(
 	'pgsql', 'myDatabase', 'myHost', 5432, 'myUser', 'myPassword'
 );
 ```
+Every part (host, database, username, password) is checked for NUL bytes and, depending on the DSN's delimiter style, either safely quoted (`pgsql`'s space-delimited style) or rejected if it contains a character that would otherwise silently corrupt or truncate the resulting DSN (the semicolon-delimited style used by `mysql`, `firebird`, `informix`, ... has no quoting mechanism at all).
 
 ## Tables
 
@@ -147,6 +150,11 @@ or share one already-built cache instance across all tables:
 ```php
 \CeusMedia\Database\PDO\Table::$cacheInstance	= $myCache;
 ```
+or set one on a single table instance only, overriding the static configuration:
+```php
+$table->setCache( $myCache );
+```
+A misbehaving cache (eg. one that rejects a particular key as invalid per PSR-16) never breaks reading or writing - every cache call is guarded and treated as a cache miss/no-op on failure, not surfaced to the caller.
 
 ### Reading an entry
 
@@ -274,6 +282,17 @@ $number	= $table->count( $conditions );
 $approximateNumber	= $table->countFast( $conditions );
 ```
 
+### Checking existence
+
+Without fetching the entry itself:
+
+```php
+$exists	= $table->has( $primaryKey );
+$exists	= $table->hasByIndex( 'maybeSomeForeignId', 123 );
+$exists	= $table->hasByIndices( ['maybeSomeForeignId' => 123] );
+```
+`has()` consults the cache first (if a fetched entry for that primary key is already cached, no query is made at all).
+
 ### Adding an entry
 
 ```php
@@ -333,9 +352,11 @@ $result     = $table->remove( $primaryKey );
 ```
 where the result will be the number of removed entries.
 
-### Removing several entry
+### Removing several entries
 
 ```php
+$result  = $table->removeByIndex( 'maybeSomeForeignId', 123 );
+
 $indices = [
     'maybeSomeForeignId' => 123,
 ];
@@ -364,6 +385,10 @@ where YOUR_FETCH_MODE is one of these standard PDO fetch modes:
 - FETCH_NUM
 - FETCH_BOTH
 - FETCH_OBJ
+
+(`FETCH_CLASS` and `FETCH_INTO` are covered under "Entities" below.)
+
+The currently set mode can be read back with `$table->getFetchMode()`.
 
 ## Entities
 
@@ -396,6 +421,24 @@ class MyFirstTable extends Table
 }
 ```
 Now, all indexing methods will return lists of filled entity classes. 
+
+### The "onFetch" hook
+
+If an entity class (used with `FETCH_CLASS` or `FETCH_INTO`) defines a public `onFetch()` method, it is called right after fetching (and after JSON/DateTime column decoding), once per entity:
+
+```php
+class MyFirstTableEntity extends Entity
+{
+    public string $id;
+    public string $content;
+
+    public function onFetch( \CeusMedia\Database\PDO\Table\Reader $reader, self $entity ): void
+    {
+        //  eg. derive a computed property, or lazy-load a related entity
+    }
+}
+```
+This is entirely optional - entities without an `onFetch()` method are unaffected.
 
 ## JSON columns
 
