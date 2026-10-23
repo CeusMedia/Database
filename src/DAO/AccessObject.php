@@ -35,6 +35,8 @@ namespace CeusMedia\Database\DAO;
  *	@copyright		2010-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
+ *	@deprecated		unmaintained and broken, will be removed in version 0.8, use \CeusMedia\Database\PDO\Table instead
+ *	@see			\CeusMedia\Database\PDO\Table
  */
 class AccessObject
 {
