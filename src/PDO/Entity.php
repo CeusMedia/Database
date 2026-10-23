@@ -277,10 +277,12 @@ class Entity implements ArrayAccess, Countable, Iterator, JsonSerializable
 	}
 
 	/**
-	 *	@return		string|bool
+	 *	Returns data to be JSON encoded by json_encode().
+	 *	Returning the encoded string here would lead to double encoding.
+	 *	@return		array<string,mixed>
 	 */
-	public function jsonSerialize(): string|bool
+	public function jsonSerialize(): array
 	{
-		return json_encode( $this->toArray() );
+		return $this->toArray();
 	}
 }

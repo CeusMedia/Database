@@ -80,9 +80,8 @@ class Reader extends Abstraction
 		if( FALSE === $result )
 			return 0;
 
-		/** @var array|FALSE $array */
 		$array	= $result->fetch( PDO::FETCH_NUM );
-		if( FALSE === $array )
+		if( FALSE === $array || !is_numeric( $array[0] ?? NULL ) )
 			return 0;
 		return (int) $array[0];
 	}
@@ -104,9 +103,8 @@ class Reader extends Abstraction
 		if( FALSE === $result )
 			return 0;
 
-		/** @var array|FALSE $array */
 		$array	= $result->fetch( PDO::FETCH_ASSOC );
-		if( FALSE === $array )
+		if( FALSE === $array || !is_numeric( $array['rows'] ?? NULL ) )
 			return 0;
 		return (int) $array['rows'];
 	}
@@ -309,9 +307,9 @@ class Reader extends Abstraction
 		$query		= 'SELECT COUNT('.$this->primaryKey.') FROM '.$this->getTableName().' WHERE '.$conditions;
 		$statement	= $this->dbc->prepare( $query );
 		$statement->execute();
-		/** @var array<int,int> $result */
 		$result		= $statement->fetch( PDO::FETCH_NUM );
-		return 0 !== $result[0];
+		//  count may be delivered as string, depending on driver and emulated prepares
+		return FALSE !== $result && is_numeric( $result[0] ?? NULL ) && 0 < (int) $result[0];
 	}
 
 	/**
@@ -401,11 +399,10 @@ class Reader extends Abstraction
 
 	/**
 	 *	@param		PDOStatement	$resultSet
-	 *	@param		bool			$manuallyOnFail		Fetch manually of PDO fetching failed, default: no
 	 *	@return		array
 	 *	@throws		RuntimeException	if fetching fails
 	 */
-	protected function applyFetchModeOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail = FALSE ): array
+	protected function applyFetchModeOnResultSet( PDOStatement $resultSet ): array
 	{
 		//  FETCH_INTO must be checked before FETCH_CLASS: PDO::FETCH_INTO (9) has
 		//  all the bits of PDO::FETCH_CLASS (8) plus one, so "fetchMode & FETCH_CLASS
@@ -416,7 +413,7 @@ class Reader extends Abstraction
 			return $this->applyFetchModeIntoOnResultSet( $resultSet );
 
 		if( PDO::FETCH_CLASS === ( $this->fetchMode & PDO::FETCH_CLASS ) && NULL !== $this->fetchEntityClass )
-			return $this->applyFetchModeClassOnResultSet( $resultSet, $manuallyOnFail );
+			return $this->applyFetchModeClassOnResultSet( $resultSet );
 
 		$rows	= $resultSet->fetchAll( $this->fetchMode );
 		if( [] === $this->jsonColumns && [] === $this->dateTimeColumns )
@@ -546,11 +543,10 @@ class Reader extends Abstraction
 
 	/**
 	 *	@param		PDOStatement	$resultSet
-	 *	@param		bool			$manuallyOnFail
 	 *	@return		array
 	 *	@throws		RuntimeException	if fetching fails
 	 */
-	protected function applyFetchModeClassOnResultSet( PDOStatement $resultSet, bool $manuallyOnFail ): array
+	protected function applyFetchModeClassOnResultSet( PDOStatement $resultSet ): array
 	{
 		if( NULL === $this->fetchEntityClass )
 			throw new RuntimeException( 'No entity class set' );
@@ -567,8 +563,6 @@ class Reader extends Abstraction
 		}
 		/** @phpstan-ignore-next-line  */
 		catch( Error|Exception|Throwable $e ){
-			if( $manuallyOnFail )
-				return $this->applyFetchModeClassOnResultSetManually( $resultSet );
 			throw new RuntimeException( vsprintf( 'Could not create entity of class %s on fetch (%s)', [
 				$this->fetchEntityClass,
 				$e->getMessage()
@@ -581,35 +575,6 @@ class Reader extends Abstraction
 			$this->decodeDateTimeColumns( $entity );
 			if( method_exists( $entity, 'onFetch' ) )
 				$entity->onFetch( $this, $entity );
-		}
-		return $fetched;
-	}
-
-	/**
-	 *	Creates list of entities on fetched results.
-	 *	If fetching using PDO failed, this method can try to fetch into a manually created entity object.
-	 *	@param		PDOStatement	$resultSet
-	 *	@return		array
-	 *	@throws		RuntimeException	if fetching fails
-	 */
-	protected function applyFetchModeClassOnResultSetManually( PDOStatement $resultSet ): array
-	{
-		$fetched	= [];
-		foreach( $resultSet->fetchAll( PDO::FETCH_ASSOC ) as $row ){
-			/** @var object $entity */
-			$entity	= new $this->fetchEntityClass();
-			$data = [];
-			foreach( $row as $key => $value )
-				if( property_exists( $entity, $key ) )
-					$data[$key]	= $value;
-
-			/** @var object $entity */
-			$entity	= new $this->fetchEntityClass( $data );
-			$this->decodeJsonColumns( $entity );
-			$this->decodeDateTimeColumns( $entity );
-			if( method_exists( $entity, 'onFetch' ) )
-				$entity->onFetch( $this, $entity );
-			$fetched[] = $entity;
 		}
 		return $fetched;
 	}

@@ -254,13 +254,16 @@ abstract class Table
 			$data = unserialize( $cacheData );
 		else{
 			$this->reader->focusPrimary( $id );
-			/** @var object|array $data */
+			/** @var object|array|NULL $data */
 			$data	= $this->reader->get();
 			$this->reader->defocus();
-			try{
-				$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
+			//  cache found entries only, otherwise has() would report a missing entry as existing
+			if( NULL !== $data ){
+				try{
+					$this->cache->set( $this->cacheKey.$id, serialize( $data ) );
+				}
+				catch( SimpleCacheInvalidArgumentException ){}
 			}
-			catch( SimpleCacheInvalidArgumentException ){}
 		}
 		if( NULL !== $field && 0 !== strlen( trim( $field ) ) )
 			return $this->getFieldFromResult( $data, $field );
@@ -405,6 +408,53 @@ abstract class Table
 	}
 
 	/**
+	 *	Returns values of one column of all rows found by conditions.
+	 *	@access		public
+	 *	@param		string			$column			Column to return values of
+	 *	@param		array			$conditions		Map of conditions to include in SQL query
+	 *	@param		array			$orders			Map of orders to include in SQL query
+	 *	@param		array			$limits			List of offset and limit
+	 *	@param		array			$groupings		List of columns to group by
+	 *	@param		array			$having			List of conditions to apply after grouping
+	 *	@return		array<int,string|int|float|bool|array|object|NULL>	List of column values
+	 *	@throws		RangeException					If column is empty
+	 *	@throws		DomainException					If column is not a table column
+	 */
+	public function getColumnOfAllByConditions( string $column, array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $having = [] ): array
+	{
+		/** @var string $column */
+		$column	= $this->checkField( $column, TRUE );
+		$list	= [];
+		foreach( $this->reader->find( [$column], $conditions, $orders, $limits, $groupings, $having ) as $row )
+			$list[]	= $this->getFieldFromResult( $row, $column, FALSE );
+		return $list;
+	}
+
+	/**
+	 *	Returns some columns of all rows found by conditions.
+	 *	Each row is reduced to the given columns, as array or object, depending on fetch mode.
+	 *	Rows of entity fetch modes are reduced to anonymous objects.
+	 *	@access		public
+	 *	@param		string[]		$columns		List of columns to return, at least one, "*" for all
+	 *	@param		array			$conditions		Map of conditions to include in SQL query
+	 *	@param		array			$orders			Map of orders to include in SQL query
+	 *	@param		array			$limits			List of offset and limit
+	 *	@param		array			$groupings		List of columns to group by
+	 *	@param		array			$having			List of conditions to apply after grouping
+	 *	@return		array<int,array|object>			List of reduced rows
+	 *	@throws		RangeException					If no column is given or a column is empty
+	 *	@throws		DomainException					If a column is not a table column
+	 */
+	public function getColumnsOfAllByConditions( array $columns, array $conditions = [], array $orders = [], array $limits = [], array $groupings = [], array $having = [] ): array
+	{
+		$columns	= $this->checkFields( $columns );
+		$list		= [];
+		foreach( $this->reader->find( $columns, $conditions, $orders, $limits, $groupings, $having ) as $row )
+			$list[]	= $this->getPartialRowFromResult( $row, $columns );
+		return $list;
+	}
+
+	/**
 	 *	Returns list of distinct column values.
 	 *	@access		public
 	 *	@param		string			$column			Column to get distinct values for
@@ -425,6 +475,113 @@ abstract class Table
 	public function getFetchMode(): int
 	{
 		return $this->reader->getFetchMode();
+	}
+
+	/**
+	 *	Returns value of a single column of a row by ID.
+	 *	Uses cache, like get().
+	 *	@access		public
+	 *	@param		int|string		$id				ID to focus on
+	 *	@param		string			$field			Column to return value of
+	 *	@return		string|int|float|bool|array|object|NULL		Column value, NULL if not found
+	 *	@throws		RangeException					If field is empty
+	 *	@throws		DomainException					If field is not a table column
+	 */
+	public function getField( int|string $id, string $field ): string|int|float|bool|array|object|NULL
+	{
+		/** @var string $field */
+		$field	= $this->checkField( $field, TRUE );
+		/** @var object|array|NULL $data */
+		$data	= $this->get( $id );
+		return $this->getFieldFromResult( $data, $field, FALSE );
+	}
+
+	/**
+	 *	Returns value of a single column of first row selected by index.
+	 *	@access		public
+	 *	@param		string					$field			Column to return value of
+	 *	@param		string					$key			Index key
+	 *	@param		float|array|int|string	$value			Value(s) of index
+	 *	@param		array					$orders			Map of orders to include in SQL query
+	 *	@param		boolean					$strict			Flag: throw exception if nothing found (default: FALSE)
+	 *	@return		string|int|float|bool|array|object|NULL		Column value, NULL if not found
+	 *	@throws		RangeException			If field is empty
+	 *	@throws		DomainException			If field is not a table column
+	 *	@throws		DomainException			If key is neither an index nor the primary key
+	 *	@throws		RangeException			In strict mode, if nothing found
+	 */
+	public function getFirstFieldByIndex( string $field, string $key, float|array|int|string $value, array $orders = [], bool $strict = FALSE ): string|int|float|bool|array|object|NULL
+	{
+		return $this->getFirstFieldByIndices( $field, [$key => $value], $orders, $strict );
+	}
+
+	/**
+	 *	Returns value of a single column of first row selected by indices.
+	 *	@access		public
+	 *	@param		string			$field			Column to return value of
+	 *	@param		array			$indices		Map of index keys and values
+	 *	@param		array			$orders			Map of orders to include in SQL query
+	 *	@param		boolean			$strict			Flag: throw exception if nothing found (default: FALSE)
+	 *	@return		string|int|float|bool|array|object|NULL		Column value, NULL if not found
+	 *	@throws		RangeException			If field is empty
+	 *	@throws		DomainException			If field is not a table column
+	 *	@throws		RangeException			If index map is empty
+	 *	@throws		DomainException			If a key is neither an index nor the primary key
+	 *	@throws		RangeException			In strict mode, if nothing found
+	 */
+	public function getFirstFieldByIndices( string $field, array $indices, array $orders = [], bool $strict = FALSE ): string|int|float|bool|array|object|NULL
+	{
+		/** @var string $field */
+		$field	= $this->checkField( $field, TRUE );
+		$row	= $this->getFirstRowByIndices( $indices, $orders, [$field] );
+		return $this->getFieldFromResult( $row, $field, $strict );
+	}
+
+	/**
+	 *	Returns some columns of first row selected by index.
+	 *	The row is reduced to the given columns, as array or object, depending on fetch mode.
+	 *	@access		public
+	 *	@param		string[]				$fields			List of columns to return, at least one, "*" for all
+	 *	@param		string					$key			Index key
+	 *	@param		float|array|int|string	$value			Value(s) of index
+	 *	@param		array					$orders			Map of orders to include in SQL query
+	 *	@param		boolean					$strict			Flag: throw exception if nothing found (default: FALSE)
+	 *	@return		array|object|NULL		Reduced row, NULL if not found
+	 *	@throws		RangeException			If no field is given or a field is empty
+	 *	@throws		DomainException			If a field is not a table column
+	 *	@throws		DomainException			If key is neither an index nor the primary key
+	 *	@throws		RangeException			In strict mode, if nothing found
+	 */
+	public function getFirstFieldsByIndex( array $fields, string $key, float|array|int|string $value, array $orders = [], bool $strict = FALSE ): array|object|NULL
+	{
+		return $this->getFirstFieldsByIndices( $fields, [$key => $value], $orders, $strict );
+	}
+
+	/**
+	 *	Returns some columns of first row selected by indices.
+	 *	The row is reduced to the given columns, as array or object, depending on fetch mode.
+	 *	@access		public
+	 *	@param		string[]		$fields			List of columns to return, at least one, "*" for all
+	 *	@param		array			$indices		Map of index keys and values
+	 *	@param		array			$orders			Map of orders to include in SQL query
+	 *	@param		boolean			$strict			Flag: throw exception if nothing found (default: FALSE)
+	 *	@return		array|object|NULL		Reduced row, NULL if not found
+	 *	@throws		RangeException			If no field is given or a field is empty
+	 *	@throws		DomainException			If a field is not a table column
+	 *	@throws		RangeException			If index map is empty
+	 *	@throws		DomainException			If a key is neither an index nor the primary key
+	 *	@throws		RangeException			In strict mode, if nothing found
+	 */
+	public function getFirstFieldsByIndices( array $fields, array $indices, array $orders = [], bool $strict = FALSE ): array|object|NULL
+	{
+		$fields	= $this->checkFields( $fields );
+		$row	= $this->getFirstRowByIndices( $indices, $orders, $fields );
+		if( NULL === $row ){
+			if( $strict )
+				throw new RangeException( 'Result is empty' );
+			return NULL;
+		}
+		return $this->getPartialRowFromResult( $row, $fields );
 	}
 
 	/**
@@ -569,12 +726,7 @@ abstract class Table
 	 */
 	public function removeByIndex( string $key, float|array|int|string $value ): int
 	{
-		$this->reader->focusIndex( $key, $value );
-		$this->writer->focusIndex( $key, $value );
-		$number	= $this->removeBySetFocus();
-		$this->reader->defocus();
-		$this->writer->defocus();
-		return $number;
+		return $this->removeByFocusedIndices( [$key => $value] );
 	}
 
 	/**
@@ -587,14 +739,7 @@ abstract class Table
 	public function removeByIndices( array $indices ): int
 	{
 		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
-		foreach( $indices as $key => $value ){
-			$this->reader->focusIndex( $key, $value );
-			$this->writer->focusIndex( $key, $value );
-		}
-		$number	= $this->removeBySetFocus();
-		$this->reader->defocus();
-		$this->writer->defocus();
-		return $number;
+		return $this->removeByFocusedIndices( $indices );
 	}
 
 	/**
@@ -799,17 +944,41 @@ abstract class Table
 	}
 
 	/**
+	 *	Validates a list of fields to select, which must not be empty.
+	 *	Fields must be table columns or "*" for all columns, so they are safe to be used in queries.
+	 *	@access		protected
+	 *	@param		array		$fields			List of fields to check
+	 *	@return		string[]	List of trimmed fields
+	 *	@throws		RangeException				If list is empty or a field is empty
+	 *	@throws		DomainException				If a field is not a table column
+	 */
+	protected function checkFields( array $fields ): array
+	{
+		if( [] === $fields )
+			throw new RangeException( 'At least one field must be given' );
+		$list	= [];
+		foreach( $fields as $field ){
+			$field	= is_string( $field ) ? trim( $field ) : '';
+			if( '*' !== $field )
+				//  strict and mandatory: returns the field or throws
+				$field	= (string) $this->checkField( $field, TRUE );
+			$list[]	= $field;
+		}
+		return $list;
+	}
+
+	/**
 	 *	Returns any fields or one field from a query result.
 	 *	@access		protected
 	 *	@param		object|array|null			$result			Query result as array or object
 	 *	@param		string						$field			Field to return value of
 	 *	@param		boolean						$strict			Flag: throw exception if result is empty
-	 *	@return		string|int|float|bool|NULL	Structure depending on result and field list length
+	 *	@return		string|int|float|bool|array|object|NULL	Field value, decoded if JSON or DateTime column
 	 *	@throws		RangeException				If given result list is empty
 	 *	@throws		DomainException				If requested field is not a table column
 	 *	@throws		RangeException				If requested field is not within result fields
 	 */
-	protected function getFieldFromResult( object|array|null $result, string $field, bool $strict = TRUE ): float|bool|int|string|NULL
+	protected function getFieldFromResult( object|array|null $result, string $field, bool $strict = TRUE ): string|int|float|bool|array|object|NULL
 	{
 		if( is_null( $result ) || is_array( $result ) && 0 === count( $result ) ){
 			if( $strict )
@@ -827,14 +996,17 @@ abstract class Table
 		if( is_object( $result ) ){
 			if( !property_exists( $result, $field ) )
 				throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
-			/** @var array<string,string|int|float|bool|NULL> $values */
+			/** @var array<string,string|int|float|bool|array|object|NULL> $values */
 			$values	= get_object_vars( $result );
 			return $values[$field];
 		}
 
-		if( !isset( $result[$field] ) )
+		//  not isset(), since a column value can be NULL
+		if( !array_key_exists( $field, $result ) )
 			throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
-		return $result[$field];
+		/** @var string|int|float|bool|array|object|NULL $value */
+		$value	= $result[$field];
+		return $value;
 	}
 
 	/**
@@ -854,14 +1026,28 @@ abstract class Table
 		if( 0 === count( $fields ) )
 			return $result;
 		if( 1 === count( $fields ) )
-			return $this->getFieldFromResult( $result, current( $fields ) );
+			return $this->getFieldFromResult( $result, current( $fields ), $strict );
 
 		if( is_null( $result ) || is_array( $result ) && 0 === count( $result ) ){
 			if( $strict )
 				throw new RangeException( 'Result is empty' );
 			return [];
 		}
+		return $this->getPartialRowFromResult( $result, $fields );
+	}
 
+	/**
+	 *	Reduces a query result row to the given fields, keeping its structure (array or object).
+	 *	Fields can be columns, aliased columns ("column AS alias") or "*" for all columns.
+	 *	@access		protected
+	 *	@param		object|array		$result			Query result row as array or object
+	 *	@param		string[]			$fields			List of fields
+	 *	@return		array|object		Reduced row, objects are reduced to anonymous objects
+	 *	@throws		DomainException		If requested field is not a table column
+	 *	@throws		RangeException		If requested field is not within result fields
+	 */
+	protected function getPartialRowFromResult( object|array $result, array $fields ): array|object
+	{
 		foreach( $fields as $nr => $field )
 			if( $field === '*' )
 				array_splice( $fields, $nr, 1, $this->columns );
@@ -889,7 +1075,8 @@ abstract class Table
 
 		$list	= [];
 		foreach( $fields as $field ){
-			if( '*' !== $field  && !isset( $result[$field] ) )
+			//  not isset(), since a column value can be NULL
+			if( !array_key_exists( $field, $result ) )
 				throw new RangeException( 'Field "'.$field.'" is not an column of result set' );
 			$list[$field]	= $result[$field];
 		}
@@ -926,13 +1113,14 @@ abstract class Table
 	 */
 	protected function setupCache(): self
 	{
-		if( self::$cacheInstance instanceof SimpleCacheInterface)
-			$this->cache	= self::$cacheInstance;
+		//  static (not self), so subclasses can set their own cache defaults
+		if( static::$cacheInstance instanceof SimpleCacheInterface )
+			$this->cache	= static::$cacheInstance;
 		else{
-			$cacheFactory	= new ObjectFactory( [self::$cacheResource] );
+			$cacheFactory	= new ObjectFactory( [static::$cacheResource] );
 			/** @var SimpleCacheInterface $cacheInstance */
 			/** @noinspection PhpUnhandledExceptionInspection */
-			$cacheInstance	= $cacheFactory->create( self::$cacheClass );
+			$cacheInstance	= $cacheFactory->create( static::$cacheClass );
 			$this->cache	= $cacheInstance;
 		}
 		$this->cacheKey	= 'db.'.$this->prefix.$this->name.'.';
@@ -978,7 +1166,7 @@ abstract class Table
 		$this->reader->setDateTimeColumns( $this->dateTimeColumns );
 
 		$this->writer->setIndices( $this->indices );
-//		$this->writer->setGeneratedColumns( $this->generated );
+		$this->writer->setGeneratedColumns( $this->generated );
 		$this->writer->setAutoIncrementPrimaryKey( $this->autoIncrementPrimaryKey );
 		return $this;
 	}
@@ -994,24 +1182,53 @@ abstract class Table
 	}
 
 	/**
-	 *	@return		int
+	 *	Returns first row selected by indices (including primary key), reduced to given fields.
+	 *	@param		array		$indices		Map of index keys and values
+	 *	@param		array		$orders			Map of orders to include in SQL query
+	 *	@param		string[]	$fields			List of validated fields to select
+	 *	@return		object|array|NULL
+	 *	@throws		RangeException				If index map is empty
+	 *	@throws		DomainException				If a key is neither an index nor the primary key
 	 */
-	private function removeBySetFocus(): int
+	private function getFirstRowByIndices( array $indices, array $orders, array $fields ): object|array|NULL
 	{
-		/** @var array $rows */
-		$rows	= $this->reader->get( FALSE );
-		if( 0 === count( $rows ) )
-			return 0;
-		$number = $this->writer->delete();
-		foreach( $rows as $row ){
-			$id		= match( $this->fetchMode ){
-				PDO::FETCH_CLASS, PDO::FETCH_OBJ	=> get_object_vars( $row )[$this->primaryKey],
-				default								=> $row[$this->primaryKey],
-			};
+		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
+		foreach( $indices as $key => $value )
+			$this->reader->focusIndex( $key, $value );
+		$fields	= in_array( '*', $fields, TRUE ) ? [] : $fields;
+		try{
+			return $this->reader->get( TRUE, $orders, [], $fields );
+		}
+		finally{
+			$this->reader->defocus();
+		}
+	}
+
+	/**
+	 *	Removes entries selected by indices (including primary key) and their cache entries.
+	 *	IDs are read independent of fetch mode, since rows of entity fetch modes may not reveal them.
+	 *	@param		array		$indices		Map of index keys and values
+	 *	@return		int			Number of removed entries
+	 *	@throws		DomainException				If a key is neither an index nor the primary key
+	 */
+	private function removeByFocusedIndices( array $indices ): int
+	{
+		foreach( $indices as $key => $value )
+			$this->writer->focusIndex( $key, $value );
+		try{
+			$ids	= $this->reader->getDistinctColumnValues( $this->primaryKey, $indices );
+			if( [] === $ids )
+				return 0;
+			$number	= $this->writer->delete();
+		}
+		finally{
+			$this->writer->defocus();
+		}
+		foreach( $ids as $id ){
 			try{
-				$this->cache->delete( $this->cacheKey.$id );
-			} catch ( SimpleCacheInvalidArgumentException $e ){
+				$this->cache->delete( $this->cacheKey.( is_scalar( $id ) ? $id : '' ) );
 			}
+			catch( SimpleCacheInvalidArgumentException ){}
 		}
 		return $number;
 	}

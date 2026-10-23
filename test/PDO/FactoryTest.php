@@ -66,4 +66,22 @@ class FactoryTest extends TestCase
 		$factory	= new Factory( $dsn, $this->username, $this->password, $this->options );
 		$factory->setStrategy( 6 );
 	}
+
+	public function testCreateExceptionWithoutStrategy(): void
+	{
+		$factory	= new Factory( "mysql:host=".$this->host.";dbname=".$this->database, $this->username, $this->password );
+		$factory->setStrategy( Factory::STRATEGY_NONE );
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'No strategy set' );
+		$factory->create();
+	}
+
+	public function testCreateWithPhp81StrategyAndDriverOptions(): void
+	{
+		$factory	= new Factory( "mysql:host=".$this->host.";dbname=".$this->database, $this->username, $this->password );
+		$factory->setStrategy( Factory::STRATEGY_PHP81 );
+		$connection	= $factory->create( [\PDO::ATTR_CASE => \PDO::CASE_UPPER] );
+		self::assertInstanceOf( \CeusMedia\Database\PDO\Connection\Php81::class, $connection );
+		self::assertSame( \PDO::CASE_UPPER, $connection->getAttribute( \PDO::ATTR_CASE ) );
+	}
 }

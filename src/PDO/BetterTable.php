@@ -55,6 +55,8 @@ use RuntimeException;
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  *	@template		DatabaseEntityTemplate
+ *	@deprecated		use Table instead, which has all methods of this class and will be removed in version 0.8
+ *	@see			Table
  */
 abstract class BetterTable
 {

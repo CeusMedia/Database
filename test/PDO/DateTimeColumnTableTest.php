@@ -111,6 +111,26 @@ class DateTimeColumnTableTest extends TestCase
 			self::assertInstanceOf( DateTime::class, $value );
 	}
 
+	/**
+	 *	Decoded DateTime values are returned as single field and within reduced rows.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFieldMethodsWithDateTimeColumn(): void
+	{
+		$this->table->setDateTimeColumns( ['plainAt'] );
+		$id	= $this->table->add( ['topic' => 'dt', 'plainAt' => new DateTime( '2026-01-02 03:04:05' )] );
+
+		$value	= $this->table->getField( $id, 'plainAt' );
+		self::assertInstanceOf( DateTime::class, $value );
+		self::assertSame( '2026-01-02 03:04:05', $value->format( 'Y-m-d H:i:s' ) );
+
+		$this->table->setFetchMode( \PDO::FETCH_ASSOC );
+		$row	= $this->table->getFirstFieldsByIndex( ['plainAt', 'preciseAt'], 'id', $id );
+		self::assertInstanceOf( DateTime::class, $row['plainAt'] );
+		self::assertNull( $row['preciseAt'], 'NULL value in array row' );
+	}
+
 	protected function setUp(): void
 	{
 		parent::setUp();

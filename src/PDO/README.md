@@ -146,6 +146,14 @@ Every `get()`, `add()` and `edit()` call transparently caches read entries by pr
 \CeusMedia\Database\PDO\Table::$cacheClass		= \CeusMedia\Cache\Adapter\Memory::class;
 \CeusMedia\Database\PDO\Table::$cacheResource	= NULL;    // passed to the adapter's constructor
 ```
+or redeclare these static properties in a table class, to set defaults for this table only:
+```php
+class MyFirstTable extends \CeusMedia\Database\PDO\Table
+{
+	public static string $cacheClass	= \CeusMedia\Cache\Adapter\Memory::class;
+	...
+}
+```
 or share one already-built cache instance across all tables:
 ```php
 \CeusMedia\Database\PDO\Table::$cacheInstance	= $myCache;
@@ -154,7 +162,7 @@ or set one on a single table instance only, overriding the static configuration:
 ```php
 $table->setCache( $myCache );
 ```
-A misbehaving cache (eg. one that rejects a particular key as invalid per PSR-16) never breaks reading or writing - every cache call is guarded and treated as a cache miss/no-op on failure, not surfaced to the caller.
+Only found entries are cached, so a missing entry is looked up again next time. A misbehaving cache (eg. one that rejects a particular key as invalid per PSR-16) never breaks reading or writing - every cache call is guarded and treated as a cache miss/no-op on failure, not surfaced to the caller.
 
 ### Reading an entry
 
@@ -239,6 +247,27 @@ There are more parameters possible for each of this indexing methods, which allo
 - fields: restricting columns in result set
 - grouping: apply GROUP BY
 - having: apply HAVING
+
+### Reading single columns
+
+Instead of restricting columns using the `$fields` parameter (whose return type depends on the number of given fields), there are dedicated methods with a fixed return type:
+
+| Method | Returns |
+| --- | --- |
+| `getField( $id, 'content' )` | value of one column of an entry by primary key (cached like `get()`) |
+| `getFirstFieldByIndex( 'content', 'maybeSomeForeignId', 123 )` | value of one column of the first entry by index |
+| `getFirstFieldByIndices( 'content', $indices )` | value of one column of the first entry by indices |
+| `getFirstFieldsByIndex( ['id', 'content'], 'maybeSomeForeignId', 123 )` | first entry by index, reduced to some columns |
+| `getFirstFieldsByIndices( ['id', 'content'], $indices )` | first entry by indices, reduced to some columns |
+| `getColumnOfAllByConditions( 'content', $conditions )` | list of values of one column of all found entries |
+| `getColumnsOfAllByConditions( ['id', 'content'], $conditions )` | list of all found entries, reduced to some columns |
+
+Single values are returned as is, or decoded, for JSON and DateTime columns. Reduced entries are arrays or anonymous objects, depending on fetch mode, even if only one column is requested. If nothing is found, `NULL` is returned, or a `RangeException` is thrown, if `$strict` is enabled. Only real table columns (or `*` for all) are accepted.
+
+```php
+$content	= $table->getField( 1, 'content' );
+$ids		= $table->getColumnOfAllByConditions( 'id', ['maybeSomeForeignId' => 123], ['id' => 'ASC'] );
+```
 
 ### Distinct column values
 

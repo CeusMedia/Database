@@ -29,7 +29,6 @@
 namespace CeusMedia\Database\PDO\Connection;
 
 use CeusMedia\Database\PDO\Connection\Base;
-use CeusMedia\Database\PDO\Connection\Php80;
 use CeusMedia\Database\PDO\Connection\Php81;
 use RangeException;
 use RuntimeException;
@@ -48,12 +47,10 @@ class Factory
 {
 	const STRATEGY_NONE			= 0;
 	const STRATEGY_BY_VERSION	= 1;
-	const STRATEGY_PHP80		= 2;
 	const STRATEGY_PHP81		= 3;
 	const STRATEGIES		= [
 		self::STRATEGY_NONE,
 		self::STRATEGY_BY_VERSION,
-		self::STRATEGY_PHP80,
 		self::STRATEGY_PHP81,
 	];
 
@@ -113,7 +110,6 @@ class Factory
 
 		return match( $strategy ){
 			self::STRATEGY_PHP81	=> new Php81( $this->dsn, $this->username, $this->password, $driverOptions ),
-			self::STRATEGY_PHP80	=> new Php80( $this->dsn, $this->username, $this->password, $driverOptions ),
 			self::STRATEGY_NONE		=> throw new RuntimeException( 'No strategy set' ),
 			default					=> throw new RuntimeException( 'No support for PHP '.PHP_VERSION ),
 		};
@@ -143,8 +139,6 @@ class Factory
 	{
 		if( version_compare( PHP_VERSION, '8.1.0', '>=' ) )
 			return self::STRATEGY_PHP81;
-		if( version_compare( PHP_VERSION, '8.0.0', '>=' ) )
-			return self::STRATEGY_PHP80;
 		throw new RuntimeException( 'No support for PHP '.PHP_VERSION );
 	}
 }

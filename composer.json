@@ -54,6 +54,10 @@
       "@dev:install",
       "XDEBUG_MODE=coverage php vendor/bin/phpunit --configuration util/phpunit.xml"
     ],
+    "dev:phpunit-coverage": [
+      "@dev:install",
+      "XDEBUG_MODE=coverage php vendor/bin/phpunit --configuration util/phpunit.xml --coverage-text --colors=always"
+    ],
     "dev:phpstan": [
       "@dev:install",
       "XDEBUG_MODE=off vendor/bin/phpstan analyze --configuration=util/phpstan.neon --memory-limit=1G --verbose"

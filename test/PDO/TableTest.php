@@ -813,6 +813,382 @@ class TableTest extends TestCase
 	//  --  PROTECTED  --  //
 
 	/**
+	 *	checkField() and checkIndices() return FALSE or NULL instead of throwing, if not strict.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testCheckFieldAndCheckIndicesInNonStrictMode(): void
+	{
+		$checkField		= new \ReflectionMethod( $this->table, 'checkField' );
+		self::assertNull( $checkField->invoke( $this->table, ' ' ) );
+		self::assertFalse( $checkField->invoke( $this->table, ' ', TRUE, FALSE ) );
+		self::assertFalse( $checkField->invoke( $this->table, 'invalid', FALSE, FALSE ) );
+		self::assertSame( 'topic', $checkField->invoke( $this->table, ' topic ' ) );
+
+		$checkIndices	= new \ReflectionMethod( $this->table, 'checkIndices' );
+		self::assertSame( [], $checkIndices->invoke( $this->table, [] ) );
+		self::assertFalse( $checkIndices->invoke( $this->table, [], TRUE, FALSE ) );
+		self::assertFalse( $checkIndices->invoke( $this->table, ['label' => 'x'], FALSE, FALSE ) );
+	}
+
+	public function testGetFieldWithArrayFetchModeExceptionOnFieldMissingInResult(): void
+	{
+		$getField	= new \ReflectionMethod( $this->table, 'getFieldFromResult' );
+		$this->expectException( \RangeException::class );
+		$getField->invoke( $this->table, ['id' => 1], 'topic' );
+	}
+
+	/**
+	 *	Deprecated, but still available for subclasses: removes a zero primary key value before insert.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testRemovePrimaryKeyValueOnInsertIfAutoIncrement(): void
+	{
+		$method	= new \ReflectionMethod( $this->table, 'removePrimaryKeyValueOnInsertIfAutoIncrement' );
+
+		$array	= ['id' => 0, 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$array] );
+		self::assertSame( ['topic' => 'x'], $array );
+
+		$array	= ['id' => 5, 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$array] );
+		self::assertSame( ['id' => 5, 'topic' => 'x'], $array, 'sane value is kept' );
+
+		$object	= (object) ['id' => '0', 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$object] );
+		self::assertFalse( property_exists( $object, 'id' ) );
+
+		$property	= new \ReflectionProperty( $this->table, 'autoIncrementPrimaryKey' );
+		$property->setValue( $this->table, FALSE );
+		$array	= ['id' => 0, 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$array] );
+		self::assertSame( ['id' => 0, 'topic' => 'x'], $array, 'kept without auto increment' );
+	}
+
+	//  --  FIELD AND COLUMN METHODS (ported from BetterTable)  --  //
+
+	public function testGetField(): void
+	{
+		self::assertSame( 'start', $this->table->getField( 1, 'topic' ) );
+		self::assertSame( 'start', $this->table->getField( 1, ' topic ' ), 'trimmed' );
+		self::assertNull( $this->table->getField( 999, 'topic' ), 'not existing' );
+
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		self::assertSame( 'start', $this->table->getField( 1, 'topic' ) );
+	}
+
+	public function testGetFieldUsesCache(): void
+	{
+		$this->table->setCache( new MemoryCache( NULL ) );
+		self::assertSame( 'start', $this->table->getField( 1, 'topic' ) );
+		$this->connection->exec( "UPDATE transactions SET topic='changed' WHERE id=1" );
+		self::assertSame( 'start', $this->table->getField( 1, 'topic' ) );
+	}
+
+	public function testGetFieldExceptionOnEmptyField(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->table->getField( 1, ' ' );
+	}
+
+	public function testGetFieldExceptionOnInvalidField(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getField( 1, 'invalid' );
+	}
+
+	/**
+	 *	Decoded JSON values are returned as single field, too (did fail with TypeError before).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetFieldWithJsonColumn(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$id	= $this->table->add( ['topic' => 'json', 'label' => ['a' => 1]] );
+		self::assertEquals( (object) ['a' => 1], $this->table->getField( $id, 'label' ) );
+		self::assertEquals( (object) ['a' => 1], $this->table->get( $id, 'label' ), 'old API, too' );
+		self::assertEquals( (object) ['a' => 1], $this->table->getFirstFieldByIndex( 'label', 'topic', 'json' ) );
+		self::assertEquals( [(object) ['a' => 1]], $this->table->getColumnOfAllByConditions( 'label', ['topic' => 'json'] ) );
+	}
+
+	public function testGetFirstFieldByIndex(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		$this->table->add( ['topic' => 'stop', 'label' => 'label2'] );
+
+		self::assertSame( 'label1', $this->table->getFirstFieldByIndex( 'label', 'topic', 'stop' ) );
+		self::assertSame( 'label2', $this->table->getFirstFieldByIndex( 'label', 'topic', 'stop', ['id' => 'DESC'] ) );
+		self::assertSame( 'label2', $this->table->getFirstFieldByIndex( 'label', 'id', 3 ), 'primary key counts as index' );
+		self::assertSame( 'label2', $this->table->getFirstFieldByIndex( 'label', 'id', [3, 4] ), 'list of values' );
+		self::assertNull( $this->table->getFirstFieldByIndex( 'label', 'topic', 'invalid' ) );
+	}
+
+	/**
+	 *	The reader focus is removed after reading, even if reading failed.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetFirstFieldsByIndicesRemovesFocusEvenOnFailure(): void
+	{
+		/** @var \CeusMedia\Database\PDO\Table\Reader $reader */
+		$reader	= ( new \ReflectionProperty( $this->table, 'reader' ) )->getValue( $this->table );
+
+		$this->table->getFirstFieldsByIndices( ['id', 'topic'], ['topic' => 'start'] );
+		self::assertSame( [], $reader->getFocus() );
+
+		try{
+			$this->table->getFirstFieldsByIndices( ['id', 'topic'], ['topic' => 'start'], ['invalid' => 'ASC'] );
+			self::fail( 'Expected DomainException on invalid order column' );
+		}
+		catch( \DomainException ){}
+		self::assertSame( [], $reader->getFocus() );
+	}
+
+	public function testGetFirstFieldByIndexExceptionOnEmptyResultWhenStrict(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->table->getFirstFieldByIndex( 'label', 'topic', 'invalid', [], TRUE );
+	}
+
+	public function testGetFirstFieldByIndexExceptionOnInvalidIndex(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getFirstFieldByIndex( 'topic', 'label', 'x' );
+	}
+
+	public function testGetFirstFieldByIndexExceptionOnInjectedField(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getFirstFieldByIndex( 'id FROM transactions; --', 'topic', 'start' );
+	}
+
+	public function testGetFirstFieldByIndices(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		$this->table->add( ['topic' => 'stop', 'label' => 'label2'] );
+
+		self::assertSame( 'label2', $this->table->getFirstFieldByIndices( 'label', ['topic' => 'stop', 'id' => 3] ) );
+		self::assertSame( 'label2', $this->table->getFirstFieldByIndices( 'label', ['topic' => 'stop'], ['id' => 'DESC'] ) );
+		self::assertNull( $this->table->getFirstFieldByIndices( 'label', ['topic' => 'stop', 'id' => 1] ) );
+	}
+
+	public function testGetFirstFieldByIndicesExceptionOnEmptyIndices(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->table->getFirstFieldByIndices( 'label', [] );
+	}
+
+	public function testGetFirstFieldsByIndex(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		$this->table->add( ['topic' => 'stop', 'label' => 'label2'] );
+
+		$result	= $this->table->getFirstFieldsByIndex( ['id', 'label'], 'topic', 'stop', ['id' => 'DESC'] );
+		self::assertEquals( (object) ['id' => 3, 'label' => 'label2'], $result );
+
+		$result	= $this->table->getFirstFieldsByIndex( ['label'], 'topic', 'stop' );
+		self::assertEquals( (object) ['label' => 'label1'], $result, 'a single field still is a row' );
+
+		self::assertNull( $this->table->getFirstFieldsByIndex( ['id', 'label'], 'topic', 'invalid' ) );
+
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		$result	= $this->table->getFirstFieldsByIndex( ['id', 'label'], 'topic', 'stop' );
+		self::assertSame( ['id' => 2, 'label' => 'label1'], $result );
+
+		$result	= $this->table->getFirstFieldsByIndex( ['*'], 'topic', 'stop' );
+		self::assertSame( ['id', 'topic', 'label', 'timestamp'], array_keys( $result ) );
+	}
+
+	public function testGetFirstFieldsByIndexExceptionOnNoFields(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->table->getFirstFieldsByIndex( [], 'topic', 'start' );
+	}
+
+	public function testGetFirstFieldsByIndexExceptionOnInvalidField(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getFirstFieldsByIndex( ['id', 'invalid'], 'topic', 'start' );
+	}
+
+	public function testGetFirstFieldsByIndexExceptionOnEmptyResultWhenStrict(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->table->getFirstFieldsByIndex( ['id', 'label'], 'topic', 'invalid', [], TRUE );
+	}
+
+	public function testGetFirstFieldsByIndices(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+
+		$result	= $this->table->getFirstFieldsByIndices( ['id', 'label'], ['topic' => 'stop', 'id' => 2] );
+		self::assertEquals( (object) ['id' => 2, 'label' => 'label1'], $result );
+		self::assertNull( $this->table->getFirstFieldsByIndices( ['id', 'label'], ['topic' => 'stop', 'id' => 1] ) );
+	}
+
+	public function testGetFirstFieldsByIndicesExceptionOnInvalidIndex(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getFirstFieldsByIndices( ['id', 'topic'], ['label' => 'x'] );
+	}
+
+	/**
+	 *	Entity rows are reduced to anonymous objects, containing the requested fields only.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetFirstFieldsByIndexWithEntityFetchMode(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_CLASS );
+		$this->table->setFetchEntityClass( TransactionEntity::class );
+		$result	= $this->table->getFirstFieldsByIndex( ['id', 'topic'], 'topic', 'start' );
+		self::assertEquals( (object) ['id' => '1', 'topic' => 'start'], $result );
+	}
+
+	public function testGetColumnOfAllByConditions(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		$this->table->add( ['topic' => 'stop', 'label' => 'label2'] );
+
+		self::assertSame( ['label2', 'label1'], $this->table->getColumnOfAllByConditions( 'label', ['topic' => 'stop'], ['id' => 'DESC'] ) );
+		self::assertSame( ['label1'], $this->table->getColumnOfAllByConditions( 'label', ['topic' => 'stop'], ['id' => 'ASC'], [0, 1] ) );
+		self::assertSame( [1, 2, 3], $this->table->getColumnOfAllByConditions( 'id' ) );
+		self::assertSame( [], $this->table->getColumnOfAllByConditions( 'label', ['topic' => 'invalid'] ) );
+
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		self::assertSame( ['start', 'stop'], $this->table->getColumnOfAllByConditions( 'topic', [], ['topic' => 'ASC'], [], ['topic'] ), 'grouped' );
+	}
+
+	public function testGetColumnOfAllByConditionsExceptionOnInvalidColumn(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getColumnOfAllByConditions( 'invalid' );
+	}
+
+	public function testGetColumnsOfAllByConditions(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		$this->table->add( ['topic' => 'stop', 'label' => 'label2'] );
+
+		$result	= $this->table->getColumnsOfAllByConditions( ['id', 'label'], ['topic' => 'stop'], ['id' => 'DESC'] );
+		self::assertEquals( [
+			(object) ['id' => 3, 'label' => 'label2'],
+			(object) ['id' => 2, 'label' => 'label1'],
+		], $result );
+
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		$result	= $this->table->getColumnsOfAllByConditions( ['label'], ['topic' => 'stop'], [], [1, 1] );
+		self::assertSame( [['label' => 'label2']], $result, 'a single column still are rows' );
+		self::assertSame( [], $this->table->getColumnsOfAllByConditions( ['id'], ['topic' => 'invalid'] ) );
+	}
+
+	public function testGetColumnsOfAllByConditionsExceptionOnNoColumns(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->table->getColumnsOfAllByConditions( [] );
+	}
+
+	public function testGetColumnsOfAllByConditionsExceptionOnAliasedColumn(): void
+	{
+		//  only real columns, since fields are put into the query
+		$this->expectException( \DomainException::class );
+		$this->table->getColumnsOfAllByConditions( ['id', 'label AS title'] );
+	}
+
+	/**
+	 *	NULL values of array rows are values, not missing fields (did throw RangeException before).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFieldsWithNullValueInArrayFetchMode(): void
+	{
+		$getField	= new \ReflectionMethod( $this->table, 'getFieldFromResult' );
+		self::assertNull( $getField->invoke( $this->table, ['id' => 1, 'label' => NULL], 'label' ) );
+
+		$getFields	= new \ReflectionMethod( $this->table, 'getFieldsFromResult' );
+		self::assertSame( ['id' => 1, 'label' => NULL], $getFields->invoke( $this->table, ['id' => 1, 'label' => NULL], ['id', 'label'] ) );
+	}
+
+	/**
+	 *	Missing entries are not cached, so has() does not report them as existing afterward.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetDoesNotCacheMissingEntry(): void
+	{
+		$this->table->setCache( new MemoryCache( NULL ) );
+		self::assertNull( $this->table->get( 999 ) );
+		self::assertFalse( $this->table->has( 999 ) );
+
+		//  inserted bypassing the table: must be found, not served as cached NULL
+		$this->connection->exec( "INSERT INTO transactions (id, topic, label) VALUES (999, 'late', 'inserted later')" );
+		self::assertTrue( $this->table->has( 999 ) );
+		self::assertSame( 'late', $this->table->get( 999 )->topic );
+	}
+
+	/**
+	 *	A subclass can set its own default cache class.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testSetupCacheUsesCacheClassOfSubclass(): void
+	{
+		$table	= new TransactionTableWithOwnCacheClass( $this->connection );
+		$cache	= ( new \ReflectionProperty( $table, 'cache' ) )->getValue( $table );
+		self::assertInstanceOf( MemoryCache::class, $cache );
+
+		$cache	= ( new \ReflectionProperty( $this->table, 'cache' ) )->getValue( $this->table );
+		self::assertInstanceOf( \CeusMedia\Cache\Adapter\Noop::class, $cache, 'default stays untouched' );
+	}
+
+	/**
+	 *	Removing by index works for every fetch mode and invalidates the cache of every removed entry.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testRemoveByIndexWithEveryFetchModeInvalidatesCache(): void
+	{
+		$modes	= [
+			'FETCH_OBJ'		=> fn() => $this->table->setFetchMode( PDO::FETCH_OBJ ),
+			'FETCH_ASSOC'	=> fn() => $this->table->setFetchMode( PDO::FETCH_ASSOC ),
+			'FETCH_CLASS'	=> fn() => $this->table->setFetchMode( PDO::FETCH_CLASS )->setFetchEntityClass( TransactionEntity::class ),
+			'FETCH_CLASS|FETCH_PROPS_LATE'	=> fn() => $this->table->setFetchMode( PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE )->setFetchEntityClass( TransactionEntity::class ),
+			'FETCH_INTO'	=> fn() => $this->table->setFetchMode( PDO::FETCH_INTO )->setFetchEntityObject( new TransactionEntity() ),
+		];
+		foreach( $modes as $label => $setMode ){
+			$cache	= new MemoryCache( NULL );
+			$this->table->setCache( $cache );
+			$this->table->setFetchEntityClass( NULL )->setFetchEntityObject( NULL );
+			$setMode();
+
+			$id1	= $this->table->add( ['topic' => 'remove', 'label' => 'label1'] );
+			$id2	= $this->table->add( ['topic' => 'remove', 'label' => 'label2'] );
+			self::assertTrue( $cache->has( 'db.transactions.'.$id1 ), $label );
+
+			self::assertSame( 2, $this->table->removeByIndex( 'topic', 'remove' ), $label );
+			self::assertFalse( $cache->has( 'db.transactions.'.$id1 ), $label );
+			self::assertFalse( $cache->has( 'db.transactions.'.$id2 ), $label );
+			self::assertFalse( $this->table->has( $id1 ), $label );
+		}
+	}
+
+	public function testRemoveByIndicesWithEntityObjectFetchMode(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_INTO )->setFetchEntityObject( new TransactionEntity() );
+		$id	= $this->table->add( ['topic' => 'remove', 'label' => 'label1'] );
+		self::assertSame( 1, $this->table->removeByIndices( ['topic' => 'remove', 'id' => $id] ) );
+		self::assertSame( 0, $this->table->removeByIndices( ['topic' => 'remove'] ) );
+	}
+
+	public function testRemoveByIndexExceptionOnInvalidIndex(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->removeByIndex( 'label', 'x' );
+	}
+
+	/**
 	 *	Setup for every Test.
 	 *	@access		protected
 	 *	@return		void

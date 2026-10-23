@@ -1,7 +1,31 @@
 ## Version 0.7.2
 - all new features and fixes from 0.6.8, but for PHP ^8.3
-- Fix `Table::get()`'s cache lookup not being guarded against a cache's `SimpleCacheInvalidArgumentException`, unlike every other cache call in the class; an invalid cache key is now treated as a cache miss like everywhere else.
-- Fix function conditions (eg. `['MAX(id)' => [1, 2]]`) given a list of values causing an uncaught `TypeError` in `Table\Abstraction::getConditionQuery()`; like column conditions, a list of values is now combined by OR. Condition values of unsupported type (eg. bool or object) now raise an `InvalidArgumentException` instead of a `TypeError`.
+- PDO:
+	- Add methods from `BetterTable` to `Table`, to read single columns with a fixed return type instead of using the `$fields` parameters: `getField()`, `getFirstFieldByIndex()`, `getFirstFieldByIndices()`, `getFirstFieldsByIndex()`, `getFirstFieldsByIndices()`, `getColumnOfAllByConditions()` and `getColumnsOfAllByConditions()`. They accept real table columns only, return `NULL` if nothing found (or throw in strict mode) and reduced entries stay rows, even for a single column.
+	- Fix `Table::get()`'s cache lookup not being guarded against a cache's `SimpleCacheInvalidArgumentException`, unlike every other cache call in the class; an invalid cache key is now treated as a cache miss like everywhere else.
+	- Fix `Table::get()` caching missing entries, so `has()` reported them as existing afterward and an entry inserted later (bypassing the table) was not found.
+	- Fix `Table::setupCache()` ignoring cache defaults (`$cacheClass`, `$cacheResource`, `$cacheInstance`) redeclared in a table subclass (`self::` instead of `static::`).
+	- Fix `Table` not passing its generated columns to its table writer (`setDatabase()`), so a generated column also listed in `$columns` was written on `add()`/`edit()`/`editByIndices()`, which the database rejects (eg. MySQL error 1906).
+	- Fix `Table::removeByIndex()`/`removeByIndices()` failing with an `Error` in `FETCH_INTO` mode and with fetch mode bit masks (eg. `FETCH_CLASS | FETCH_PROPS_LATE`), since IDs for cache invalidation were read depending on fetch mode; they are read independent of fetch mode now.
+	- Fix reading a single field of a JSON or DateTime column (eg. `Table::get( $id, 'column' )`) failing with a `TypeError`, since `Table::getFieldFromResult()` only allowed scalar return values.
+	- Fix `Table::getFieldFromResult()`/`getFieldsFromResult()` throwing a `RangeException` ("not a column of result set") for a column with value `NULL` in array fetch mode (`isset()`), and `getFieldsFromResult()` ignoring `$strict` for a single field.
+	- Fix function conditions (eg. `['MAX(id)' => [1, 2]]`) given a list of values causing an uncaught `TypeError` in `Table\Abstraction::getConditionQuery()`; like column conditions, a list of values is now combined by OR. Condition values of unsupported type (eg. bool or object) now raise an `InvalidArgumentException` instead of a `TypeError`.
+	- Fix `Table\Reader::find()`/`get()` with a column list in `FETCH_INTO` mode failing with an uncaught `Error`, since `Table\Abstraction::validateColumns()` treated `FETCH_INTO` as `FETCH_CLASS` (whose bits are a subset of `FETCH_INTO`'s) and looked up mandatory fields of a not set entity class.
+	- Fix `Table\Reader::has()` and `Table\Writer::has()` reporting an entry as existing if the database delivered the count as string `"0"` (depending on driver and `ATTR_STRINGIFY_FETCHES`); counts are checked to be numeric now.
+	- Fix `Table\Writer::updateByConditions()` silently ignoring `NULL` values (`isset()`); like `update()`, they now set the column to `NULL`.
+	- Fix `Table\Writer::deleteByConditions()` and `updateByConditions()` sending a query with empty WHERE clause (and failing with an SQL syntax error) if no or only unknown condition columns were given; they now throw an `InvalidArgumentException`.
+	- Fix `Entity::jsonSerialize()` returning an already JSON-encoded string, so `json_encode()` on an entity encoded twice and produced a JSON string instead of a JSON object; it now returns the data array.
+	- Deprecate `BetterTable`, which will be removed in version 0.8: use `Table`, which has all its methods now.
+	- Remove `Connection\Php80` and `Connection\Factory::STRATEGY_PHP80`: the class could not even be loaded on PHP ^8.3 (its `query()` signature is incompatible with `PDO::query()`, a fatal error).
+	- Remove the unreachable and broken manual fetch fallback `Table\Reader::applyFetchModeClassOnResultSetManually()` (and the `$manuallyOnFail` parameters leading to it): it re-read an already consumed statement and silently returned an empty list.
+- DAO:
+	- Deprecate `DAO\Table` and `DAO\AccessObject`, which will be removed in version 0.8: they are unmaintained, untested and partly broken (eg. `AccessObject::updateField()` calls a not existing method); use `PDO\Table` instead.
+- General:
+	- Raise PDO unit test coverage from 71% to 99%: add tests for `BetterTable` (not tested before), `Entity`, the condition syntax (operators, BETWEEN, bitwise, LIKE, function conditions, orders, limits), field methods, generated columns, nested transactions, log levels and `getTables()`.
+	- Make the test for a not loaded PDO driver independent of the drivers installed.
+	- Reach PHPStan level 9+strict again with PHPStan 2.3, which knows exact return types of `PDOStatement::fetch()`.
+	- Add composer script `dev:phpunit-coverage`, showing code coverage on the console.
+	- Update dependencies and readme files.
 
 ## Version 0.7.1
 - all new features and fixes from 0.6.7, but for PHP ^8.3

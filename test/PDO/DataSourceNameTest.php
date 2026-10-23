@@ -10,6 +10,7 @@ namespace CeusMedia\DatabaseTest\PDO;
 
 use CeusMedia\Database\PDO\DataSourceName;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use PDO;
 use ReflectionClass;
 use RuntimeException;
 
@@ -54,10 +55,17 @@ class DataSourceNameTest extends BaseTestCase
 
 	public function testConstructThrowsExceptionOnNotLoadedDriver(): void
 	{
-		//	"sqlite" is supported (whitelisted) but not compiled into this PHP build
+		//	pick a supported (whitelisted) driver, which is not loaded in this PHP build
+		$property	= new \ReflectionProperty( DataSourceName::class, 'drivers' );
+		/** @var string[] $supported */
+		$supported	= $property->getDefaultValue();
+		$notLoaded	= array_values( array_diff( $supported, PDO::getAvailableDrivers() ) );
+		if( [] === $notLoaded )
+			self::markTestSkipped( 'All supported PDO drivers are loaded' );
+
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'PDO driver "sqlite" is not loaded' );
-		new DataSourceName( 'sqlite' );
+		$this->expectExceptionMessage( 'PDO driver "'.$notLoaded[0].'" is not loaded' );
+		new DataSourceName( $notLoaded[0] );
 	}
 
 	public function testGetInstance(): void
@@ -258,5 +266,21 @@ class DataSourceNameTest extends BaseTestCase
 		foreach( $properties as $name => $value )
 			$reflection->getProperty( $name )->setValue( $dsn, $value );
 		return $dsn;
+	}
+
+	public function testGetters(): void
+	{
+		$dsn	= new DataSourceName( 'mysql', 'mydb' );
+		self::assertSame( 'mydb', $dsn->getDatabase() );
+		self::assertNull( $dsn->getHost() );
+		self::assertNull( $dsn->getPort() );
+		self::assertNull( $dsn->getUsername() );
+		self::assertNull( $dsn->getPassword() );
+
+		$dsn->setHost( 'localhost' )->setPort( 3307 )->setUsername( 'user' )->setPassword( 'secret' );
+		self::assertSame( 'localhost', $dsn->getHost() );
+		self::assertSame( 3307, $dsn->getPort() );
+		self::assertSame( 'user', $dsn->getUsername() );
+		self::assertSame( 'secret', $dsn->getPassword() );
 	}
 }

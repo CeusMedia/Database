@@ -14,6 +14,7 @@ use CeusMedia\Common\ADT\Collection\Dictionary;
 use CeusMedia\Database\PDO\Connection as PdoConnection;
 use CeusMedia\Database\PDO\Table\Reader as PdoTableReader;
 use CeusMedia\DatabaseTest\PDO\AdvancedTransactionEntity;
+use CeusMedia\DatabaseTest\PDO\MandatoryFieldsEntity;
 use CeusMedia\DatabaseTest\PDO\NarrowIntoEntity;
 use CeusMedia\DatabaseTest\PDO\OnFetchTrackingEntity;
 use CeusMedia\DatabaseTest\PDO\ThrowingConstructorEntity;
@@ -1259,6 +1260,114 @@ class ReaderTest extends TestCase
 	}
 
 	//  --  PROTECTED  --  //
+
+	/**
+	 *	defocus() reports whether there was anything to defocus.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testDefocusReturnValue(): void
+	{
+		self::assertFalse( $this->reader->defocus(), 'nothing focused' );
+
+		$this->reader->focusIndex( 'topic', 'test' );
+		self::assertFalse( $this->reader->defocus( TRUE ), 'primary key not focused' );
+		self::assertSame( ['topic' => 'test'], $this->reader->getFocus() );
+		self::assertTrue( $this->reader->defocus() );
+	}
+
+	public function testGetLastQueryWithPurePdoConnection(): void
+	{
+		$pdo	= new \PDO( $this->dsn, $this->username, $this->password );
+		$reader	= new PdoTableReader( $pdo, $this->tableName, $this->columns, $this->primaryKey );
+		self::assertSame( 1, $reader->count() );
+		self::assertNull( $reader->getLastQuery() );
+	}
+
+	public function testSetPrimaryKeyExceptionOnEmptyColumn(): void
+	{
+		$this->expectException( \RangeException::class );
+		$this->reader->setPrimaryKey( ' ' );
+	}
+
+	public function testSetTableNameExceptionOnEmptyName(): void
+	{
+		$this->expectException( \InvalidArgumentException::class );
+		$this->reader->setTableName( ' ' );
+	}
+
+	public function testSetAutoIncrementPrimaryKeyIsFluent(): void
+	{
+		self::assertSame( $this->reader, $this->reader->setAutoIncrementPrimaryKey( FALSE ) );
+	}
+
+	public function testFindWithAliasedColumn(): void
+	{
+		$result	= $this->reader->find( ['id', 'label AS title'] );
+		self::assertSame( [['id' => 1, 'title' => '1210847252']], $result );
+	}
+
+	public function testFindExceptionOnEmptyColumnString(): void
+	{
+		$this->expectException( \InvalidArgumentException::class );
+		$this->reader->find( ' ' );
+	}
+
+	public function testFindExceptionOnInvalidColumn(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->reader->find( ['id', 'not_a_column'] );
+	}
+
+	/**
+	 *	On fetching into entity class, mandatory fields of the entity are always selected.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindAddsMandatoryFieldsOfEntityClass(): void
+	{
+		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
+		$this->reader->setFetchEntityClass( MandatoryFieldsEntity::class );
+		$result	= $this->reader->find( ['label'] );
+		self::assertCount( 1, $result );
+		self::assertInstanceOf( MandatoryFieldsEntity::class, $result[0] );
+		self::assertEquals( 1, $result[0]->id );
+		self::assertSame( 'start', $result[0]->topic );
+		self::assertSame( '1210847252', $result[0]->label );
+	}
+
+	/**
+	 *	Selecting a column list in FETCH_INTO mode must not be treated as FETCH_CLASS,
+	 *	since FETCH_INTO's bits are a superset of FETCH_CLASS's (no entity class is set).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFindWithColumnsInFetchIntoMode(): void
+	{
+		$entity	= new TransactionEntity();
+		$this->reader->setFetchMode( \PDO::FETCH_INTO );
+		$this->reader->setFetchEntityObject( $entity );
+		$result	= $this->reader->find( ['id', 'topic'] );
+		self::assertCount( 1, $result );
+		self::assertSame( 'start', $entity->topic );
+	}
+
+	public function testValidateFocusInNonStrictMode(): void
+	{
+		$method	= new \ReflectionMethod( $this->reader, 'validateFocus' );
+		self::assertFalse( $method->invoke( $this->reader, FALSE ) );
+		$this->reader->focusPrimary( 1 );
+		self::assertTrue( $method->invoke( $this->reader, FALSE ) );
+	}
+
+	public function testApplyFetchModeClassOnResultSetExceptionWithoutEntityClass(): void
+	{
+		$method		= new \ReflectionMethod( $this->reader, 'applyFetchModeClassOnResultSet' );
+		$statement	= $this->connection->query( 'SELECT * FROM transactions' );
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'No entity class set' );
+		$method->invoke( $this->reader, $statement, FALSE );
+	}
 
 	/**
 	 *	Setup for every Test.

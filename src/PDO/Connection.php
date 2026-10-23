@@ -29,12 +29,6 @@
  */
 namespace CeusMedia\Database\PDO;
 
-use CeusMedia\Database\PDO\Connection\Php80;
 use CeusMedia\Database\PDO\Connection\Php81;
 
-if( version_compare( PHP_VERSION, '8.1.0', '>=' ) ){
-	class Connection extends Php81 {}
-}
-else if( version_compare( PHP_VERSION, '8.0.0', '>=' ) ){
-	class Connection extends Php80 {}
-}
+class Connection extends Php81 {}
