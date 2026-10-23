@@ -414,8 +414,8 @@ abstract class Abstraction
 		$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 		//  iterate all columns
 		foreach( $allReadableColumns as $column ){
-			//  if condition given
-			if( isset( $conditions[$column] ) ){
+			//  if condition given (also NULL, which becomes "IS NULL")
+			if( array_key_exists( $column, $conditions ) ){
 				//  note condition pair
 				$columnConditions[$column] = $conditions[$column];
 				unset( $conditions[$column] );
@@ -629,7 +629,9 @@ abstract class Abstraction
 			$value	= $this->encodeDateTimeValue( $value );
 		else if( is_array( $value ) || is_object( $value ) )
 			$value	= $this->encodeJsonValue( $value );
-		if( is_numeric( $value ) )
+		//  only real numbers stay unquoted; numeric strings (eg. phone number "0301234") are quoted,
+		//  otherwise the database would store them as number and drop leading zeros
+		if( is_int( $value ) || is_float( $value ) )
 			return (string) $value;
 		$result	= $this->dbc->quote( $value );
 		if( FALSE === $result )

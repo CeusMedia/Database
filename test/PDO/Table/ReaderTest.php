@@ -375,6 +375,20 @@ class ReaderTest extends TestCase
 	 *	@access		public
 	 *	@return		void
 	 */
+	/**
+	 *	A NULL condition value means "IS NULL", it must not be ignored.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testConditionWithNullValue(): void
+	{
+		self::assertSame( 1, $this->reader->count() );
+		self::assertSame( 0, $this->reader->count( ['label' => NULL] ), 'IS NULL, not ignored' );
+		self::assertSame( 0, count( $this->reader->find( [], ['label' => NULL] ) ) );
+		self::assertSame( 1, $this->reader->count( ['label' => 'IS NOT NULL'] ) );
+		self::assertSame( 1, $this->reader->count( ['id' => 1, 'topic' => 'start'] ) );
+	}
+
 	public function testFindWhereInWithNullColumns(): void
 	{
 		$this->connection->query( "INSERT INTO transactions (topic,label) VALUES ('test','findWhereInNullColumnsTest');" );
