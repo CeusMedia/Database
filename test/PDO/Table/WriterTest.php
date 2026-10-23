@@ -99,6 +99,29 @@ class WriterTest extends TestCase
 	 *	@access		public
 	 *	@return		void
 	 */
+	/**
+	 *	Numeric strings must be stored as given, eg. leading zeros of phone numbers.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testInsert_keepsNumericStrings(): void
+	{
+		$id		= $this->writer->insert( ['topic' => '0301234', 'label' => '007'] );
+		/** @var array $row */
+		$row	= $this->reader->focusPrimary( $id )->get();
+		self::assertSame( '0301234', $row['topic'] );
+		self::assertSame( '007', $row['label'] );
+
+		$this->writer->focusPrimary( $id );
+		$this->writer->update( ['label' => '00042'] );
+		/** @var array $row */
+		$row	= $this->reader->focusPrimary( $id )->get();
+		self::assertSame( '00042', $row['label'] );
+
+		self::assertSame( 1, $this->reader->count( ['topic' => '0301234'] ), 'condition with numeric string' );
+		self::assertSame( 0, $this->reader->count( ['topic' => '301234'] ) );
+	}
+
 	public function testInsert_withArray()
 	{
 		$data	= ['topic' => 'insert', 'label' => 'insertTest'];

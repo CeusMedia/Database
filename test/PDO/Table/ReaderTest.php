@@ -370,6 +370,54 @@ class ReaderTest extends TestCase
 	}
 
 	/**
+	 *	A NULL condition value means "IS NULL", it must not be ignored.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testConditionWithNullValue(): void
+	{
+		self::assertSame( 1, $this->reader->count() );
+		self::assertSame( 0, $this->reader->count( ['label' => NULL] ), 'IS NULL, not ignored' );
+		self::assertSame( 0, count( $this->reader->find( [], ['label' => NULL] ) ) );
+		self::assertSame( 1, $this->reader->count( ['label' => 'IS NOT NULL'] ) );
+		self::assertSame( 1, $this->reader->count( ['id' => 1, 'topic' => 'start'] ) );
+	}
+
+	/**
+	 *	A list of condition values is combined by OR - for columns as well as for function conditions.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testConditionWithListOfValues(): void
+	{
+		$method	= new \ReflectionMethod( $this->reader, 'getConditionQuery' );
+
+		$actual	= $method->invoke( $this->reader, ['id' => [1, 2]], FALSE, FALSE );
+		self::assertSame( "(`id` = 1 OR `id` = 2)", $actual );
+
+		$actual	= $method->invoke( $this->reader, ['MAX(id)' => [1, '> 5']], FALSE, FALSE, TRUE );
+		self::assertSame( "(MAX(`id`) = 1 OR MAX(`id`)  >  '5')", $actual );
+
+		$actual	= $method->invoke( $this->reader, ['MAX(id)' => 1], FALSE, FALSE, TRUE );
+		self::assertSame( "MAX(`id`) = 1", $actual );
+
+		$this->connection->query( "INSERT INTO transactions (topic, label) VALUES ('test', 'listOfValuesTest');" );
+		self::assertSame( 2, $this->reader->count( ['id' => [1, 2, 3]] ) );
+		self::assertSame( 1, $this->reader->count( ['label' => ['listOfValuesTest', 'not_existing']] ) );
+	}
+
+	/**
+	 *	Condition values which are neither string, integer, float, NULL nor a list of those are rejected.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testConditionWithInvalidValueTypeException(): void
+	{
+		$this->expectException( \InvalidArgumentException::class );
+		$this->reader->count( ['MAX(id)' => [TRUE]] );
+	}
+
+	/**
 	 *	NULL columns must fall back to an empty list (ie. all columns), just
 	 *	like an empty array would.
 	 *	@access		public

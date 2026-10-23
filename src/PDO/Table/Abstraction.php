@@ -430,8 +430,8 @@ abstract class Abstraction
 		$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
 		//  iterate all columns
 		foreach( $allReadableColumns as $column ){
-			//  if condition given
-			if( isset( $conditions[$column] ) ){
+			//  if condition given (also NULL, which becomes "IS NULL")
+			if( array_key_exists( $column, $conditions ) ){
 				//  note condition pair
 				$columnConditions[$column] = $conditions[$column];
 				unset( $conditions[$column] );
@@ -467,30 +467,15 @@ abstract class Abstraction
 		$conditions = [];
 
 		//  iterate noted column conditions
-		foreach( $columnConditions as $column => $value ){
-			if( is_array( $value ) ){
-				/**
-				 * @var int $nr
-				 * @var int|float|string $part
-				 */
-				foreach( $value as $nr => $part )
-					$value[$nr]	= $this->realizeConditionQueryPart( $column, $part );
-
-				/** @var array<int,string> $value */
-				$part	= '('.implode( ' OR ', $value ).')';
-			}
-			else
-				$part	= $this->realizeConditionQueryPart( $column, $value );
-			$conditions[]	= $part;
-
-		}
+		foreach( $columnConditions as $column => $value )
+			$conditions[]	= $this->realizeConditionQueryParts( $column, $value );
 
 		//  function conditions are allowed: rebuild each as a whitelisted function over a validated column
 		if( $allowFunctions )
 			//  iterate noted functions
 			foreach( $functionConditions as $function => $value ){
 				//  extend conditions
-				$conditions[]	= $this->realizeConditionQueryPart(
+				$conditions[]	= $this->realizeConditionQueryParts(
 					$this->secureFunctionCondition( $function, $allReadableColumns ),
 					$value,
 					FALSE
@@ -556,6 +541,30 @@ abstract class Abstraction
 			$order	= ' ORDER BY '.implode( ', ', $list );
 		}
 		return $order;
+	}
+
+	/**
+	 *	Realizes a condition for a column or function, where a list of values is combined by OR.
+	 *	@access		protected
+	 *	@param		string			$column			Column name or secured function call, eg. "MAX(`id`)"
+	 *	@param		mixed			$value			Condition value or list of condition values
+	 *	@param		boolean			$maskColumn		Flag: mask column name
+	 *	@return		string
+	 *	@throws		InvalidArgumentException	if a value is neither string, integer, float nor NULL
+	 *	@throws		InvalidArgumentException	if whitespace is missing after an operator
+	 */
+	protected function realizeConditionQueryParts( string $column, mixed $value, bool $maskColumn = TRUE ): string
+	{
+		$values	= is_array( $value ) ? $value : [$value];
+		$parts	= [];
+		foreach( $values as $part ){
+			if( NULL !== $part && !is_string( $part ) && !is_int( $part ) && !is_float( $part ) )
+				throw new InvalidArgumentException( 'Invalid condition value type "'.get_debug_type( $part ).'" for '.$column );
+			$parts[]	= $this->realizeConditionQueryPart( $column, $part, $maskColumn );
+		}
+		if( is_array( $value ) )
+			return '('.implode( ' OR ', $parts ).')';
+		return $parts[0];
 	}
 
 	/**
@@ -645,7 +654,9 @@ abstract class Abstraction
 			$value	= $this->encodeDateTimeValue( $value );
 		else if( is_array( $value ) || is_object( $value ) )
 			$value	= $this->encodeJsonValue( $value );
-		if( is_numeric( $value ) )
+		//  only real numbers stay unquoted; numeric strings (eg. phone number "0301234") are quoted,
+		//  otherwise the database would store them as number and drop leading zeros
+		if( is_int( $value ) || is_float( $value ) )
 			return (string) $value;
 		$result	= $this->dbc->quote( $value );
 		if( FALSE === $result )
