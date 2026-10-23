@@ -34,3 +34,14 @@ This library offers two independent ways to work with a database:
 - **[OSQL](src/OSQL/README.md)** - an object-oriented SQL query builder (`Select`, `Condition`, `Table`, `Client`) for building and executing queries as objects.
 
 See each module's own README for code examples.
+
+## Development
+
+Tests need a MySQL/MariaDB database: copy `test/config/test.ini.dist` to `test/config/test.ini` and set the connection. Since all tests share this database, do not run several test runs at once.
+
+| Composer script | Purpose |
+| --- | --- |
+| `composer dev:all` | syntax check, PHPStan and unit tests |
+| `composer dev:phpunit` | unit tests, writing coverage reports to `doc/Test/` |
+| `composer dev:phpstan` | static analysis (level 9 + strict rules) |
+| `composer dev:test-syntax` | PHP syntax check |

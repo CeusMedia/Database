@@ -146,6 +146,14 @@ Every `get()`, `add()` and `edit()` call transparently caches read entries by pr
 \CeusMedia\Database\PDO\Table::$cacheClass		= \CeusMedia\Cache\Adapter\Memory::class;
 \CeusMedia\Database\PDO\Table::$cacheResource	= NULL;    // passed to the adapter's constructor
 ```
+or redeclare these static properties in a table class, to set defaults for this table only:
+```php
+class MyFirstTable extends \CeusMedia\Database\PDO\Table
+{
+	public static string $cacheClass	= \CeusMedia\Cache\Adapter\Memory::class;
+	...
+}
+```
 or share one already-built cache instance across all tables:
 ```php
 \CeusMedia\Database\PDO\Table::$cacheInstance	= $myCache;
@@ -154,7 +162,7 @@ or set one on a single table instance only, overriding the static configuration:
 ```php
 $table->setCache( $myCache );
 ```
-A misbehaving cache (eg. one that rejects a particular key as invalid per PSR-16) never breaks reading or writing - every cache call is guarded and treated as a cache miss/no-op on failure, not surfaced to the caller.
+Only found entries are cached, so a missing entry is looked up again next time. A misbehaving cache (eg. one that rejects a particular key as invalid per PSR-16) never breaks reading or writing - every cache call is guarded and treated as a cache miss/no-op on failure, not surfaced to the caller.
 
 ### Reading an entry
 

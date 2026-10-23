@@ -434,6 +434,157 @@ class WriterTest extends TestCase
 	//  --  PROTECTED  --  //
 
 	/**
+	 *	Generated columns are never written, neither on insert nor on update.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGeneratedColumnsAreNotWritten(): void
+	{
+		$this->writer->setGeneratedColumns( ['timestamp'] );
+		$data	= ['topic' => 'gen', 'label' => 'generated', 'timestamp' => '2000-01-01 00:00:00'];
+		$id		= $this->writer->insert( $data );
+		self::assertStringNotContainsString( 'timestamp', (string) $this->writer->getLastQuery() );
+
+		$this->writer->focusPrimary( $id );
+		$this->writer->update( ['label' => 'changed', 'timestamp' => '2000-01-01 00:00:00'] );
+		self::assertStringNotContainsString( 'timestamp', (string) $this->writer->getLastQuery() );
+		$this->writer->defocus();
+
+		$this->writer->updateByConditions( ['label' => 'changed2', 'timestamp' => '2000-01-01 00:00:00'], ['id' => $id] );
+		self::assertStringNotContainsString( 'timestamp', (string) $this->writer->getLastQuery() );
+
+		self::assertSame( 0, $this->reader->count( ['timestamp' => '2000-01-01 00:00:00'] ) );
+	}
+
+	/**
+	 *	The primary key is written only if auto increment is disabled.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testInsertAndUpdateWithAutoIncrementPrimaryKeyDisabled(): void
+	{
+		self::assertSame( 2, $this->writer->insert( ['id' => 100, 'topic' => 'auto', 'label' => 'ignored id'] ), 'given ID ignored' );
+
+		self::assertSame( $this->writer, $this->writer->setAutoIncrementPrimaryKey( FALSE ) );
+		self::assertSame( 100, $this->writer->insert( ['id' => 100, 'topic' => 'auto', 'label' => 'given id'] ) );
+		self::assertSame( 1, $this->reader->count( ['id' => 100] ) );
+
+		$this->writer->focusPrimary( 100 );
+		self::assertSame( 1, $this->writer->update( ['id' => 101] ) );
+		$this->writer->defocus();
+		self::assertSame( 1, $this->reader->count( ['id' => 101] ) );
+	}
+
+	/**
+	 *	Focused indices are added to inserted data, unless given explicitly.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testInsertAddsFocusedIndices(): void
+	{
+		$this->writer->focusIndex( 'topic', 'focused' );
+		$id	= $this->writer->insert( ['label' => 'from focus'] );
+		$this->writer->defocus();
+		self::assertSame( 1, $this->reader->count( ['id' => $id, 'topic' => 'focused'] ) );
+
+		$this->writer->focusIndex( 'topic', 'focused' );
+		$id	= $this->writer->insert( ['topic' => 'explicit', 'label' => 'given'] );
+		$this->writer->defocus();
+		self::assertSame( 1, $this->reader->count( ['id' => $id, 'topic' => 'explicit'] ) );
+	}
+
+	/**
+	 *	HTML tags are stripped on insert by default, on updates only if enabled.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testStripTags(): void
+	{
+		$id	= $this->writer->insert( ['topic' => 'tags', 'label' => '<b>bold</b>'] );
+		self::assertSame( 1, $this->reader->count( ['id' => $id, 'label' => 'bold'] ) );
+
+		//  values starting with "<" would be read as operator in conditions, so check by direct query
+		$getLabel	= fn( int $id ) => $this->connection->query( 'SELECT label FROM transactions WHERE id='.$id )->fetchColumn();
+
+		$id	= $this->writer->insert( ['topic' => 'tags', 'label' => '<b>bold</b>'], FALSE );
+		self::assertSame( '<b>bold</b>', $getLabel( $id ) );
+
+		$this->writer->updateByConditions( ['label' => '<i>italic</i>'], ['id' => $id] );
+		self::assertSame( '<i>italic</i>', $getLabel( $id ), 'not stripped by default' );
+		$this->writer->updateByConditions( ['label' => '<i>italic</i>'], ['id' => $id], TRUE );
+		self::assertSame( 'italic', $getLabel( $id ) );
+	}
+
+	/**
+	 *	A NULL value sets the column to NULL, on update() as well as on updateByConditions().
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testUpdateWithNullValue(): void
+	{
+		$this->connection->exec( "CREATE TEMPORARY TABLE nullable (id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(20) NULL)" );
+		$this->connection->exec( "INSERT INTO nullable (label) VALUES ('a'), ('b')" );
+		$writer	= new PdoTableWriter( $this->connection, 'nullable', ['id', 'label'], 'id' );
+		$reader	= new PdoTableReader( $this->connection, 'nullable', ['id', 'label'], 'id' );
+
+		$writer->focusPrimary( 1 );
+		self::assertSame( 1, $writer->update( ['label' => NULL] ) );
+		$writer->defocus();
+		self::assertSame( 1, $reader->count( ['id' => 1, 'label' => NULL] ) );
+
+		self::assertSame( 1, $writer->updateByConditions( ['label' => NULL], ['id' => 2] ) );
+		self::assertSame( 1, $reader->count( ['id' => 2, 'label' => NULL] ) );
+	}
+
+	public function testUpdateByConditionsWithObject(): void
+	{
+		self::assertSame( 1, $this->writer->updateByConditions( (object) ['label' => 'from object'], ['id' => 1] ) );
+		self::assertSame( 1, $this->reader->count( ['label' => 'from object'] ) );
+	}
+
+	public function testDeleteByConditionsExceptionOnEmptyConditions(): void
+	{
+		$this->expectException( \InvalidArgumentException::class );
+		$this->writer->deleteByConditions( [] );
+	}
+
+	/**
+	 *	Conditions with unknown columns only (eg. a typo) are rejected, instead of producing an empty WHERE clause.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testDeleteByConditionsExceptionOnInvalidConditionsOnly(): void
+	{
+		try{
+			$this->writer->deleteByConditions( ['not_a_column' => 1] );
+			self::fail( 'Expected InvalidArgumentException' );
+		}
+		catch( \InvalidArgumentException ){}
+		self::assertSame( 1, $this->reader->count(), 'nothing deleted' );
+	}
+
+	public function testUpdateByConditionsExceptionOnInvalidConditionsOnly(): void
+	{
+		$this->expectException( \InvalidArgumentException::class );
+		$this->writer->updateByConditions( ['label' => 'x'], ['not_a_column' => 1] );
+	}
+
+	/**
+	 *	Objects are converted to arrays: iterators by iteration, entities by public properties.
+	 *	Other objects without public primary key property are not supported.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testInsertWithIteratorAndUnsupportedObject(): void
+	{
+		$id	= $this->writer->insert( new \ArrayIterator( ['topic' => 'iterator', 'label' => 'from iterator'] ) );
+		self::assertSame( 1, $this->reader->count( ['id' => $id, 'topic' => 'iterator'] ) );
+
+		$this->expectException( \RuntimeException::class );
+		$this->writer->insert( new class { private string $id = '1'; public string $topic = 'x'; } );
+	}
+
+	/**
 	 *	Setup for every Test.
 	 *	@access		protected
 	 *	@return		void

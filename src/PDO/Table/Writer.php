@@ -32,7 +32,6 @@ use InvalidArgumentException;
 use PDO;
 use ReflectionObject;
 use RuntimeException;
-use Traversable;
 
 /**
  *	Write Access for Database Tables.
@@ -69,11 +68,14 @@ class Writer extends Abstraction
 	 *	@access		public
 	 *	@param		array		$where		associative Array of Condition Strings
 	 *	@return		integer
+	 *	@throws		InvalidArgumentException	if no valid conditions are given
 	 */
 	public function deleteByConditions( array $where = [] ): int
 	{
 		//  render WHERE conditions, uncursored, without functions
 		$conditions		= $this->getConditionQuery( $where, FALSE, FALSE );
+		if( '' === $conditions )
+			throw new InvalidArgumentException( 'Conditions for delete cannot be empty' );
 		$query			= 'DELETE FROM '.$this->getTableName().' WHERE '.$conditions;
 		$affectedRows	= (int) $this->dbc->exec( $query );
 		$this->defocus();
@@ -212,11 +214,14 @@ class Writer extends Abstraction
 		$updates	= [];
 		//  render WHERE conditions, uncursored, without functions
 		$conditions	= $this->getConditionQuery( $conditions, FALSE, FALSE );
+		if( '' === $conditions )
+			throw new InvalidArgumentException( 'Conditions for update must contain at least one valid column' );
 		foreach( $this->columns as $column ){
 			//  don't write to generated columns
 			if( in_array( $column, $this->generated, TRUE ) )
 				continue;
-			if( isset( $data[$column] ) ){
+			//  also NULL, which sets the column to NULL, like update() does
+			if( array_key_exists( $column, $data ) ){
 				if( $stripTags && is_string( $data[$column] ) )
 					$data[$column]	= strip_tags( $data[$column] );
 				$data[$column]	= $this->secureValue( $data[$column] );
@@ -263,7 +268,7 @@ class Writer extends Abstraction
 		if( $object instanceof Dictionary )
 			/** @phpstan-ignore-next-line */
 			return $object->getAll();
-		if( is_iterable( $object ) || $object instanceof Traversable ){
+		if( is_iterable( $object ) ){
 			$map	= [];
 			foreach( $object as $key => $value )
 				$map[$key]	= $value;
@@ -297,10 +302,9 @@ class Writer extends Abstraction
 		] );
 		$result	= $this->dbc->query( $query );
 		if( FALSE !== $result ){
-			/** @var array|FALSE $array */
 			$array	= $result->fetch( PDO::FETCH_NUM );
-			if( FALSE !== $array )
-				return (bool) (int) $array[0];
+			if( is_array( $array ) && is_numeric( $array[0] ?? NULL ) )
+				return 0 < (int) $array[0];
 
 		}
 		return FALSE;

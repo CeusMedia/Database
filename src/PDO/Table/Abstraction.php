@@ -451,30 +451,15 @@ abstract class Abstraction
 		$conditions = [];
 
 		//  iterate noted column conditions
-		foreach( $columnConditions as $column => $value ){
-			if( is_array( $value ) ){
-				/**
-				 * @var int $nr
-				 * @var int|float|string $part
-				 */
-				foreach( $value as $nr => $part )
-					$value[$nr]	= $this->realizeConditionQueryPart( $column, $part );
-
-				/** @var array<int,string> $value */
-				$part	= '('.implode( ' OR ', $value ).')';
-			}
-			else
-				$part	= $this->realizeConditionQueryPart( $column, $value );
-			$conditions[]	= $part;
-
-		}
+		foreach( $columnConditions as $column => $value )
+			$conditions[]	= $this->realizeConditionQueryParts( $column, $value );
 
 		//  function conditions are allowed: rebuild each as a whitelisted function over a validated column
 		if( $allowFunctions )
 			//  iterate noted functions
 			foreach( $functionConditions as $function => $value ){
 				//  extend conditions
-				$conditions[]	= $this->realizeConditionQueryPart(
+				$conditions[]	= $this->realizeConditionQueryParts(
 					$this->secureFunctionCondition( $function, $allReadableColumns ),
 					$value,
 					FALSE
@@ -540,6 +525,30 @@ abstract class Abstraction
 			$order	= ' ORDER BY '.implode( ', ', $list );
 		}
 		return $order;
+	}
+
+	/**
+	 *	Realizes a condition for a column or function, where a list of values is combined by OR.
+	 *	@access		protected
+	 *	@param		string			$column			Column name or secured function call, eg. "MAX(`id`)"
+	 *	@param		mixed			$value			Condition value or list of condition values
+	 *	@param		boolean			$maskColumn		Flag: mask column name
+	 *	@return		string
+	 *	@throws		InvalidArgumentException	if a value is neither string, integer, float nor NULL
+	 *	@throws		InvalidArgumentException	if whitespace is missing after an operator
+	 */
+	protected function realizeConditionQueryParts( string $column, mixed $value, bool $maskColumn = TRUE ): string
+	{
+		$values	= is_array( $value ) ? $value : [$value];
+		$parts	= [];
+		foreach( $values as $part ){
+			if( NULL !== $part && !is_string( $part ) && !is_int( $part ) && !is_float( $part ) )
+				throw new InvalidArgumentException( 'Invalid condition value type "'.get_debug_type( $part ).'" for '.$column );
+			$parts[]	= $this->realizeConditionQueryPart( $column, $part, $maskColumn );
+		}
+		if( is_array( $value ) )
+			return '('.implode( ' OR ', $parts ).')';
+		return $parts[0];
 	}
 
 	/**
@@ -704,7 +713,7 @@ abstract class Abstraction
 	 *	@throws		InvalidArgumentException	if columns is neither a list of columns nor *
 	 *	@throws		DomainException				if column is neither a defined column nor *
 	 */
-	protected function validateColumns( array|string|null $columns ): array
+	protected function validateColumns( array|string|NULL $columns ): array
 	{
 		if( is_string( $columns ) && 0 !== strlen( trim( $columns ) ) )
 			$columns	= [$columns];
@@ -725,7 +734,10 @@ abstract class Abstraction
 			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
 		}
 
-		if( ['*'] !== $columns && 0 !== ( $this->fetchMode & PDO::FETCH_CLASS ) )
+		//  FETCH_INTO (9) has all bits of FETCH_CLASS (8), so it must be excluded explicitly
+		$isFetchClass	= PDO::FETCH_CLASS === ( $this->fetchMode & PDO::FETCH_CLASS )
+			&& PDO::FETCH_INTO !== ( $this->fetchMode & PDO::FETCH_INTO );
+		if( ['*'] !== $columns && $isFetchClass && NULL !== $this->fetchEntityClass )
 			if( isset( $this->fetchEntityClass::$mandatoryFields ) )
 				foreach( $this->fetchEntityClass::$mandatoryFields as $column )
 					if( !in_array( $column, $columns, TRUE ) )

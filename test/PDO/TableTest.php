@@ -813,6 +813,165 @@ class TableTest extends TestCase
 	//  --  PROTECTED  --  //
 
 	/**
+	 *	checkField() and checkIndices() return FALSE or NULL instead of throwing, if not strict.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testCheckFieldAndCheckIndicesInNonStrictMode(): void
+	{
+		$checkField		= new \ReflectionMethod( $this->table, 'checkField' );
+		self::assertNull( $checkField->invoke( $this->table, ' ' ) );
+		self::assertFalse( $checkField->invoke( $this->table, ' ', TRUE, FALSE ) );
+		self::assertFalse( $checkField->invoke( $this->table, 'invalid', FALSE, FALSE ) );
+		self::assertSame( 'topic', $checkField->invoke( $this->table, ' topic ' ) );
+
+		$checkIndices	= new \ReflectionMethod( $this->table, 'checkIndices' );
+		self::assertSame( [], $checkIndices->invoke( $this->table, [] ) );
+		self::assertFalse( $checkIndices->invoke( $this->table, [], TRUE, FALSE ) );
+		self::assertFalse( $checkIndices->invoke( $this->table, ['label' => 'x'], FALSE, FALSE ) );
+	}
+
+	public function testGetFieldWithArrayFetchModeExceptionOnFieldMissingInResult(): void
+	{
+		$getField	= new \ReflectionMethod( $this->table, 'getFieldFromResult' );
+		$this->expectException( \RangeException::class );
+		$getField->invoke( $this->table, ['id' => 1], 'topic' );
+	}
+
+	/**
+	 *	Deprecated, but still available for subclasses: removes a zero primary key value before insert.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testRemovePrimaryKeyValueOnInsertIfAutoIncrement(): void
+	{
+		$method	= new \ReflectionMethod( $this->table, 'removePrimaryKeyValueOnInsertIfAutoIncrement' );
+
+		$array	= ['id' => 0, 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$array] );
+		self::assertSame( ['topic' => 'x'], $array );
+
+		$array	= ['id' => 5, 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$array] );
+		self::assertSame( ['id' => 5, 'topic' => 'x'], $array, 'sane value is kept' );
+
+		$object	= (object) ['id' => '0', 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$object] );
+		self::assertFalse( property_exists( $object, 'id' ) );
+
+		$property	= new \ReflectionProperty( $this->table, 'autoIncrementPrimaryKey' );
+		$property->setValue( $this->table, FALSE );
+		$array	= ['id' => 0, 'topic' => 'x'];
+		$method->invokeArgs( $this->table, [&$array] );
+		self::assertSame( ['id' => 0, 'topic' => 'x'], $array, 'kept without auto increment' );
+	}
+
+	/**
+	 *	Decoded JSON values are returned as single field, too (did fail with TypeError before).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetSingleFieldWithJsonColumn(): void
+	{
+		$this->table->setJsonColumns( ['label'] );
+		$id	= $this->table->add( ['topic' => 'json', 'label' => ['a' => 1]] );
+		self::assertEquals( (object) ['a' => 1], $this->table->get( $id, 'label' ) );
+		self::assertEquals( (object) ['a' => 1], $this->table->getByIndex( 'topic', 'json', [], 'label' ) );
+		self::assertEquals( [(object) ['a' => 1]], $this->table->getAll( ['topic' => 'json'], [], [], ['label'] ) );
+	}
+
+	/**
+	 *	NULL values of array rows are values, not missing fields (did throw RangeException before).
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testFieldsWithNullValueInArrayFetchMode(): void
+	{
+		$getField	= new \ReflectionMethod( $this->table, 'getFieldFromResult' );
+		self::assertNull( $getField->invoke( $this->table, ['id' => 1, 'label' => NULL], 'label' ) );
+
+		$getFields	= new \ReflectionMethod( $this->table, 'getFieldsFromResult' );
+		self::assertSame( ['id' => 1, 'label' => NULL], $getFields->invoke( $this->table, ['id' => 1, 'label' => NULL], ['id', 'label'] ) );
+	}
+
+	/**
+	 *	Missing entries are not cached, so has() does not report them as existing afterward.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetDoesNotCacheMissingEntry(): void
+	{
+		$this->table->setCache( new MemoryCache( NULL ) );
+		self::assertNull( $this->table->get( 999 ) );
+		self::assertFalse( $this->table->has( 999 ) );
+
+		//  inserted bypassing the table: must be found, not served as cached NULL
+		$this->connection->exec( "INSERT INTO transactions (id, topic, label) VALUES (999, 'late', 'inserted later')" );
+		self::assertTrue( $this->table->has( 999 ) );
+		self::assertSame( 'late', $this->table->get( 999 )->topic );
+	}
+
+	/**
+	 *	A subclass can set its own default cache class.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testSetupCacheUsesCacheClassOfSubclass(): void
+	{
+		$table	= new TransactionTableWithOwnCacheClass( $this->connection );
+		$cache	= ( new \ReflectionProperty( $table, 'cache' ) )->getValue( $table );
+		self::assertInstanceOf( MemoryCache::class, $cache );
+
+		$cache	= ( new \ReflectionProperty( $this->table, 'cache' ) )->getValue( $this->table );
+		self::assertInstanceOf( \CeusMedia\Cache\Adapter\Noop::class, $cache, 'default stays untouched' );
+	}
+
+	/**
+	 *	Removing by index works for every fetch mode and invalidates the cache of every removed entry.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testRemoveByIndexWithEveryFetchModeInvalidatesCache(): void
+	{
+		$modes	= [
+			'FETCH_OBJ'		=> fn() => $this->table->setFetchMode( PDO::FETCH_OBJ ),
+			'FETCH_ASSOC'	=> fn() => $this->table->setFetchMode( PDO::FETCH_ASSOC ),
+			'FETCH_CLASS'	=> fn() => $this->table->setFetchMode( PDO::FETCH_CLASS )->setFetchEntityClass( TransactionEntity::class ),
+			'FETCH_CLASS|FETCH_PROPS_LATE'	=> fn() => $this->table->setFetchMode( PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE )->setFetchEntityClass( TransactionEntity::class ),
+			'FETCH_INTO'	=> fn() => $this->table->setFetchMode( PDO::FETCH_INTO )->setFetchEntityObject( new TransactionEntity() ),
+		];
+		foreach( $modes as $label => $setMode ){
+			$cache	= new MemoryCache( NULL );
+			$this->table->setCache( $cache );
+			$this->table->setFetchEntityClass( NULL )->setFetchEntityObject( NULL );
+			$setMode();
+
+			$id1	= $this->table->add( ['topic' => 'remove', 'label' => 'label1'] );
+			$id2	= $this->table->add( ['topic' => 'remove', 'label' => 'label2'] );
+			self::assertTrue( $cache->has( 'db.transactions.'.$id1 ), $label );
+
+			self::assertSame( 2, $this->table->removeByIndex( 'topic', 'remove' ), $label );
+			self::assertFalse( $cache->has( 'db.transactions.'.$id1 ), $label );
+			self::assertFalse( $cache->has( 'db.transactions.'.$id2 ), $label );
+			self::assertFalse( $this->table->has( $id1 ), $label );
+		}
+	}
+
+	public function testRemoveByIndicesWithEntityObjectFetchMode(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_INTO )->setFetchEntityObject( new TransactionEntity() );
+		$id	= $this->table->add( ['topic' => 'remove', 'label' => 'label1'] );
+		self::assertSame( 1, $this->table->removeByIndices( ['topic' => 'remove', 'id' => $id] ) );
+		self::assertSame( 0, $this->table->removeByIndices( ['topic' => 'remove'] ) );
+	}
+
+	public function testRemoveByIndexExceptionOnInvalidIndex(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->removeByIndex( 'label', 'x' );
+	}
+
+	/**
 	 *	Setup for every Test.
 	 *	@access		protected
 	 *	@return		void

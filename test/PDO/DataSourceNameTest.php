@@ -10,6 +10,7 @@ namespace CeusMedia\DatabaseTest\PDO;
 
 use CeusMedia\Database\PDO\DataSourceName;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use PDO;
 use ReflectionClass;
 use RuntimeException;
 
@@ -54,10 +55,17 @@ class DataSourceNameTest extends BaseTestCase
 
 	public function testConstructThrowsExceptionOnNotLoadedDriver(): void
 	{
-		//	"sqlite" is supported (whitelisted) but not compiled into this PHP build
+		//	pick a supported (whitelisted) driver, which is not loaded in this PHP build
+		$property	= new \ReflectionProperty( DataSourceName::class, 'drivers' );
+		/** @var string[] $supported */
+		$supported	= $property->getDefaultValue();
+		$notLoaded	= array_values( array_diff( $supported, PDO::getAvailableDrivers() ) );
+		if( [] === $notLoaded )
+			self::markTestSkipped( 'All supported PDO drivers are loaded' );
+
 		$this->expectException( RuntimeException::class );
-		$this->expectExceptionMessage( 'PDO driver "sqlite" is not loaded' );
-		new DataSourceName( 'sqlite' );
+		$this->expectExceptionMessage( 'PDO driver "'.$notLoaded[0].'" is not loaded' );
+		new DataSourceName( $notLoaded[0] );
 	}
 
 	public function testGetInstance(): void

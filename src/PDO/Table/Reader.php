@@ -80,9 +80,8 @@ class Reader extends Abstraction
 		if( FALSE === $result )
 			return 0;
 
-		/** @var array|FALSE $array */
 		$array	= $result->fetch( PDO::FETCH_NUM );
-		if( FALSE === $array )
+		if( !is_array( $array ) || !is_numeric( $array[0] ?? NULL ) )
 			return 0;
 		return (int) $array[0];
 	}
@@ -104,9 +103,8 @@ class Reader extends Abstraction
 		if( FALSE === $result )
 			return 0;
 
-		/** @var array|FALSE $array */
 		$array	= $result->fetch( PDO::FETCH_ASSOC );
-		if( FALSE === $array )
+		if( !is_array( $array ) || !is_numeric( $array['rows'] ?? NULL ) )
 			return 0;
 		return (int) $array['rows'];
 	}
@@ -309,9 +307,9 @@ class Reader extends Abstraction
 		$query		= 'SELECT COUNT('.$this->primaryKey.') FROM '.$this->getTableName().' WHERE '.$conditions;
 		$statement	= $this->dbc->prepare( $query );
 		$statement->execute();
-		/** @var array<int,int> $result */
 		$result		= $statement->fetch( PDO::FETCH_NUM );
-		return 0 !== $result[0];
+		//  count may be delivered as string, depending on driver and emulated prepares
+		return is_array( $result ) && is_numeric( $result[0] ?? NULL ) && 0 < (int) $result[0];
 	}
 
 	/**
