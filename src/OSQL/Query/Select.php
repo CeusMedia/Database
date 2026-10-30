@@ -1,7 +1,8 @@
-<?php /** @noinspection PhpUnused */
+<?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 
 /**
- *	Builder for SELECT statements.
+ *	OSQL query to read data.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -25,15 +26,19 @@
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Database\OSQL\Client;
+use CeusMedia\Database\OSQL\Condition;
+use CeusMedia\Database\OSQL\Condition\Group;
+use CeusMedia\Database\OSQL\Identifier;
 use CeusMedia\Database\OSQL\Table;
 use InvalidArgumentException;
+use PDO;
 use RuntimeException;
 
 /**
- *	Builder for SELECT statements.
+ *	OSQL query to read data.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -41,201 +46,348 @@ use RuntimeException;
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Select extends AbstractQuery implements QueryInterface
+class Select extends AbstractQuery
 {
-	public int $foundRows		= 0;
-	public array $result		= [];
+	use ConditionsTrait;
 
-	protected bool $countRows	= FALSE;
-	protected array $conditions	= [];
-	protected array $orders		= [];
-	protected array $fields		= ['*'];
-	protected array $tables		= [];
-	protected ?string $groupBy	= NULL;
+	/** @var string[] $fields Quoted fields, all columns if empty */
+	protected array $fields			= [];
 
-	/**
-	 *	Static constructor.
-	 *	@access		public
-	 *	@param		Client		$dbc	OSQL database connection
-	 *	@return		self
-	 */
-	public static function create( Client $dbc ): self
+	protected bool $distinct		= FALSE;
+
+	protected ?Table $table			= NULL;
+
+	/** @var string[] $joins Rendered joins */
+	protected array $joins			= [];
+
+	/** @var string[] $groupings Quoted columns */
+	protected array $groupings		= [];
+
+	protected ?Group $having		= NULL;
+
+	/** @var string[] $orders Rendered orders */
+	protected array $orders			= [];
+
+	protected ?int $limit			= NULL;
+
+	protected int $offset			= 0;
+
+	protected ?int $fetchMode		= NULL;
+
+	/** @var class-string|NULL $fetchClass */
+	protected ?string $fetchClass	= NULL;
+
+	protected bool $counting		= FALSE;
+
+	public function __clone()
 	{
-		$className	= static::class;
-		return new $className( $dbc );
+		$this->cloneConditions();
+		if( NULL !== $this->having )
+			$this->having	= clone $this->having;
 	}
 
 	/**
-	 *	Enable/disable counting of all rows ignoring limits.
-	 *	The result can be read later by in query member "foundRows".
-	 *	@access		public
-	 *	@param		bool		$count		Flag: enable or disable counting
+	 *	Executes query and returns all found rows.
+	 *	@return		array<int,array<string,mixed>|object>
 	 */
-	public function countRows( bool $count = TRUE ): self
+	public function all(): array
 	{
-		$this->countRows	= $count;
+		$statement	= $this->client->run( $this );
+		if( NULL !== $this->fetchClass )
+			/** @var array<int,object> */
+			return $statement->fetchAll( PDO::FETCH_CLASS, $this->fetchClass );
+		/** @var array<int,array<string,mixed>|object> */
+		return $statement->fetchAll( $this->fetchMode ?? $this->client->getFetchMode() );
+	}
+
+	/**
+	 *	Executes query and returns first column of all found rows.
+	 *	@return		array<int,mixed>
+	 */
+	public function column(): array
+	{
+		return $this->client->run( $this )->fetchAll( PDO::FETCH_COLUMN, 0 );
+	}
+
+	/**
+	 *	Returns number of found rows, ignoring order, limit and offset.
+	 *	For pagination: get total by count(), then rows by page( $page, $perPage )->all().
+	 *	@return		int
+	 */
+	public function count(): int
+	{
+		$query				= clone $this;
+		$query->counting	= TRUE;
+		$value				= $this->client->run( $query )->fetchColumn( 0 );
+		$this->statement	= $query->statement;
+		$this->parameters	= $query->parameters;
+		return is_numeric( $value ) ? (int) $value : 0;
+	}
+
+	/**
+	 *	Sets whether duplicate rows are removed (SELECT DISTINCT).
+	 *	@param		bool		$distinct
+	 *	@return		static
+	 */
+	public function distinct( bool $distinct = TRUE ): static
+	{
+		$this->distinct	= $distinct;
 		return $this;
 	}
 
 	/**
-	 *	Adds fields to select and returns query object for method chaining.
-	 *	@access		public
-	 *	@param		array|string	$fields		List of fields to select or one field name or asterisk
-	 *	@return		self
+	 *	Executes query and returns all found rows, same as all().
+	 *	@return		array<int,array<string,mixed>|object>
 	 */
-	public function get( array|string $fields ): self
+	public function execute(): array
 	{
-		if( is_string( $fields ) )
-			$fields	= [$fields];
-		$this->fields	= $fields;
+		return $this->all();
+	}
+
+	/**
+	 *	Indicates whether at least one row is found.
+	 *	@return		bool
+	 */
+	public function exists(): bool
+	{
+		return NULL !== $this->first();
+	}
+
+	/**
+	 *	Fetches rows as objects of given class, instead of fetch mode.
+	 *	@param		class-string	$className
+	 *	@return		static
+	 */
+	public function fetchAs( string $className ): static
+	{
+		if( !class_exists( $className ) )
+			throw new InvalidArgumentException( 'Class "'.$className.'" is not existing' );
+		$this->fetchClass	= $className;
 		return $this;
 	}
 
 	/**
-	 *	...
-	 *	@access		protected
-	 *	@return		void
+	 *	Sets fetch mode for this query, instead of fetch mode of client.
+	 *	@param		int		$mode		PDO fetch mode, eg. PDO::FETCH_ASSOC
+	 *	@return		static
 	 */
-	protected function checkSetup(): void
+	public function fetchMode( int $mode ): static
 	{
-		if( 0 === count( $this->tables ) )
-			throw new RuntimeException( 'No from clause set' );
+		$this->fetchMode	= $mode;
+		$this->fetchClass	= NULL;
+		return $this;
 	}
 
 	/**
-	 *	Sets table to select in and returns query object for method chaining.
-	 *	@access		public
-	 *	@param		Table	$table		Table to select in
-	 *	@return		self
+	 *	Sets fields to select, all columns by default.
+	 *	A field can be "*", "o.*", a column ("total", "o.total"), an aggregate function ("COUNT(*)",
+	 *	"SUM(o.total)") and have an alias ("o.total AS sum").
+	 *	@param		string		...$fields
+	 *	@return		static
 	 */
-	public function from( Table $table ): self
+	public function fields( string ...$fields ): static
 	{
-		$this->tables[]	= $table;
+		$this->fields	= array_map( [Identifier::class, 'quoteField'], array_values( $fields ) );
 		return $this;
 	}
 
-	public function groupBy( string $name ): self
+	/**
+	 *	Executes query, limited to one row, and returns it - or NULL if nothing found.
+	 *	@return		array<string,mixed>|object|NULL
+	 */
+	public function first(): array|object|NULL
 	{
-		$this->groupBy	= $name;
+		$query	= ( clone $this )->limit( 1 );
+		$rows	= $query->all();
+		$this->statement	= $query->statement;
+		$this->parameters	= $query->parameters;
+		return $rows[0] ?? NULL;
+	}
+
+	/**
+	 *	Sets table to select from.
+	 *	@param		Table|string	$table		Table object or name, may contain an alias, eg. "orders AS o"
+	 *	@return		static
+	 */
+	public function from( Table|string $table ): static
+	{
+		$this->table	= Table::resolve( $table );
 		return $this;
 	}
 
-	public function order( string $field, ?string $direction = 'ASC' ): self
+	/**
+	 *	Sets columns to group by.
+	 *	@param		string		...$fields		Columns (or aliases of selected fields)
+	 *	@return		static
+	 */
+	public function groupBy( string ...$fields ): static
 	{
-		$direction	= strtoupper( $direction ?? 'ASC' );
+		$this->groupings	= array_map( static fn( string $field ) => Identifier::quoteColumn( $field ), array_values( $fields ) );
+		return $this;
+	}
+
+	/**
+	 *	Adds condition on grouped rows (HAVING), combined by AND with having conditions before.
+	 *	Field can be an aggregate function, eg. having( 'COUNT(*)', 5, Condition::OP_GT ), or an alias of a selected field.
+	 *	@param		Condition|Group|string	$field		Condition, group of conditions or field to create condition for
+	 *	@param		mixed					$value		Value, if field is given
+	 *	@param		string					$operator	Operator, if field is given, default: "="
+	 *	@return		static
+	 */
+	public function having( Condition|Group|string $field, mixed $value = NULL, string $operator = Condition::OP_EQ ): static
+	{
+		$condition		= self::resolveCondition( func_get_args() );
+		$this->having	= self::combineConditions( $this->having, Group::OPERATION_AND, $condition );
+		return $this;
+	}
+
+	/**
+	 *	Adds inner join.
+	 *	Without right key, the left key is used as column of both tables (USING).
+	 *	@param		Table|string	$table		Table object or name, may contain an alias, eg. "customers AS c"
+	 *	@param		string			$keyLeft	Column of joined tables, eg. "o.customerId", or common column, if no right key given
+	 *	@param		string|NULL		$keyRight	Column of joining table, eg. "c.customerId"
+	 *	@return		static
+	 */
+	public function join( Table|string $table, string $keyLeft, ?string $keyRight = NULL ): static
+	{
+		return $this->addJoin( 'JOIN', $table, $keyLeft, $keyRight );
+	}
+
+	/**
+	 *	Adds left (outer) join.
+	 *	@param		Table|string	$table		Table object or name, may contain an alias
+	 *	@param		string			$keyLeft	Column of joined tables, or common column, if no right key given
+	 *	@param		string|NULL		$keyRight	Column of joining table
+	 *	@return		static
+	 */
+	public function leftJoin( Table|string $table, string $keyLeft, ?string $keyRight = NULL ): static
+	{
+		return $this->addJoin( 'LEFT JOIN', $table, $keyLeft, $keyRight );
+	}
+
+	/**
+	 *	Sets maximum number of rows, NULL for no limit.
+	 *	@param		int|NULL	$limit
+	 *	@return		static
+	 */
+	public function limit( ?int $limit ): static
+	{
+		if( NULL !== $limit && $limit < 1 )
+			throw new InvalidArgumentException( 'Limit must be at least 1' );
+		$this->limit	= $limit;
+		return $this;
+	}
+
+	/**
+	 *	Sets number of rows to skip.
+	 *	@param		int		$offset
+	 *	@return		static
+	 */
+	public function offset( int $offset ): static
+	{
+		if( $offset < 0 )
+			throw new InvalidArgumentException( 'Offset must not be negative' );
+		$this->offset	= $offset;
+		return $this;
+	}
+
+	/**
+	 *	Adds order.
+	 *	@param		string		$field			Column, alias of selected field or aggregate function
+	 *	@param		string		$direction		ASC or DESC, default: ASC
+	 *	@return		static
+	 */
+	public function order( string $field, string $direction = 'ASC' ): static
+	{
+		$direction	= strtoupper( trim( $direction ) );
 		if( !in_array( $direction, ['ASC', 'DESC'], TRUE ) )
 			throw new InvalidArgumentException( 'Direction must be ASC or DESC' );
-		$this->orders[]	= (object) [
-			'field'		=> $field,
-			'direction'	=> $direction,
-		];
+		$this->orders[]	= Identifier::quoteExpression( $field ).' '.$direction;
 		return $this;
 	}
 
 	/**
-	 *	Returns rendered FROM string.
-	 *	@access		protected
-	 *	@return		string
+	 *	Sets limit and offset for given page.
+	 *	@param		int		$page			Page number, starting at 1
+	 *	@param		int		$perPage		Rows per page
+	 *	@return		static
 	 */
-	protected function renderFrom(): string
+	public function page( int $page, int $perPage ): static
 	{
-		if( 0 === count( $this->tables ) )
-			throw new RuntimeException( 'No table set' );
-		$list	= [];
-		foreach( $this->tables as $table )
-			$list[]	= $table->render();
-		return ' FROM '.implode( ', ', $list );
+		if( $page < 1 )
+			throw new InvalidArgumentException( 'Page must be at least 1' );
+		return $this->limit( $perPage )->offset( ( $page - 1 ) * $perPage );
 	}
 
 	/**
-	 *	Returns rendered GROUP string.
-	 *	@access		protected
-	 *	@return		string
-	 */
-	protected function renderGrouping(): string
-	{
-		if( NULL === $this->groupBy )
-			return '';
-		return ' GROUP BY '.$this->groupBy;
-	}
-
-	protected function renderOrders(): string
-	{
-		if( 0 === count( $this->orders ) )
-			return '';
-		$list	= [];
-		foreach( $this->orders as $order ){
-			$list[]	= $order->field.' '.$order->direction;
-		}
-		return ' ORDER BY '.implode( ', ', $list );
-	}
-
-	/**
-	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
-	 *	@access		public
-	 *	@return		object
+	 *	Returns statement with placeholders and list of parameters.
+	 *	@return		object{query: string, parameters: array<int,string|int|float|NULL>}
 	 */
 	public function render(): object
 	{
-		$this->checkSetup();
+		if( NULL === $this->table )
+			throw new RuntimeException( 'No table set' );
 		$parameters	= [];
-		$fields		= implode( ', ', $this->fields );
-		$from		= $this->renderFrom();
-		$joins		= $this->renderJoins();
-		$conditions	= $this->renderConditions( $parameters );
-		$limit		= $this->renderLimit( $parameters );
-		$offset		= $this->renderOffset( $parameters );
-		$group		= $this->renderGrouping();
-		$orders		= $this->renderOrders();
-		$options	= $this->renderOptions();
-		$query		= 'SELECT '.$options.$fields.$from.$joins.$conditions.$group.$orders.$limit.$offset;
-		$query		= preg_replace( '/ (LEFT|INNER|FROM|WHERE|ORDER|LIMIT|GROUP|HAVING)/', PHP_EOL.'\\1', $query );
-		return (object) [
-			'query'			=> $query,
-			'parameters'	=> $parameters,
-		];
+		$distinct	= $this->distinct ? 'DISTINCT ' : '';
+		$fields		= [] !== $this->fields ? implode( ', ', $this->fields ) : '*';
+		$from		= ' FROM '.$this->table->render().implode( $this->joins );
+		$where		= self::renderConditionGroup( $this->conditions, ' WHERE ', $parameters );
+		$group		= [] !== $this->groupings ? ' GROUP BY '.implode( ', ', $this->groupings ) : '';
+		$having		= self::renderConditionGroup( $this->having, ' HAVING ', $parameters );
+
+		if( $this->counting ){
+			if( [] === $this->groupings && NULL === $this->having && !$this->distinct )
+				return self::result( 'SELECT COUNT(*)'.$from.$where, $parameters );
+			$query	= 'SELECT '.$distinct.$fields.$from.$where.$group.$having;
+			return self::result( 'SELECT COUNT(*) FROM ('.$query.') AS `counted`', $parameters );
+		}
+		$orders		= [] !== $this->orders ? ' ORDER BY '.implode( ', ', $this->orders ) : '';
+		$query		= 'SELECT '.$distinct.$fields.$from.$where.$group.$having.$orders.$this->renderLimit();
+		return self::result( $query, $parameters );
 	}
 
-	protected function renderOptions(): string
+	/**
+	 *	Adds right (outer) join.
+	 *	@param		Table|string	$table		Table object or name, may contain an alias
+	 *	@param		string			$keyLeft	Column of joined tables, or common column, if no right key given
+	 *	@param		string|NULL		$keyRight	Column of joining table
+	 *	@return		static
+	 */
+	public function rightJoin( Table|string $table, string $keyLeft, ?string $keyRight = NULL ): static
 	{
-		$options	= [];
-		if( $this->countRows )
-			$options[]	= 'SQL_CALC_FOUND_ROWS';
-		if( 0 === count( $options ) )
-			return '';
-		return join( $options ).' ';
+		return $this->addJoin( 'RIGHT JOIN', $table, $keyLeft, $keyRight );
+	}
+
+	/**
+	 *	Executes query, limited to one row, and returns its first column - or NULL if nothing found.
+	 *	@return		mixed
+	 */
+	public function value(): mixed
+	{
+		$query	= ( clone $this )->limit( 1 );
+		$value	= $this->client->run( $query )->fetchColumn( 0 );
+		$this->statement	= $query->statement;
+		$this->parameters	= $query->parameters;
+		return FALSE === $value ? NULL : $value;
+	}
+
+	//  --  PROTECTED  --  //
+
+	protected function addJoin( string $type, Table|string $table, string $keyLeft, ?string $keyRight ): static
+	{
+		$specification	= NULL === $keyRight
+			? ' USING ('.Identifier::quoteName( $keyLeft ).')'
+			: ' ON '.Identifier::quoteColumn( $keyLeft ).' = '.Identifier::quoteColumn( $keyRight );
+		$this->joins[]	= ' '.$type.' '.Table::resolve( $table )->render().$specification;
+		return $this;
+	}
+
+	protected function renderLimit(): string
+	{
+		if( NULL === $this->limit )
+			//  MySQL needs a limit for an offset, so use the largest possible
+			return 0 !== $this->offset ? ' LIMIT 18446744073709551615 OFFSET '.$this->offset : '';
+		return ' LIMIT '.$this->limit.( 0 !== $this->offset ? ' OFFSET '.$this->offset : '' );
 	}
 }
-
-/*
-Syntax
----------------------
-
-MySQL:   https://dev.mysql.com/doc/refman/5.7/en/select.html
-MariaDB: https://mariadb.com/kb/en/library/select/
-
-SELECT
-    [ALL | DISTINCT | DISTINCTROW ]
-      [HIGH_PRIORITY]
-      [STRAIGHT_JOIN]
-      [SQL_SMALL_RESULT] [SQL_BIG_RESULT] [SQL_BUFFER_RESULT]
-      [SQL_CACHE | SQL_NO_CACHE] [SQL_CALC_FOUND_ROWS]
-    select_expr [, select_expr ...]
-    [FROM table_references
-      [PARTITION partition_list]
-    [WHERE where_condition]
-    [GROUP BY {col_name | expr | position}
-      [ASC | DESC], ... [WITH ROLLUP]]
-    [HAVING where_condition]
-    [ORDER BY {col_name | expr | position}
-      [ASC | DESC], ...]
-    [LIMIT {[offset,] row_count | row_count OFFSET offset}]
-    [PROCEDURE procedure_name(argument_list)]
-    [INTO OUTFILE 'file_name'
-        [CHARACTER SET charset_name]
-        export_options
-      | INTO DUMPFILE 'file_name'
-      | INTO var_name [, var_name]]
-    [FOR UPDATE | LOCK IN SHARE MODE]]
-
-*/

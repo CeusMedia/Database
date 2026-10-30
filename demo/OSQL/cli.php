@@ -4,18 +4,11 @@
 $pathLib	= dirname( __DIR__, 2 ).'/';
 require_once $pathLib.'vendor/autoload.php';
 
-use CeusMedia\Common\Alg\UnitFormater;
 use CeusMedia\Common\CLI;
 use CeusMedia\Common\CLI\Color as CliColor;
-use CeusMedia\Common\UI\DevOutput;
-use CeusMedia\Database\PDO\DataSourceName;
 use CeusMedia\Database\OSQL\Client;
-use CeusMedia\Database\OSQL\Connection;
-use CeusMedia\Database\OSQL\Condition;
-use CeusMedia\Database\OSQL\Table;
-use CeusMedia\Database\OSQL\Query\Select;
-
-new DevOutput();
+use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\DataSourceName;
 
 $cliColor	= new CliColor();
 
@@ -29,43 +22,35 @@ $command	= sprintf( $command, $dbConfig->username, $dbConfig->password, $dbConfi
 //passthru( $command );
 
 try{
-	$dsn		= DataSourceName::renderStatic(
-		$dbConfig->driver,
-		$dbConfig->database,
-		$dbConfig->host,
-		$dbConfig->port,
-		$dbConfig->username,
-		$dbConfig->password
-	);
+	$dsn	= DataSourceName::getInstance( $dbConfig->driver, $dbConfig->database )
+		->setHost( $dbConfig->host )
+		->setPort( (int) $dbConfig->port )
+		->setUsername( $dbConfig->username )
+		->setPassword( $dbConfig->password );
+	$client	= new Client( new Connection( $dsn ) );
 
-	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
-	$client	= new Client( $dbc );
+	$query	= $client->select( 'galleries AS g' )
+		->fields( 'g.galleryId', 'g.title', 'COUNT(gi.galleryImageId) AS images', 'MAX(gi.timestamp) AS lastUpload' )
+		->leftJoin( 'gallery_images AS gi', 'g.galleryId', 'gi.galleryId' )
+		->where( 'g.galleryId', 1 )
+		->groupBy( 'g.galleryId', 'g.title' );
 
-	$query	= Select::create( $client )
-		->get( ['*', 'SUM(galleryId) as summedGalleryIds'] )
-//		->groupBy( 'galleryId' )
-		->from( new Table( 'galleries', 'g' ) )
-		->where( new Condition( 'galleryId', 1, Condition::OP_EQ ) );
-//		->countRows();
-
-	$result	= $query->execute();
+	$result	= $query->all();
 
 	CLI::out( PHP_EOL.$cliColor->bold( 'Final Statement:' ) );
-	CLI::out( str_replace( PHP_EOL, ' ', $query->statement ) );
+	CLI::out( $query->statement );
 
 	CLI::out( PHP_EOL.$cliColor->bold( 'Bound Parameters:' ) );
-	foreach( $query->parameters as $key => $data )
-		CLI::out( ' - '.$key.': ('.$data['type'].') '.$data['value'] );
+	foreach( $query->parameters as $nr => $value )
+		CLI::out( ' - #'.( $nr + 1 ).': ('.get_debug_type( $value ).') '.$value );
 
 	CLI::out( PHP_EOL.$cliColor->bold( 'Result:' ) );
 	foreach( $result as $nr => $row ){
 		CLI::out( ' - Row #'.$nr );
-		foreach( $row as $key => $data )
+		foreach( (array) $row as $key => $data )
 			CLI::out( '   - '.$key.': '.$data );
 	}
-	CLI::out( PHP_EOL.$cliColor->bold( 'Query timings:' ) );
-	foreach( $query->timing as $key => $value )
-		CLI::out( ' - '.$key.': '.UnitFormater::formatSeconds( $value ) );
+	CLI::out( PHP_EOL.$cliColor->bold( 'Number of galleries:' ).' '.$client->select( 'galleries' )->count() );
 	CLI::out();
 }
 catch( Exception $e ){

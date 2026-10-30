@@ -1,6 +1,8 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
- *	...
+ *	Table, optionally with alias, as part of OSQL queries.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -24,12 +26,13 @@
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL;
 
-use RuntimeException;
+use InvalidArgumentException;
 
 /**
- *	...
+ *	Table, optionally with alias, as part of OSQL queries.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -39,103 +42,59 @@ use RuntimeException;
  */
 class Table
 {
-	protected ?string $name		= NULL;
+	protected string $name;
+
 	protected ?string $alias	= NULL;
-	protected array $joins		= [];
 
 	/**
 	 *	Constructor.
-	 *	@access		public
-	 *	@param		string|NULL		$name		Table name
-	 *	@param		string|NULL		$alias		Alias name
-	 *	@return		void
+	 *	@param		string			$name		Table name
+	 *	@param		string|NULL		$alias		Alias, optional
+	 *	@throws		InvalidArgumentException	if name or alias is not valid
 	 */
-	public function __construct( ?string $name = NULL, ?string $alias = NULL )
+	public function __construct( string $name, ?string $alias = NULL )
 	{
-		if( NULL !== $name )
-			$this->setName( $name );
+		Identifier::quoteName( $name );
 		if( NULL !== $alias )
-			$this->setAlias( $alias );
+			Identifier::quoteName( $alias );
+		$this->name		= trim( $name );
+		$this->alias	= NULL !== $alias ? trim( $alias ) : NULL;
 	}
 
 	/**
-	 *	Return alias name.
-	 *	@access		public
-	 *	@return		string|NULL
+	 *	Returns given table object or creates one from given name, which may contain an alias, eg. "orders AS o".
+	 *	@param		Table|string	$table		Table object or name
+	 *	@return		self
+	 *	@throws		InvalidArgumentException	if name or alias is not valid
 	 */
+	public static function resolve( Table|string $table ): self
+	{
+		if( $table instanceof self )
+			return $table;
+		if( 1 === preg_match( '/^(\S+)\s+(?:AS\s+)?(\S+)$/i', trim( $table ), $matches ) )
+			return new self( $matches[1], $matches[2] );
+		return new self( $table );
+	}
+
 	public function getAlias(): ?string
 	{
 		return $this->alias;
 	}
 
-	/**
-	 *	Return table name.
-	 *	@access		public
-	 *	@return		string|NULL
-	 */
-	public function getName(): ?string
+	public function getName(): string
 	{
 		return $this->name;
 	}
 
+	/**
+	 *	Returns quoted table name, with alias if set.
+	 *	@return		string
+	 */
 	public function render(): string
 	{
-		if( NULL === $this->name )
-			throw new RuntimeException( 'No table name set' );
-		$joins	= '';
-		if( 0 !== count( $this->joins ) ){
-			$joins	= [];
-			foreach( $this->joins as $join ){
-				$tableName	= $join['table']->render();
-				$equiJoin	= $join['left'].' = '.$join['right'];
-				$joins[]	= ' LEFT OUTER JOIN '.$tableName.' ON ( '.$equiJoin.' )';
-			}
-			$joins	= join( $joins );
-		}
+		$name	= Identifier::quoteName( $this->name );
 		if( NULL !== $this->alias && $this->alias !== $this->name )
-			return $this->name.' AS '.$this->alias.$joins;
-		return $this->name.$joins;
-	}
-
-	/**
-	 *	Set alias name.
-	 *	@access		public
-	 *	@param		string		$alias		Alias name
-	 *	@return		self
-	 */
-	public function setAlias( string $alias ): self
-	{
-		$this->alias	= $alias;
-		return $this;
-	}
-
-	/**
-	 *	Set alias name.
-	 *	@access		public
-	 *	@param		string		$name		Table name
-	 *	@return		self
-	 */
-	public function setName( string $name ): self
-	{
-		$this->name	= $name;
-		return $this;
-	}
-
-	/**
-	 *	Join with another table.
-	 *	@access		public
-	 *	@param		Table			$table		Another to join in
-	 *	@param		string			$keyLeft	Column key of current table for equi join
-	 *	@param		string			$keyRight	Column key of new table for equi join
-	 *	@return		self
-	 */
-	public function join( Table $table, string $keyLeft, string $keyRight ): self
-	{
-		$this->joins[]	= [
-			'table'	=> $table,
-			'left'	=> $keyLeft,
-			'right'	=> $keyRight
-		];
-		return $this;
+			return $name.' AS '.Identifier::quoteName( $this->alias );
+		return $name;
 	}
 }

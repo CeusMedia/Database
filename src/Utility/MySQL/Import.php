@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- *	...
+ *	Imports a SQL file into a MySQL database, using mysql.
  *
  *	(Imported from CeusMedia::Hymn)
  *
@@ -41,7 +41,7 @@ use CeusMedia\Database\PDO\DataSourceName as PdoDataSourceName;
 use CeusMedia\Database\Utility\TempFile;
 
 /**
- *	...
+ *	Imports a SQL file into a MySQL database, using mysql.
  *
  *	(Imported from CeusMedia::Hymn)
  *
@@ -59,6 +59,7 @@ class Import
 	protected OptionsFile $optionsFile;
 	protected string $prefixPlaceholder		= '<%?prefix%>';
 	protected bool $useTempOptionsFile		= TRUE;
+	protected bool $verbose					= TRUE;
 
 //	protected CliOutput $output;
 
@@ -84,7 +85,7 @@ class Import
 	public function importFile( string $fileName ): object
 	{
 		$size	= UnitFormater::formatBytes( File::new( $fileName )->getSize() );
-		Cli::out( 'Loading '.$fileName.' ('.$size.').' );
+		$this->out( 'Loading '.$fileName.' ('.$size.').' );
 
 		$optionsFile	= NULL;
 //		$cores		= (int) shell_exec( 'cat /proc/cpuinfo | grep processor | wc -l' );	//  get number of CPU cores
@@ -145,7 +146,7 @@ class Import
 
 		rename( $fileName, $fileName.'_' );														//  move dump file to source file
 		$fpIn		= fopen( $fileName.'_', "r" );									//  open source file
-		$fpOut		= fopen( $fileName, "a" );												//  prepare empty target file
+		$fpOut		= fopen( $fileName, "w" );												//  prepare empty target file
 		if( FALSE === $fpIn )
 			throw IoException::create( 'Failed to open read stream' )
 				->setResource( $fileName );
@@ -153,11 +154,8 @@ class Import
 			throw IoException::create( 'Failed to open write stream' )
 				->setResource( $fileName );
 
-		while( !feof( $fpIn ) ){																	//  read input file until end
-			$line	= fgets( $fpIn );																//  read line buffer
-			if( FALSE === $line )
-				throw IoException::create( 'Reading from stream failed' )
-					->setResource( $fileName );
+		//  read input file line by line until end, fgets() delivers FALSE at end of file
+		while( FALSE !== ( $line = fgets( $fpIn ) ) ){
 			/** @var string $line */
 			$line	= preg_replace_callback( $regExp, $callback, $line );							//  perform replace in buffer
 //			$buffer	= fread( $fpIn, 4096 );															//  read 4K buffer
@@ -167,6 +165,9 @@ class Import
 					->setResource( $fileName );
 
 		}
+		if( !feof( $fpIn ) )
+			throw IoException::create( 'Reading from stream failed' )
+				->setResource( $fileName );
 		fclose( $fpOut );																			//  close target file
 		fclose( $fpIn );																			//  close source file
 		unlink( $fileName.'_' );															//  remove source file
@@ -184,7 +185,30 @@ class Import
 		return $this;
 	}
 
+	/**
+	 *	Enables or disables progress messages on standard output (or as HTML output in a web context).
+	 *	Enabled by default.
+	 *	@param		bool		$verbose		Flag: print progress messages
+	 *	@return		self
+	 */
+	public function setVerbose( bool $verbose ): self
+	{
+		$this->verbose	= $verbose;
+		return $this;
+	}
+
 	/*  --  PROTECTED  --  */
+
+	/**
+	 *	Prints a progress message, if verbose mode is enabled.
+	 *	@param		string		$message		Message to print
+	 *	@return		void
+	 */
+	protected function out( string $message ): void
+	{
+		if( $this->verbose )
+			Cli::out( $message );
+	}
 
 	protected function _callbackReplacePrefix( array $matches ): string
 	{
@@ -203,27 +227,27 @@ class Import
 
 	protected function getTempFileWithAppliedTablePrefix( string $sourceFile, string $prefix ): string
 	{
-		CLI::out( 'Applying table prefix to import file ...' );
+		$this->out( 'Applying table prefix to import file ...' );
 //		CLI::out( 'Applying table prefix ...' );
 		$tempName	= $sourceFile.'.tmp';
 		$fpIn		= fopen( $sourceFile, 'r' );												//  open source file
-		$fpOut		= fopen( $tempName, 'a' );												//  prepare empty target file
+		$fpOut		= fopen( $tempName, 'w' );												//  prepare empty target file
 		if( FALSE === $fpIn )
 			throw IoException::create( 'Failed to open read stream' )
 				->setResource( $sourceFile );
 		if( FALSE === $fpOut )
 			throw IoException::create( 'Failed to open write stream' )
 				->setResource( $tempName );
-		while( !feof( $fpIn ) ){																	//  read input file until end
-			$line	= fgets( $fpIn );																//  read line buffer
-			if( FALSE === $line )
-				throw IoException::create( 'Reading from stream failed' )
-					->setResource( $sourceFile );
-			$line	= str_replace( '<%?prefix%>', $prefix, $line );							//  replace table prefix placeholder
+		//  read input file line by line until end, fgets() delivers FALSE at end of file
+		while( FALSE !== ( $line = fgets( $fpIn ) ) ){
+			$line	= str_replace( $this->prefixPlaceholder, $prefix, $line );							//  replace table prefix placeholder
 			if( FALSE === fwrite( $fpOut, $line ) )													//  write buffer to target file
 				throw IoException::create( 'Writing to stream failed' )
 					->setResource( $tempName );
 		}
+		if( !feof( $fpIn ) )
+			throw IoException::create( 'Reading from stream failed' )
+				->setResource( $sourceFile );
 		fclose( $fpOut );																			//  close target file
 		fclose( $fpIn );																			//  close source file
 		return $tempName;

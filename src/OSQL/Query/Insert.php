@@ -1,6 +1,8 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
- *	Builder for INSERT statements.
+ *	OSQL query to insert data.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -27,12 +29,14 @@
 
 namespace CeusMedia\Database\OSQL\Query;
 
+use CeusMedia\Database\OSQL\Identifier;
 use CeusMedia\Database\OSQL\Table;
-use PDO;
+use CeusMedia\Database\OSQL\Value;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
- *	Builder for INSERT statements.
+ *	OSQL query to insert data.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -40,91 +44,125 @@ use RuntimeException;
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Insert extends AbstractQuery implements QueryInterface
+class Insert extends AbstractQuery
 {
-	public ?string $lastInsertId	= NULL;
-	public int $nrAffectedRows		= 0;
+	/** @var int $affectedRows Number of rows inserted (or changed on duplicate key) by latest execution */
+	public int $affectedRows		= 0;
 
-	protected array $fields;
 	protected ?Table $table			= NULL;
 
+	/** @var array<int,array<string,string|int|float|NULL>> $rows */
+	protected array $rows			= [];
+
+	/** @var string[] $updateOnDuplicate */
+	protected array $updateOnDuplicate	= [];
+
 	/**
-	 *	...
-	 *	@access		protected
-	 *	@return		void
+	 *	Adds another row to insert, for inserting several rows at once.
+	 *	All rows must have the same columns.
+	 *	@param		array<string,mixed>		$data		Map of columns and values
+	 *	@return		static
 	 */
-	protected function checkSetup(): void
+	public function addRow( array $data ): static
 	{
-		if( NULL === $this->table )
-			throw new RuntimeException( 'No table clause set' );
+		$this->rows[]	= [];
+		return $this->setAll( $data );
 	}
 
-	public function into( Table $table ): self
+	/**
+	 *	Executes query and returns ID of (first) inserted row.
+	 *	@return		int
+	 */
+	public function execute(): int
 	{
-		$this->table	= $table;
+		$statement			= $this->client->run( $this );
+		$this->affectedRows	= $statement->rowCount();
+		return (int) $this->client->getConnection()->lastInsertId();
+	}
+
+	/**
+	 *	Sets table to insert into.
+	 *	@param		Table|string	$table
+	 *	@return		static
+	 */
+	public function into( Table|string $table ): static
+	{
+		$this->table	= Table::resolve( $table );
 		return $this;
 	}
 
 	/**
-	 *	Returns rendered VALUE string.
-	 *	@access		protected
-	 *	@param		array		$parameters		Reference to parameters map
-	 *	@return		string
+	 *	Updates given columns, if a row with same primary or unique key already exists (ON DUPLICATE KEY UPDATE).
+	 *	@param		string		...$fields		Columns to update by the values to insert
+	 *	@return		static
 	 */
-	protected function renderFields( array &$parameters ): string
+	public function onDuplicateKeyUpdate( string ...$fields ): static
 	{
-		if( 0 === count( $this->fields ) )
-			return '';
-		$listKeys	= [];
-		$listValues	= [];
-		foreach( $this->fields as $name => $value ){
-			$key	= 'value_'.str_replace( '.', '_', $name );
-			$listKeys[]			= $name;
-			$listValues[]		= ':'.$key;
-			$parameters[$key]	= [
-				'type'	=> PDO::PARAM_STR,
-				'value'	=> $value,
-			];
-		}
-		return vsprintf( '( %s ) VALUE ( %s )', [
-			implode( ', ', $listKeys ),
-			implode( ', ', $listValues ),
-		] );
+		foreach( $fields as $field )
+			Identifier::quoteName( $field );
+		$this->updateOnDuplicate	= array_values( $fields );
+		return $this;
 	}
 
 	/**
-	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
-	 *	@access		public
-	 *	@return		object
+	 *	Returns statement with placeholders and list of parameters.
+	 *	@return		object{query: string, parameters: array<int,string|int|float|NULL>}
 	 */
 	public function render(): object
 	{
-		$this->checkSetup();
+		if( NULL === $this->table )
+			throw new RuntimeException( 'No table set' );
+		if( [] === $this->rows || [] === $this->rows[0] )
+			throw new RuntimeException( 'No values set' );
+		$columns	= array_keys( $this->rows[0] );
 		$parameters	= [];
-		/** @phpstan-ignore-next-line  */
-		$table		= $this->table->render();
-		$fields		= $this->renderFields( $parameters );
-		$conditions	= $this->renderConditions( $parameters );
-		$limit		= $this->renderLimit( $parameters );
-		$offset		= $this->renderOffset( $parameters );
-		/** @noinspection SqlNoDataSourceInspection */
-		$query		= 'INSERT INTO '.$table.$fields.$conditions.$limit.$offset;
-		return (object) [
-			'query'			=> $query,
-			'parameters'	=> $parameters,
-		];
+		$rows		= [];
+		foreach( $this->rows as $nr => $row ){
+			if( count( $row ) !== count( $columns ) || [] !== array_diff( $columns, array_keys( $row ) ) )
+				throw new InvalidArgumentException( 'Row '.( $nr + 1 ).' has other columns than the first row' );
+			foreach( $columns as $column )
+				$parameters[]	= $row[$column];
+			$rows[]	= '('.implode( ', ', array_fill( 0, count( $columns ), '?' ) ).')';
+		}
+		$query	= vsprintf( 'INSERT INTO %s (%s) VALUES %s', [
+			$this->table->render(),
+			implode( ', ', array_map( [Identifier::class, 'quoteName'], $columns ) ),
+			implode( ', ', $rows ),
+		] );
+		if( [] !== $this->updateOnDuplicate ){
+			$updates	= array_map( static function( string $field ): string {
+				$quoted	= Identifier::quoteName( $field );
+				return $quoted.' = VALUES('.$quoted.')';
+			}, $this->updateOnDuplicate );
+			$query	.= ' ON DUPLICATE KEY UPDATE '.implode( ', ', $updates );
+		}
+		return self::result( $query, $parameters );
 	}
 
 	/**
-	 *	Add pair to insert and returns query object for method chaining.
-	 *	@access		public
-	 *	@param		string					$name
-	 *	@param		string|int|float|null	$value
-	 *	@return		self
+	 *	Sets value of column in (latest) row.
+	 *	@param		string		$field		Column
+	 *	@param		mixed		$value		Value: scalar, NULL, bool, date/time object or backed enum
+	 *	@return		static
 	 */
-	public function set( string $name, string|int|float|null $value ): self
+	public function set( string $field, mixed $value ): static
 	{
-		$this->fields[$name]	 = $value;
+		Identifier::quoteName( $field );
+		if( [] === $this->rows )
+			$this->rows[]	= [];
+		$this->rows[count( $this->rows ) - 1][trim( $field )]	= Value::normalize( $value );
+		return $this;
+	}
+
+	/**
+	 *	Sets values of columns in (latest) row.
+	 *	@param		array<string,mixed>		$data		Map of columns and values
+	 *	@return		static
+	 */
+	public function setAll( array $data ): static
+	{
+		foreach( $data as $field => $value )
+			$this->set( $field, $value );
 		return $this;
 	}
 }

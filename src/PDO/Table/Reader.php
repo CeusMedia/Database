@@ -4,7 +4,7 @@
 declare(strict_types=1);
 
 /**
- *	Table with column definition and indices.
+ *	Read access to a database table, with column definition and indices.
  *
  *	Copyright (c) 2007-2026 Christian Würker (ceusmedia.de)
  *
@@ -43,7 +43,7 @@ use Throwable;
 use TypeError;
 
 /**
- *	Table with column definition and indices.
+ *	Read access to a database table, with column definition and indices.
  *	@category		Library
  *	@package		CeusMedia_Database_PDO_Table
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -116,8 +116,8 @@ class Reader extends Abstraction
 	 *	@param		array		$conditions		Map of condition pairs additional to focuses indices
 	 *	@param		array		$orders			Map of order relations
 	 *	@param		array		$limits			Array of limit conditions
-	 *	@param		array		$groupings		List of columns to group by
-	 *	@param		array		$having			List of conditions to apply after grouping
+	 *	@param		array		$groupings		List of columns or aliases of selected fields to group by
+	 *	@param		array		$having			Map of conditions to apply after grouping, keys: functions (eg. COUNT(*)), columns or aliases
 	 *	@return		array		List of fetched table rows
 	 *	@throws		RuntimeException			If executing fails
 	 */
@@ -131,10 +131,12 @@ class Reader extends Abstraction
 		$orders		= $this->getOrderCondition( $orders );
 		//  render LIMIT BY clause if needed
 		$limits		= $this->getLimitCondition( $limits );
-		//  render GROUP BY clause if needed
-		$groupings	= 0 !== count( $groupings ) ? ' GROUP BY '.join( ', ', $groupings ) : '';
-		//  render HAVING clause if needed
-		$partHaving	= 0 !== count( $having ) ? ' HAVING '.join( ' AND ', $having ) : '';
+		//  aliases of selected fields, usable in GROUP BY and HAVING
+		$aliases	= $this->getFieldAliases( $columns );
+		//  render GROUP BY clause if needed, with validated columns or aliases
+		$groupings	= $this->getGroupingCondition( $groupings, $aliases );
+		//  render HAVING clause if needed, with validated keys and secured values
+		$partHaving	= $this->getHavingCondition( $having, $aliases );
 		//  get enumeration of masked column names
 		$columnList	= $this->getColumnEnumeration( $columns );
 		//  render base query
@@ -586,9 +588,19 @@ class Reader extends Abstraction
 	 */
 	protected function applyFetchModeIntoOnResultSet( PDOStatement $resultSet ): array
 	{
+		/** @var object $template */
+		$template	= $this->fetchEntityObject;
+		$fetched	= [];
 		try{
-			/** @var array<object> $fetched */
-			$fetched	= $resultSet->fetchAll( PDO::FETCH_INTO );
+			//  fetch each row into a clone of the entity object, which stays untouched as template,
+			//  since fetching all rows into the same object would deliver one object holding the last row
+			while( TRUE ){
+				$entity	= clone $template;
+				$resultSet->setFetchMode( PDO::FETCH_INTO, $entity );
+				if( FALSE === $resultSet->fetch() )
+					break;
+				$fetched[]	= $entity;
+			}
 		}
 			/** @phpstan-ignore-next-line */
 		catch( Error|Exception|Throwable $e ){

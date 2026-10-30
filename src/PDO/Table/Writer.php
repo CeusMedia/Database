@@ -84,6 +84,7 @@ class Writer extends Abstraction
 
 	/**
 	 *	Inserts data into this table and returns ID.
+	 *	Values of NULL are left out, so the column gets its default value - unlike on update, where NULL is written.
 	 *	@access		public
 	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
@@ -199,10 +200,10 @@ class Writer extends Abstraction
 	 *	@access		public
 	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
 	 *	@param		array			$conditions		Array of condition pairs
-	 *	@param		boolean			$stripTags		Flag: strip HTML tags from values
+	 *	@param		boolean			$stripTags		Flag: strip HTML tags from values, default: yes (like insert and update)
 	 *	@return		integer
 	 */
-	public function updateByConditions( array|object $data = [], array $conditions = [], bool $stripTags = FALSE ): int
+	public function updateByConditions( array|object $data = [], array $conditions = [], bool $stripTags = TRUE ): int
 	{
 		if( is_object( $data ) )
 			$data	= $this->convertObjectToArray( $data );
@@ -241,13 +242,12 @@ class Writer extends Abstraction
 	 *	Removes all data and resets incremental counter.
 	 *	Note: This method does not return the number of removed rows.
 	 *	@access		public
-	 *	@return		self
+	 *	@return		static
 	 *	@see		https://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
-	public function truncate(): self
+	public function truncate(): static
 	{
-		$query	= 'TRUNCATE '.$this->getTableName();
-		$this->dbc->exec( $query );
+		$this->dbc->exec( 'TRUNCATE '.$this->getTableName() );
 		return $this;
 	}
 

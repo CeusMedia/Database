@@ -1,6 +1,8 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
- *	...
+ *	Interface for OSQL queries.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -18,24 +20,35 @@
  *	along with this program.  If not, see <https://www.gnu.org/licenses/>.
  *
  *	@category		Library
- *	@package		CeusMedia_Database_OSQL
+ *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL\Query;
 
 /**
- *	...
+ *	Interface for OSQL queries.
  *	@category		Library
- *	@package		CeusMedia_Database_OSQL
+ *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
  *	@copyright		2010-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-Interface QueryInterface
+interface QueryInterface
 {
+	/**
+	 *	Executes query and returns result, depending on query type.
+	 *	@return		mixed
+	 */
+	public function execute(): mixed;
+
+	/**
+	 *	Returns statement with placeholders and list of parameters.
+	 *	@return		object{query: string, parameters: array<int,string|int|float|NULL>}
+	 */
 	public function render(): object;
 }

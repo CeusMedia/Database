@@ -494,7 +494,7 @@ class WriterTest extends TestCase
 	}
 
 	/**
-	 *	HTML tags are stripped on insert by default, on updates only if enabled.
+	 *	HTML tags are stripped by default on insert, update and update by conditions, unless disabled.
 	 *	@access		public
 	 *	@return		void
 	 */
@@ -510,9 +510,37 @@ class WriterTest extends TestCase
 		self::assertSame( '<b>bold</b>', $getLabel( $id ) );
 
 		$this->writer->updateByConditions( ['label' => '<i>italic</i>'], ['id' => $id] );
-		self::assertSame( '<i>italic</i>', $getLabel( $id ), 'not stripped by default' );
-		$this->writer->updateByConditions( ['label' => '<i>italic</i>'], ['id' => $id], TRUE );
-		self::assertSame( 'italic', $getLabel( $id ) );
+		self::assertSame( 'italic', $getLabel( $id ), 'stripped by default' );
+		$this->writer->updateByConditions( ['label' => '<i>italic</i>'], ['id' => $id], FALSE );
+		self::assertSame( '<i>italic</i>', $getLabel( $id ) );
+
+		$this->writer->focusPrimary( $id );
+		$this->writer->update( ['label' => '<u>underlined</u>'] );
+		self::assertSame( 'underlined', $getLabel( $id ), 'stripped by default' );
+		$this->writer->update( ['label' => '<u>underlined</u>'], FALSE );
+		self::assertSame( '<u>underlined</u>', $getLabel( $id ) );
+		$this->writer->defocus();
+	}
+
+	/**
+	 *	A NULL value is left out on insert, so the column gets its default value - unlike on update.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testInsertLeavesOutNullValue(): void
+	{
+		$this->connection->exec( "CREATE TEMPORARY TABLE defaults (id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(20) NULL DEFAULT 'default', status TINYINT NOT NULL DEFAULT 1)" );
+		$writer	= new PdoTableWriter( $this->connection, 'defaults', ['id', 'label', 'status'], 'id' );
+
+		$id	= $writer->insert( ['label' => NULL, 'status' => NULL] );
+		$row	= $this->connection->query( 'SELECT label, status FROM defaults WHERE id='.$id )->fetch( \PDO::FETCH_ASSOC );
+		self::assertSame( 'default', $row['label'], 'nullable column gets its default, not NULL' );
+		self::assertSame( 1, (int) $row['status'], 'NOT NULL column gets its default, insert does not fail' );
+
+		$id	= $writer->insert( (object) ['label' => 'given', 'status' => NULL] );
+		$row	= $this->connection->query( 'SELECT label, status FROM defaults WHERE id='.$id )->fetch( \PDO::FETCH_ASSOC );
+		self::assertSame( 'given', $row['label'] );
+		self::assertSame( 1, (int) $row['status'], 'also for objects' );
 	}
 
 	/**
@@ -549,7 +577,7 @@ class WriterTest extends TestCase
 	}
 
 	/**
-	 *	Conditions with unknown columns only (eg. a typo) are rejected, instead of producing an empty WHERE clause.
+	 *	Conditions with unknown columns (eg. a typo) are rejected, instead of being ignored or producing an empty WHERE clause.
 	 *	@access		public
 	 *	@return		void
 	 */
@@ -557,15 +585,25 @@ class WriterTest extends TestCase
 	{
 		try{
 			$this->writer->deleteByConditions( ['not_a_column' => 1] );
-			self::fail( 'Expected InvalidArgumentException' );
+			self::fail( 'Expected DomainException' );
 		}
-		catch( \InvalidArgumentException ){}
+		catch( \DomainException ){}
+		self::assertSame( 1, $this->reader->count(), 'nothing deleted' );
+	}
+
+	public function testDeleteByConditionsExceptionOnMistypedColumnBesideValidColumn(): void
+	{
+		try{
+			$this->writer->deleteByConditions( ['topic' => 'start', 'labl' => 'x'] );
+			self::fail( 'Expected DomainException' );
+		}
+		catch( \DomainException ){}
 		self::assertSame( 1, $this->reader->count(), 'nothing deleted' );
 	}
 
 	public function testUpdateByConditionsExceptionOnInvalidConditionsOnly(): void
 	{
-		$this->expectException( \InvalidArgumentException::class );
+		$this->expectException( \DomainException::class );
 		$this->writer->updateByConditions( ['label' => 'x'], ['not_a_column' => 1] );
 	}
 

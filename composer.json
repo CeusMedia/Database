@@ -50,6 +50,19 @@
       "@dev:install",
       "php vendor/ceus-media/doc-creator/doc-creator.php --config-file=util/doc.xml"
     ],
+    "dev:docs": [
+      "@dev:docs-api",
+      "util/docs/docs.sh build"
+    ],
+    "dev:docs-api": [
+      "@dev:install",
+      "php util/docs/generate-api.php"
+    ],
+    "dev:docs-install": "util/docs/docs.sh install",
+    "dev:docs-serve": [
+      "@dev:docs-api",
+      "util/docs/docs.sh serve"
+    ],
     "dev:phpunit": [
       "@dev:install",
       "XDEBUG_MODE=coverage php vendor/bin/phpunit --configuration util/phpunit.xml"
@@ -85,6 +98,10 @@
   },
   "scripts-descriptions": {
     "dev:all": "Install, test syntax, run PHPStan and PHPUnit",
+    "dev:docs": "Generate API reference and build documentation (MkDocs) into doc/Site/",
+    "dev:docs-api": "Generate API reference pages into doc/Manual/api/",
+    "dev:docs-install": "Install MkDocs Material into Python venv util/docs/.venv (optional, else Docker is used)",
+    "dev:docs-serve": "Generate API reference and serve documentation on http://localhost:8000",
     "dev:install": "Installs project dependencies for Development stage",
     "dev:update": "Updates project dependencies for Development stage",
     "dev:phpstan": "Validate codebase with PHPStan",

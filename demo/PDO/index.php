@@ -2,7 +2,6 @@
 /** @noinspection PhpMultipleClassDeclarationsInspection */
 $pathLib	= dirname( __DIR__, 2 ).'/';
 require_once $pathLib.'vendor/autoload.php';
-require_once $pathLib.'test/PDO/TransactionTable.php';
 
 new CeusMedia\Common\UI\DevOutput;
 
@@ -11,59 +10,54 @@ use CeusMedia\Common\UI\HTML\PageFrame as HtmlPage;
 use CeusMedia\Common\UI\HTML\Tag as HtmlTag;
 use CeusMedia\Database\PDO\Connection;
 use CeusMedia\Database\PDO\DataSourceName;
-use CeusMedia\DatabaseTest\PDO\TransactionTable as TestTransactionTable;
+use CeusMedia\DatabaseDemo\PDO\TransactionTable;
 
 ( file_exists( $pathLib.'demo/demo.ini' ) ) or die( 'Missing demo ini file (demo/demo.ini)'.PHP_EOL );
 
 $config		= parse_ini_file( $pathLib.'demo/demo.ini', TRUE );
 $dbConfig	= (object) $config['demo'];
 
-/*$command	= "mysql -u%s -p%s %s < %sdemo/demo_transactions.sql";
+//  reset demo data
+$command	= "mysql -u%s -p%s %s < %sdemo/demo_transactions.sql";
 $command	= sprintf( $command, $dbConfig->username, $dbConfig->password, $dbConfig->database, $pathLib );
 passthru( $command );
-*/
 
-$dsn		= DataSourceName::renderStatic(
-	$dbConfig->driver,
-	$dbConfig->database,
-	$dbConfig->host,
-	$dbConfig->port,
-	$dbConfig->username,
-	$dbConfig->password
-);
+$dsn	= DataSourceName::getInstance( $dbConfig->driver, $dbConfig->database )
+	->setHost( $dbConfig->host )
+	->setPort( (int) $dbConfig->port )
+	->setUsername( $dbConfig->username )
+	->setPassword( $dbConfig->password );
 
 $code	= <<<'EOT'
-$dsn	= DataSourceName::renderStatic(
-	'mysql',
-	'myDatabaseName',
-	'myHostName',
-	myHostPort,
-	'myUsername',
-	'myPassword'
-);
+$dsn	= DataSourceName::getInstance( 'mysql', 'myDatabase' )
+	->setHost( 'myHost' )
+	->setUsername( 'myUsername' )
+	->setPassword( 'myPassword' );
 
-try{
-	$dbc	= new Connection( $dsn, 'myUsername', 'myPassword' );
-	$table	= new TestTransactionTable( $dbc );
-	$table->getAll();
-	$table->getAllByIndex( 'topic', 'start' );
-	$table->getAllByIndices( ['topic' => 'start'], ['timestamp' => DESC], [0, 10] );
-	$table->get( '1' );
-	$table->getByIndex( 'topic', 'start' );
-	$table->getByIndices( ['topic' => 'start'], ['timestamp' => DESC] );
-	$table->edit( '1', ['timestamp' => date( 'Y-m-d H:i:s' )] );
-	$table->editByIndices( ['topic' => 'start'], ['timestamp' => date( 'Y-m-d H:i:s' )] );
-	$newId	= $table->add( ['topic' => 'start', 'timestamp' => date( 'Y-m-d H:i:s' )] );
-	$table->remove( $newId );
-	$table->removeByIndices( ['topic' => 'start'] );
-} catch( \Throwable ) {
-	...
-}
+$dbc	= new Connection( $dsn );
+$table	= new TransactionTable( $dbc );
+
+$table->getAll();
+$table->getAll( ['topic' => ['start', 'stop'], 'id' => '>= 2'], ['timestamp' => 'DESC'], [0, 10] );
+$table->getAllByIndex( 'topic', 'start' );
+$table->get( 1 );
+$table->getByIndex( 'topic', 'start', ['timestamp' => 'DESC'] );
+$table->count( ['topic' => 'start'] );
+$table->getField( 1, 'label' );
+
+$dbc->transaction( function() use ( $table ){
+	$newId	= $table->add( ['topic' => 'start', 'label' => 'new'] );
+	$table->edit( $newId, ['label' => 'changed'] );
+	$table->editByIndices( ['topic' => 'start'], ['label' => 'all changed'] );
+} );                                    //  committed - or rolled back on any exception
+
+$table->removeByIndices( ['topic' => 'stop'] );
 EOT;
 
 try{
-	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
-	$model	= new TestTransactionTable( $dbc );
+	$dbc	= new Connection( $dsn );
+	$model	= new TransactionTable( $dbc );
+	$model->add( ['topic' => 'stop', 'label' => 'added by demo'] );
 	$rows	= [];
 	$heads	= [];
 	foreach( $model->getAll() as $item ){
@@ -86,6 +80,7 @@ try{
 		], ['class' => 'hero-unit'] ),
 		HtmlTag::create( 'h3', 'Transactions' ),
 		$table,
+		HtmlTag::create( 'p', 'Entries: '.$model->count().', starts: '.$model->count( ['topic' => 'start'] ) ),
 		HtmlTag::create( 'div', '<xmp>'.$code.'</xmp>', ['class' => 'well'] ),
 	], ['class' => 'container'] );
 }

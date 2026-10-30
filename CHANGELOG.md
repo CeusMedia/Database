@@ -1,3 +1,38 @@
+## Version 0.7.3
+- Breaking changes:
+	- PDO: Remove `BetterTable` (a concept only, never used in production) - use `Table`, which has all its methods.
+	- PDO: Merge `Connection\Base` and `Connection\Php81` into `Connection`, which extends `PDO` directly, and remove `Connection\Factory` - use `new Connection()` and `Connection::LOG_LEVEL_*`.
+	- PDO: Conditions with unknown keys raise a `DomainException` instead of being ignored - a mistyped column removed a filter silently, so too many entries were found, counted, changed or deleted.
+	- PDO: Fetch mode `FETCH_INTO` fills a clone of the entity object per entry - the entity object stays untouched as template.
+	- PDO: `Table\Writer::updateByConditions()` strips HTML tags by default, like all other write methods.
+	- OSQL: Rebuilt (not used in production before) - see below.
+- Security:
+	- PDO: Fix SQL injection by fields, groupings and having of `Table::getAll()` and related methods. Fields, groupings and having keys may only be readable columns, aliases of selected fields or whitelisted aggregate functions (`AVG`, `COUNT`, `MAX`, `MIN`, `SUM`); having is given as condition map now, eg. `['COUNT(*)' => '> 5']` (simple strings like `'COUNT(*) > 5'` are still converted).
+	- OSQL: Fix SQL injection by identifiers (tables, columns, aliases, joins, orders, groupings), which are validated and quoted now.
+- PDO:
+	- Fix `Table::editByIndices()` and `truncate()` not removing entries from cache.
+	- Fix `FETCH_INTO` delivering the same object for every entry of a list and crashing PHP in some cases.
+	- Add `Connection::transaction()`, running a callback in a nestable transaction: commit on return, roll back and rethrow on exception.
+	- Note a transaction left open in the error log on destruction of `Connection` (PDO rolls it back silently).
+	- `Connection` accepts a `DataSourceName` object (with credentials) besides a DSN string.
+	- `Connection::$lastQuery` and `Table::getLastQuery()` are set by `prepare()` and `exec()` too, so they reflect all table methods.
+	- `Table::getDistinct()` has optional conditions, like all other read methods.
+	- Document that inserts leave out `NULL` values (column gets its default), while updates write `NULL`.
+- OSQL:
+	- Fix condition groups being rendered without brackets (wrong results). Conditions combine from left to right, nested groups are bracketed.
+	- Fix lists of values, qualified columns on update, joins being ignored on update and delete, `offset( 0 )` and offset without limit.
+	- Update and delete without conditions fail, unless `allRows()` is called.
+	- Add operators `IN`, `NOT IN`, `BETWEEN`, `NOT BETWEEN`, `NOT LIKE`, `IS NULL`, `IS NOT NULL`, condition factories (eg. `Condition::in()`), short conditions (eg. `where( 'total', 100, '>' )`) and nestable groups (`Group::and()`/`Group::or()`).
+	- Add select methods `all()`, `first()`, `value()`, `column()`, `count()`, `exists()`, `fields()`, `distinct()`, `having()`, `page()`, `fetchMode()`, `fetchAs()`, and `Insert::addRow()`, `onDuplicateKeyUpdate()`, `setAll()`, `Client::transaction()`.
+	- Remove `OSQL\Connection`, `Table::join()`, static `create()` methods and `Select::countRows()` (use `count()`); rename `Select::get()` to `fields()` and `Update::in()` to `table()`.
+- Utilities:
+	- Fix `MySQL\Export::exportToFileWithPrefix()` and `MySQL\Import::importFileWithPrefix()` always failing at the end of the file, and the import ignoring an own prefix placeholder.
+	- Add `setVerbose()` to `MySQL\Export` and `MySQL\Import` to disable progress messages.
+- General:
+	- Add documentation built by MkDocs (`composer dev:docs`): guides, recipes and API reference of the PDO and OSQL modules and utilities.
+	- Add tests: PDO table and connection features, OSQL (71 tests), utilities.
+
+
 ## Version 0.7.2
 - all new features and fixes from 0.6.8, but for PHP ^8.3
 - PDO:

@@ -1,7 +1,7 @@
 <?php /** @noinspection PhpMultipleClassDeclarationsInspection */
 
 /**
- *	Builder for Data Source Name Strings.
+ *	Base class for entities, accessible as object, array, iterator and JSON.
  *
  *	Copyright (c) 2007-2026 Christian Würker (ceusmedia.de)
  *
@@ -35,7 +35,7 @@ use Iterator;
 use JsonSerializable;
 
 /**
- * Builder for Data Source Name Strings.
+ * Base class for entities, accessible as object, array, iterator and JSON.
  *
  * Copyright (c) 2007-2026 Christian Würker (ceusmedia.de)
  *

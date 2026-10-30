@@ -1,6 +1,8 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
+
 /**
- *	Builder for UPDATE statements.
+ *	OSQL query to update data.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -24,15 +26,17 @@
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
+
 namespace CeusMedia\Database\OSQL\Query;
 
-use CeusMedia\Common\Alg\Time\Clock;
+use CeusMedia\Database\OSQL\Identifier;
 use CeusMedia\Database\OSQL\Table;
-use PDO as Pdo;
+use CeusMedia\Database\OSQL\Value;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
- *	Builder for UPDATE statements.
+ *	OSQL query to update data.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Query
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -40,92 +44,118 @@ use RuntimeException;
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
  */
-class Update extends AbstractQuery implements QueryInterface
+class Update extends AbstractQuery
 {
-	public int $nrAffectedRows	= 0;
+	use ConditionsTrait;
 
-	protected array $conditions	= [];
-	protected array $fields		= [];
-	protected ?Table $table		= NULL;
+	/** @var int $affectedRows Number of rows changed by latest execution */
+	public int $affectedRows		= 0;
 
-	/**
-	 *	...
-	 *	@access		protected
-	 *	@return		void
-	 */
-	protected function checkSetup(): void
+	protected ?Table $table			= NULL;
+
+	/** @var array<string,string|int|float|NULL> $fields Map of quoted columns and values */
+	protected array $fields			= [];
+
+	protected bool $allRows			= FALSE;
+
+	protected ?int $limit			= NULL;
+
+	public function __clone()
 	{
-		if( NULL === $this->table )
-			throw new RuntimeException( 'No table clause set' );
+		$this->cloneConditions();
 	}
 
 	/**
-	 *	Sets table to update in and returns query object for method chaining.
-	 *	@access		public
-	 *	@param		Table		$table	Table to update in
-	 *	@return		self
+	 *	Allows to update all rows, without conditions.
+	 *	Without conditions and this call, rendering fails, to prevent changing a whole table by mistake.
+	 *	@param		bool		$allRows
+	 *	@return		static
 	 */
-	public function in( Table $table ): self
+	public function allRows( bool $allRows = TRUE ): static
 	{
-		$this->table	= $table;
+		$this->allRows	= $allRows;
 		return $this;
 	}
 
 	/**
-	 *	Returns rendered SQL statement and a map of parameters for parameter binding.
-	 *	@access		public
-	 *	@return		object
+	 *	Executes query and returns number of changed rows.
+	 *	@return		int
+	 */
+	public function execute(): int
+	{
+		$this->affectedRows	= $this->client->run( $this )->rowCount();
+		return $this->affectedRows;
+	}
+
+	/**
+	 *	Sets table to update.
+	 *	@param		Table|string	$table
+	 *	@return		static
+	 */
+	public function table( Table|string $table ): static
+	{
+		$this->table	= Table::resolve( $table );
+		return $this;
+	}
+
+	/**
+	 *	Sets maximum number of rows to update, NULL for no limit.
+	 *	@param		int|NULL	$limit
+	 *	@return		static
+	 */
+	public function limit( ?int $limit ): static
+	{
+		if( NULL !== $limit && $limit < 1 )
+			throw new InvalidArgumentException( 'Limit must be at least 1' );
+		$this->limit	= $limit;
+		return $this;
+	}
+
+	/**
+	 *	Returns statement with placeholders and list of parameters.
+	 *	@return		object{query: string, parameters: array<int,string|int|float|NULL>}
 	 */
 	public function render(): object
 	{
-//		$clock	= new Clock();
-		$this->checkSetup();
+		if( NULL === $this->table )
+			throw new RuntimeException( 'No table set' );
+		if( [] === $this->fields )
+			throw new RuntimeException( 'No values set' );
+		if( NULL === $this->conditions && !$this->allRows )
+			throw new RuntimeException( 'No conditions set - call allRows() to update all rows' );
 		$parameters	= [];
-		$fields		= $this->renderFields( $parameters );
-		/** @phpstan-ignore-next-line  */
-		$table		= $this->table->render();
-		$conditions	= $this->renderConditions( $parameters );
-		$limit		= $this->renderLimit( $parameters );
-		$offset		= $this->renderOffset( $parameters );
-		$query		= 'UPDATE '.$table.$fields.$conditions.$limit.$offset;
-//		$this->timeRender	= $clock->stop( 6, 0 );
-		return (object) [
-			'query'			=> $query,
-			'parameters'	=> $parameters,
-		];
-	}
-
-	/**
-	 *	Returns rendered SET string.
-	 *	@access		protected
-	 *	@param		array		$parameters		Reference to parameters map
-	 *	@return		string
-	 */
-	protected function renderFields( array &$parameters ): string
-	{
-		if( 0 === count( $this->fields ) )
-			return '';
-		$list	= [];
-		foreach( $this->fields as $name => $value ){
-			$list[]				= $name.' = :'.$name;
-			$parameters[$name]	= [
-				'type'	=> Pdo::PARAM_STR,
-				'value'	=> $value
-			];
+		$sets		= [];
+		foreach( $this->fields as $field => $value ){
+			$sets[]			= $field.' = ?';
+			$parameters[]	= $value;
 		}
-		return ' SET '.implode( ', ', $list );
+		$query	= 'UPDATE '.$this->table->render().' SET '.implode( ', ', $sets );
+		$query	.= self::renderConditionGroup( $this->conditions, ' WHERE ', $parameters );
+		$query	.= NULL !== $this->limit ? ' LIMIT '.$this->limit : '';
+		return self::result( $query, $parameters );
 	}
 
 	/**
-	 *	Sets pair to update and returns query object for method chaining.
-	 *	@access		public
-	 *	@param		string					$name		Column key
-	 *	@param		string|int|float|null	$value		Value to set
-	 *	@return		self
+	 *	Sets value of column.
+	 *	@param		string		$field		Column, may be qualified by table, eg. "o.total"
+	 *	@param		mixed		$value		Value: scalar, NULL, bool, date/time object or backed enum
+	 *	@return		static
 	 */
-	public function set( string $name, string|int|float|null $value ): self
+	public function set( string $field, mixed $value ): static
 	{
-		$this->fields[$name]	 = $value;
+		$this->fields[Identifier::quoteColumn( $field )]	= Value::normalize( $value );
+		return $this;
+	}
+
+	/**
+	 *	Sets values of columns.
+	 *	@param		array<string,mixed>		$data		Map of columns and values
+	 *	@return		static
+	 */
+	public function setAll( array $data ): static
+	{
+		foreach( $data as $field => $value )
+			$this->set( $field, $value );
 		return $this;
 	}
 }

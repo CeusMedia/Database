@@ -1,7 +1,8 @@
 <?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 
 /**
- * 	A condition group will allow nested conditions, like <code>OR</code> and <code>AND</code>, grouped logically.
+ *	Group of conditions combined by AND or OR, as part of OSQL queries.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -32,8 +33,7 @@ use CeusMedia\Database\OSQL\Condition;
 use InvalidArgumentException;
 
 /**
- *	A condition group will allow nested conditions, like <code>OR</code> and <code>AND</code>, grouped logically.
- *
+ *	Group of conditions combined by AND or OR, as part of OSQL queries.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL_Condition
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -53,37 +53,90 @@ class Group
 
 	protected string $operation;
 
-	/** @var Condition[] $conditions */
+	/** @var array<Condition|Group> $conditions */
 	protected array $conditions		= [];
 
-	public function __construct( string $operation, array $conditions = [] )
+	/**
+	 *	Constructor.
+	 *	@param		string					$operation		Operation to combine conditions by: AND or OR
+	 *	@param		array<Condition|Group>	$conditions		Conditions or nested groups
+	 *	@throws		InvalidArgumentException	if operation is not AND or OR
+	 */
+	public function __construct( string $operation = self::OPERATION_AND, array $conditions = [] )
 	{
-		$this->setOperation( $operation );
+		$operation	= strtoupper( trim( $operation ) );
+		if( !in_array( $operation, self::OPERATIONS, TRUE ) )
+			throw new InvalidArgumentException( 'Operation must be "AND" or "OR"' );
+		$this->operation	= $operation;
 		foreach( $conditions as $condition )
 			$this->add( $condition );
 	}
 
-	public function add( Condition $condition ): self
+	public function __clone()
+	{
+		foreach( $this->conditions as $nr => $condition )
+			if( $condition instanceof self )
+				$this->conditions[$nr]	= clone $condition;
+	}
+
+	/**
+	 *	Returns new group of conditions, which all must match.
+	 *	@param		Condition|Group		...$conditions
+	 *	@return		self
+	 */
+	public static function and( Condition|Group ...$conditions ): self
+	{
+		return new self( self::OPERATION_AND, $conditions );
+	}
+
+	/**
+	 *	Returns new group of conditions, of which one must match.
+	 *	@param		Condition|Group		...$conditions
+	 *	@return		self
+	 */
+	public static function or( Condition|Group ...$conditions ): self
+	{
+		return new self( self::OPERATION_OR, $conditions );
+	}
+
+	public function add( Condition|Group $condition ): self
 	{
 		$this->conditions[]	= $condition;
 		return $this;
 	}
 
-	public function setOperation( string $operation ): self
+	public function count(): int
 	{
-		$operation	= strtoupper( $operation );
-		if( !in_array( $operation, self::OPERATIONS, TRUE ) )
-			throw new InvalidArgumentException( 'Operation must be "AND" or "OR"' );
-		$this->operation	= $operation;
-		return $this;
+		return count( $this->conditions );
 	}
 
-	public function render( array & $parameters ): string
+	/**
+	 *	@return		array<Condition|Group>
+	 */
+	public function getConditions(): array
 	{
+		return $this->conditions;
+	}
+
+	public function getOperation(): string
+	{
+		return $this->operation;
+	}
+
+	/**
+	 *	Renders conditions with placeholders, nested groups in brackets, and appends values to given parameter list.
+	 *	An empty group renders as always true (AND) or always false (OR).
+	 *	@param		array<int,string|int|float|NULL>	$parameters		List of parameters to append values to
+	 *	@return		string
+	 */
+	public function render( array &$parameters ): string
+	{
+		if( [] === $this->conditions )
+			return self::OPERATION_AND === $this->operation ? '1 = 1' : '1 = 0';
 		$list	= [];
 		foreach( $this->conditions as $condition ){
 			$string	= $condition->render( $parameters );
-			$list[]	= ( $condition instanceof Group ) ? '('.$string.')' : $string;
+			$list[]	= $condition instanceof self ? '('.$string.')' : $string;
 		}
 		return implode( ' '.$this->operation.' ', $list );
 	}

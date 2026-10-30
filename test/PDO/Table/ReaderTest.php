@@ -789,13 +789,14 @@ class ReaderTest extends TestCase
 	{
 		$this->reader->focusPrimary( 1 );
 
-		$entityObject	= new AdvancedTransactionEntity();
+		//  entity object of another class than the entity class, to tell both fetch styles apart
+		$entityObject	= new TransactionEntity();
 		$this->reader->setFetchEntityClass( AdvancedTransactionEntity::class );
 		$this->reader->setFetchEntityObject( $entityObject );
 
 		$this->reader->setFetchMode( \PDO::FETCH_INTO );
 		$intoResult		= $this->reader->get();
-		self::assertSame( $entityObject, $intoResult, 'FETCH_INTO must fetch into the bound object, not create a class instance' );
+		self::assertInstanceOf( TransactionEntity::class, $intoResult, 'FETCH_INTO must fetch into (a clone of) the bound object, not create a class instance' );
 
 		$this->reader->setFetchMode( \PDO::FETCH_CLASS );
 		$classResult	= $this->reader->get();
@@ -858,8 +859,10 @@ class ReaderTest extends TestCase
 		$entityObject	= new OnFetchTrackingEntity();
 		$this->reader->setFetchMode( \PDO::FETCH_INTO );
 		$this->reader->setFetchEntityObject( $entityObject );
-		$this->reader->get();
-		self::assertTrue( $entityObject->onFetchCalled );
+		/** @var OnFetchTrackingEntity $intoResult */
+		$intoResult		= $this->reader->get();
+		self::assertTrue( $intoResult->onFetchCalled );
+		self::assertFalse( $entityObject->onFetchCalled, 'hook is called on the fetched clone, not on the template' );
 	}
 
 	/**
@@ -1349,7 +1352,8 @@ class ReaderTest extends TestCase
 		$this->reader->setFetchEntityObject( $entity );
 		$result	= $this->reader->find( ['id', 'topic'] );
 		self::assertCount( 1, $result );
-		self::assertSame( 'start', $entity->topic );
+		self::assertInstanceOf( TransactionEntity::class, $result[0] );
+		self::assertSame( 'start', $result[0]->topic );
 	}
 
 	public function testValidateFocusInNonStrictMode(): void

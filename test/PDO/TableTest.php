@@ -9,7 +9,9 @@ namespace CeusMedia\DatabaseTest\PDO;
 
 use CeusMedia\Cache\Adapter\Memory as MemoryCache;
 use CeusMedia\Database\PDO\Table as PdoTable;
+use DomainException;
 use PDO;
+use RangeException;
 
 /**
  *	TestUnit of DB_PDO_TableReader.
@@ -654,19 +656,28 @@ class TableTest extends TestCase
 		self::assertEquals( PDO::FETCH_ASSOC, $this->table->getFetchMode() );
 	}
 
+	public function testGetDistinctWithoutConditions(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		self::assertEqualsCanonicalizing( ['start', 'stop'], $this->table->getDistinct( 'topic' ) );
+	}
+
 	/**
-	 *	"lastQuery" is only tracked by Connection::query(), not by prepare()/
-	 *	execute() - so it only reflects queries run through Reader methods
-	 *	using query() directly (eg. count()), not eg. get()/find().
+	 *	"lastQuery" is tracked by Connection::query(), prepare() and exec(),
+	 *	so it reflects every read and write method of the table.
 	 *	@access		public
 	 *	@return		void
 	 */
 	public function testGetLastQuery(): void
 	{
-		self::assertNull( $this->table->getLastQuery() );
 		$this->table->count();
-		self::assertIsString( $this->table->getLastQuery() );
-		self::assertStringContainsStringIgnoringCase( 'select', $this->table->getLastQuery() );
+		self::assertStringStartsWith( 'SELECT COUNT(', (string) $this->table->getLastQuery() );
+
+		$this->table->get( 1 );
+		self::assertStringContainsString( 'WHERE `id` = 1 LIMIT 1', (string) $this->table->getLastQuery(), 'prepared statement' );
+
+		$this->table->edit( 1, ['label' => 'changed'] );
+		self::assertStringStartsWith( 'UPDATE ', (string) $this->table->getLastQuery(), 'executed statement' );
 	}
 
 	public function testHas(): void
@@ -760,13 +771,60 @@ class TableTest extends TestCase
 		self::assertSame( $this->table, $this->table->setFetchEntityObject( $entity ) );
 
 		$result	= $this->table->get( 1 );
-		self::assertSame( $entity, $result );
+		self::assertInstanceOf( AdvancedTransactionEntity::class, $result );
+		self::assertNotSame( $entity, $result, 'entity object is a template, fetched into a clone' );
+		self::assertSame( 'start', $result->topic );
+		self::assertFalse( isset( $entity->topic ), 'template stays untouched' );
+	}
+
+	public function testGetAllWithFetchModeIntoDeliversOneObjectPerEntry(): void
+	{
+		$this->table->add( ['topic' => 'test', 'label' => 'second'] );
+		$this->table->setFetchMode( PDO::FETCH_INTO )->setFetchEntityObject( new AdvancedTransactionEntity() );
+		$results	= $this->table->getAll( [], ['id' => 'ASC'] );
+		self::assertCount( 2, $results );
+		self::assertNotSame( $results[0], $results[1] );
+		self::assertSame( ['start', 'test'], [$results[0]->topic, $results[1]->topic] );
 	}
 
 	public function testTruncate(): void
 	{
 		self::assertSame( $this->table, $this->table->truncate() );
 		self::assertEquals( 0, $this->table->count() );
+	}
+
+	public function testTruncateInvalidatesCache(): void
+	{
+		$cache	= new MemoryCache( NULL );
+		$this->table->setCache( $cache );
+		$id		= $this->table->add( ['topic' => 'test', 'label' => 'label1'] );
+		self::assertNotNull( $this->table->get( 1 ) );
+		self::assertTrue( $cache->has( 'db.transactions.1' ) );
+		self::assertTrue( $cache->has( 'db.transactions.'.$id ) );
+
+		$this->table->truncate();
+		self::assertFalse( $cache->has( 'db.transactions.1' ) );
+		self::assertFalse( $cache->has( 'db.transactions.'.$id ) );
+		self::assertNull( $this->table->get( $id ) );
+		self::assertFalse( $this->table->has( $id ) );
+	}
+
+	public function testEditByIndicesInvalidatesCache(): void
+	{
+		$cache	= new MemoryCache( NULL );
+		$this->table->setCache( $cache );
+		$id1	= $this->table->add( ['topic' => 'edit', 'label' => 'label1'] );
+		$id2	= $this->table->add( ['topic' => 'edit', 'label' => 'label2'] );
+		self::assertNotNull( $this->table->get( 1 ) );
+
+		//  the update changes the index used to select entries
+		self::assertSame( 2, $this->table->editByIndices( ['topic' => 'edit'], ['topic' => 'edited'] ) );
+		self::assertFalse( $cache->has( 'db.transactions.'.$id1 ) );
+		self::assertFalse( $cache->has( 'db.transactions.'.$id2 ) );
+		self::assertTrue( $cache->has( 'db.transactions.1' ), 'other entries stay cached' );
+		/** @var object{topic: string} $entry */
+		$entry	= $this->table->get( $id1 );
+		self::assertSame( 'edited', $entry->topic );
 	}
 
 	public function testConstructThrowsExceptionOnMissingTableName(): void
@@ -866,7 +924,7 @@ class TableTest extends TestCase
 		self::assertSame( ['id' => 0, 'topic' => 'x'], $array, 'kept without auto increment' );
 	}
 
-	//  --  FIELD AND COLUMN METHODS (ported from BetterTable)  --  //
+	//  --  FIELD AND COLUMN METHODS  --  //
 
 	public function testGetField(): void
 	{
@@ -1097,6 +1155,31 @@ class TableTest extends TestCase
 		$this->table->getColumnsOfAllByConditions( ['id', 'label AS title'] );
 	}
 
+	public function testGetAllWithAggregatedFieldsGroupingAndHaving(): void
+	{
+		$this->table->add( ['topic' => 'start', 'label' => 'second'] );
+		$result	= $this->table->getAll( [], [], [], ['topic', 'COUNT(*) AS number'], ['topic'], ['COUNT(*)' => '> 1'] );
+		self::assertEquals( [(object) ['topic' => 'start', 'number' => 2]], $result );
+	}
+
+	public function testGetAllExceptionOnInjectedAliasedField(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getAll( [], [], [], ['id', '(SELECT USER()) AS who'] );
+	}
+
+	public function testGetAllExceptionOnInjectedGrouping(): void
+	{
+		$this->expectException( \DomainException::class );
+		$this->table->getAll( [], [], [], ['topic'], ['topic, (SELECT SLEEP(1))'] );
+	}
+
+	public function testGetAllExceptionOnInjectedHaving(): void
+	{
+		$this->expectException( \InvalidArgumentException::class );
+		$this->table->getAll( [], [], [], ['topic'], ['topic'], ['COUNT(*) > 0 OR SLEEP(1)'] );
+	}
+
 	/**
 	 *	NULL values of array rows are values, not missing fields (did throw RangeException before).
 	 *	@access		public
@@ -1186,6 +1269,191 @@ class TableTest extends TestCase
 	{
 		$this->expectException( \DomainException::class );
 		$this->table->removeByIndex( 'label', 'x' );
+	}
+
+	//  --  FURTHER TESTS OF FIELDS, INDICES, CACHE AND ENTITIES  --  //
+
+	public function testAddStoresNewEntryInCache(): void
+	{
+		$cache	= new MemoryCache( NULL );
+		$this->table->setCache( $cache );
+		$id	= $this->table->add( ['topic' => 'stop', 'label' => 'cached'] );
+		self::assertTrue( $cache->has( 'db.transactions.'.$id ) );
+	}
+
+	public function testConstructWithPrefixAndFocusedId(): void
+	{
+		$table	= new TransactionTable( $this->connection, 'pre_', 1 );
+		self::assertEquals( 'pre_transactions', $table->getName() );
+		self::assertEquals( 'transactions', $table->getName( FALSE ) );
+	}
+
+	public function testEditByIndicesExceptionOnInvalidIndex(): void
+	{
+		$this->expectException( DomainException::class );
+		$this->table->editByIndices( ['label' => 'x'], ['label' => 'y'] );
+	}
+
+	public function testEditInvalidatesCache(): void
+	{
+		$cache	= new MemoryCache( NULL );
+		$this->table->setCache( $cache );
+		self::assertEquals( 'start', $this->table->get( 1 )->topic );
+		self::assertTrue( $cache->has( 'db.transactions.1' ) );
+
+		$this->table->edit( 1, ['topic' => 'changed'] );
+		self::assertFalse( $cache->has( 'db.transactions.1' ) );
+		self::assertEquals( 'changed', $this->table->get( 1 )->topic );
+	}
+
+	public function testGetAllByIndicesExceptionOnEmptyIndices(): void
+	{
+		$this->expectException( RangeException::class );
+		$this->table->getAllByIndices();
+	}
+
+	public function testGetByIndexExceptionOnInvalidIndex(): void
+	{
+		$this->expectException( DomainException::class );
+		$this->table->getByIndex( 'label', 'x' );
+	}
+
+	public function testGetByIndicesExceptionOnEmptyIndices(): void
+	{
+		$this->expectException( RangeException::class );
+		$this->table->getByIndices( [] );
+	}
+
+	public function testGetColumnsOfAllByConditionsWithArrayFetchMode(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		$result	= $this->table->getColumnsOfAllByConditions( ['id', 'topic'], ['id' => 1] );
+		self::assertSame( [['id' => 1, 'topic' => 'start']], $result );
+	}
+
+	public function testGetColumnsOfAllByConditionsWithWildcardExpandsToAllColumns(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		$result	= $this->table->getColumnsOfAllByConditions( ['*'], ['id' => 1] );
+		self::assertSame( ['id', 'topic', 'label', 'timestamp'], array_keys( $result[0] ) );
+	}
+
+	public function testGetDistinct(): void
+	{
+		$this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		$this->table->add( ['topic' => 'stop', 'label' => 'label2'] );
+
+		$result	= $this->table->getDistinct( 'topic', [], ['topic' => 'ASC'] );
+		self::assertSame( ['start', 'stop'], $result );
+		self::assertSame( ['stop'], $this->table->getDistinct( 'topic', ['id' => '> 1'] ) );
+	}
+
+	/**
+	 *	getFieldFromResult() and getFieldsFromResult() reject fields missing in the result set.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function testGetFieldsFromResultExceptionOnFieldMissingInResult(): void
+	{
+		$getField	= new \ReflectionMethod( $this->table, 'getFieldFromResult' );
+		try{
+			$getField->invoke( $this->table, (object) ['id' => 1], 'topic' );
+			self::fail( 'Expected RangeException for object result' );
+		}
+		catch( RangeException ){}
+		try{
+			$getField->invoke( $this->table, ['id' => 1], 'topic' );
+			self::fail( 'Expected RangeException for array result' );
+		}
+		catch( RangeException ){}
+
+		$getFields	= new \ReflectionMethod( $this->table, 'getFieldsFromResult' );
+		try{
+			$getFields->invoke( $this->table, (object) ['id' => 1], ['id', 'topic'] );
+			self::fail( 'Expected RangeException for object result' );
+		}
+		catch( RangeException ){}
+		try{
+			$getFields->invoke( $this->table, ['id' => 1], ['id', 'topic'] );
+			self::fail( 'Expected RangeException for array result' );
+		}
+		catch( RangeException ){}
+		try{
+			$getFields->invoke( $this->table, ['id' => 1], ['id', 'invalid'] );
+			self::fail( 'Expected DomainException for invalid column' );
+		}
+		catch( DomainException ){}
+		self::assertSame( [], $getFields->invoke( $this->table, NULL, ['id', 'topic'], FALSE ) );
+	}
+
+	public function testGetFieldWithArrayFetchMode(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_ASSOC );
+		self::assertEquals( 'start', $this->table->getField( 1, 'topic' ) );
+	}
+
+	public function testGetFirstFieldByIndexExceptionOnEmptyField(): void
+	{
+		$this->expectException( RangeException::class );
+		$this->table->getFirstFieldByIndex( ' ', 'topic', 'stop' );
+	}
+
+	public function testGetFirstFieldByIndicesExceptionOnInvalidField(): void
+	{
+		$this->expectException( DomainException::class );
+		$this->table->getFirstFieldByIndices( 'invalid', ['topic' => 'stop'] );
+	}
+
+	public function testGetSetFetchMode(): void
+	{
+		self::assertSame( PDO::FETCH_OBJ, $this->table->getFetchMode() );
+		self::assertSame( $this->table, $this->table->setFetchMode( PDO::FETCH_ASSOC ) );
+		self::assertSame( PDO::FETCH_ASSOC, $this->table->getFetchMode() );
+		self::assertIsArray( $this->table->get( 1 ) );
+	}
+
+	public function testHasUsesCache(): void
+	{
+		$this->table->setCache( new MemoryCache( NULL ) );
+		$this->table->get( 1 );
+
+		//  remove bypassing the table, so only the cache knows the entry
+		$this->connection->query( "DELETE FROM transactions WHERE id=1" );
+		self::assertTrue( $this->table->has( 1 ) );
+	}
+
+	public function testRemoveByIndexInvalidatesCache(): void
+	{
+		$cache	= new MemoryCache( NULL );
+		$this->table->setCache( $cache );
+		$id	= $this->table->add( ['topic' => 'stop', 'label' => 'label1'] );
+		self::assertTrue( $cache->has( 'db.transactions.'.$id ) );
+		$this->table->removeByIndex( 'topic', 'stop' );
+		self::assertFalse( $cache->has( 'db.transactions.'.$id ) );
+	}
+
+	public function testRemoveByIndicesExceptionOnEmptyIndices(): void
+	{
+		$this->expectException( RangeException::class );
+		$this->table->removeByIndices( [] );
+	}
+
+	public function testSave(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_CLASS );
+		$this->table->setFetchEntityClass( TransactionEntity::class );
+		/** @var TransactionEntity $entity */
+		$entity	= $this->table->get( 1 );
+		$entity->label	= 'saved';
+		self::assertTrue( $this->table->save( $entity ) );
+		self::assertEquals( 'saved', $this->table->get( 1 )->label );
+	}
+
+	public function testSetFetchEntityClass(): void
+	{
+		$this->table->setFetchMode( PDO::FETCH_CLASS );
+		self::assertSame( $this->table, $this->table->setFetchEntityClass( TransactionEntity::class ) );
+		self::assertInstanceOf( TransactionEntity::class, $this->table->get( 1 ) );
 	}
 
 	/**

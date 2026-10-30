@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- *	...
+ *	MySQL options file with connection credentials, for command line clients.
  *
  *	Copyright (c) 2014-2026 Christian Würker (ceusmedia.de)
  *
@@ -32,7 +32,7 @@ use CeusMedia\Database\PDO\DataSourceName as PdoDataSourceName;
 use RuntimeException;
 
 /**
- *	...
+ *	MySQL options file with connection credentials, for command line clients.
  *
  *	@category		Tool
  *	@package		CeusMedia_Database_Utility_MySQL

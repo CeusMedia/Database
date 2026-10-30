@@ -14,6 +14,9 @@ use PDOStatement;
 use RangeException;
 use RuntimeException;
 
+/**
+ *	Base of table reader and writer: columns, indices, focus and rendering of conditions.
+ */
 abstract class Abstraction
 {
 	/**	@var	string[]	ALLOWED_CONDITION_FUNCTIONS		Whitelisted SQL functions allowed as function condition keys */
@@ -21,6 +24,15 @@ abstract class Abstraction
 
 	/**	@var	string		PATTERN_CONDITION_FUNCTION			Pattern of a function condition key, eg. "COUNT(*)" or "SUM(amount)" */
 	protected const PATTERN_CONDITION_FUNCTION		= '/^([a-zA-Z]+)\(\s*(\*|[a-zA-Z0-9_]+)\s*\)$/';
+
+	/**	@var	string		PATTERN_FIELD_ALIAS					Pattern of an aliased field, eg. "label AS title" or "COUNT(*) AS number" */
+	protected const PATTERN_FIELD_ALIAS				= '/^(.+?)\s+AS\s+(.+)$/i';
+
+	/**	@var	string		PATTERN_ALIAS						Pattern of a valid alias name */
+	protected const PATTERN_ALIAS					= '/^[a-zA-Z_][a-zA-Z0-9_]*$/';
+
+	/**	@var	string		PATTERN_HAVING_STRING				Pattern of a having condition given as string, eg. "COUNT(*) > 5" */
+	protected const PATTERN_HAVING_STRING			= '/^\s*([a-zA-Z]+\(\s*(?:\*|[a-zA-Z0-9_]+)\s*\)|[a-zA-Z0-9_]+)\s*(<=|>=|!=|<>|=|<|>)\s*(.+?)\s*$/';
 
 	/**	@var	int							$defaultFetchMode	Default fetch mode, can be set statically */
 	public static int $defaultFetchMode		= PDO::FETCH_ASSOC;
@@ -207,7 +219,8 @@ abstract class Abstraction
 	}
 
 	/**
-	 *	...
+	 *	Returns the latest statement executed, queried or prepared by the connection.
+	 *	For statements prepared with placeholders, these are not replaced by bound values.
 	 *	@access		public
 	 *	@return		?string
 	 */
@@ -422,6 +435,8 @@ abstract class Abstraction
 	 *	@param		bool		$useIndices			Flag: use focused indices
 	 *	@param		bool		$allowFunctions		Flag: use focused indices
 	 *	@return		string
+	 *	@throws		DomainException		if a condition key is neither a readable column nor a function condition
+	 *	@throws		DomainException		if a function condition is given but functions are not allowed
 	 *	@throws		DomainException		if a function condition key names a function or column that is not whitelisted
 	 */
 	protected function getConditionQuery( array $conditions = [], bool $usePrimary = TRUE, bool $useIndices = TRUE, bool $allowFunctions = FALSE ): string
@@ -438,11 +453,18 @@ abstract class Abstraction
 			}
 		}
 		$functionConditions = [];
-		//  iterate remaining conditions
-		foreach( $conditions as $key => $value )
+		//  iterate remaining conditions, which are not readable columns
+		foreach( $conditions as $key => $value ){
 			//  column key looks like a whitelisted aggregate function call, eg. "COUNT(*)"
-			if( 1 === preg_match( self::PATTERN_CONDITION_FUNCTION, $key ) )
+			if( 1 === preg_match( self::PATTERN_CONDITION_FUNCTION, (string) $key ) ){
+				if( !$allowFunctions )
+					throw new DomainException( 'Function condition "'.$key.'" is not allowed here' );
 				$functionConditions[$key]	= $value;
+				continue;
+			}
+			//  unknown keys are not ignored, since a mistyped column would remove a filter silently
+			throw new DomainException( 'Condition key "'.$key.'" is not a column of table "'.$this->tableName.'"' );
+		}
 
 		//  if using primary key & is focused primary
 		if( $usePrimary && $this->isFocused( $this->primaryKey ) ){
@@ -488,16 +510,82 @@ abstract class Abstraction
 
 	/**
 	 *	Returns a list of comma separated and masked columns.
+	 *	Columns can be "*", readable columns or aliased columns or whitelisted functions, eg. "COUNT(*) AS number".
 	 *	@access		protected
 	 *	@param		array		$columns		List of columns to mask and enumerate
 	 *	@return		string
+	 *	@throws		DomainException			if a column is neither "*", a readable column nor a valid aliased expression
 	 */
 	protected function getColumnEnumeration( array $columns ): string
 	{
 		$list	= [];
 		foreach( $columns as $column )
-			$list[]	= in_array( $column, $this->columns, TRUE ) ? '`'.$column.'`' : $column;
+			$list[]	= $this->secureField( (string) $column );
 		return implode( ', ', $list );
+	}
+
+	/**
+	 *	Returns aliases defined by aliased fields, eg. "number" of "COUNT(*) AS number".
+	 *	@access		protected
+	 *	@param		array		$columns		List of (validated) fields
+	 *	@return		string[]
+	 */
+	protected function getFieldAliases( array $columns ): array
+	{
+		$aliases	= [];
+		foreach( $columns as $column )
+			if( 1 === preg_match( self::PATTERN_FIELD_ALIAS, trim( (string) $column ), $matches ) )
+				$aliases[]	= trim( $matches[2] );
+		return $aliases;
+	}
+
+	/**
+	 *	Builds and returns GROUP BY statement component.
+	 *	Groupings must be readable columns or aliases of selected fields.
+	 *	@access		protected
+	 *	@param		array		$groupings		List of columns or aliases to group by
+	 *	@param		string[]	$aliases		List of aliases of selected fields
+	 *	@return		string
+	 *	@throws		DomainException			if a grouping is neither a readable column nor an alias of a selected field
+	 */
+	protected function getGroupingCondition( array $groupings, array $aliases = [] ): string
+	{
+		if( 0 === count( $groupings ) )
+			return '';
+		$list	= [];
+		foreach( $groupings as $grouping )
+			$list[]	= $this->secureReference( is_string( $grouping ) ? trim( $grouping ) : '', $aliases, 'Grouping' );
+		return ' GROUP BY '.implode( ', ', $list );
+	}
+
+	/**
+	 *	Builds and returns HAVING statement component.
+	 *	Having conditions are given as map of keys and condition values, like conditions:
+	 *	keys are whitelisted functions (eg. "COUNT(*)"), readable columns or aliases of selected fields,
+	 *	values use the condition syntax (eg. "> 5", lists of values combined by OR).
+	 *	For compatibility, a simple condition can also be given as string, eg. "COUNT(*) > 5",
+	 *	having a number or a quoted string as value.
+	 *	@access		protected
+	 *	@param		array		$having			Map of having conditions or list of simple having condition strings
+	 *	@param		string[]	$aliases		List of aliases of selected fields
+	 *	@return		string
+	 *	@throws		DomainException				if a key is neither a whitelisted function, a readable column nor an alias of a selected field
+	 *	@throws		InvalidArgumentException	if a having condition string is not a simple condition
+	 */
+	protected function getHavingCondition( array $having, array $aliases = [] ): string
+	{
+		if( 0 === count( $having ) )
+			return '';
+		$conditions	= [];
+		foreach( $having as $key => $value ){
+			if( is_int( $key ) ){
+				if( !is_string( $value ) || 1 !== preg_match( self::PATTERN_HAVING_STRING, $value, $matches ) )
+					throw new InvalidArgumentException( 'Invalid having condition "'.( is_scalar( $value ) ? $value : get_debug_type( $value ) ).'", use a map like [\'COUNT(*)\' => \'> 5\']' );
+				[$key, $value]	= [$matches[1], $this->convertHavingStringValue( $matches[2], $matches[3] )];
+			}
+			$conditions[]	= $this->realizeConditionQueryParts( $this->secureReference( trim( $key ), $aliases, 'Having condition' ), $value, FALSE );
+		}
+		return ' HAVING '.implode( ' AND ', $conditions );
 	}
 
 
@@ -694,6 +782,79 @@ abstract class Abstraction
 	}
 
 	/**
+	 *	Validates a field to select and returns it masked, safe to embed in a query.
+	 *	Fields can be "*", readable columns or aliased readable columns or whitelisted functions,
+	 *	eg. "label AS title" or "COUNT(*) AS number".
+	 *	@access		protected
+	 *	@param		string		$field			Field to validate
+	 *	@return		string		Masked field, eg. "`label` AS `title`" or "COUNT(*) AS `number`"
+	 *	@throws		DomainException				if field is neither "*", a readable column nor a valid aliased expression
+	 */
+	protected function secureField( string $field ): string
+	{
+		$field				= trim( $field );
+		$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
+		if( '*' === $field )
+			return $field;
+		if( in_array( $field, $allReadableColumns, TRUE ) )
+			return '`'.$field.'`';
+		if( 1 === preg_match( self::PATTERN_FIELD_ALIAS, $field, $matches ) ){
+			$expression	= trim( $matches[1] );
+			$alias		= trim( $matches[2] );
+			if( 1 !== preg_match( self::PATTERN_ALIAS, $alias ) )
+				throw new DomainException( 'Alias "'.$alias.'" of field "'.$field.'" is not a valid alias name' );
+			if( in_array( $expression, $allReadableColumns, TRUE ) )
+				return '`'.$expression.'` AS `'.$alias.'`';
+			if( 1 === preg_match( self::PATTERN_CONDITION_FUNCTION, $expression ) )
+				return $this->secureFunctionCondition( $expression, $allReadableColumns ).' AS `'.$alias.'`';
+		}
+		throw new DomainException( 'Column key "'.$field.'" is not a valid column of table "'.$this->tableName.'"' );
+	}
+
+	/**
+	 *	Validates a reference used by GROUP BY or HAVING and returns it masked, safe to embed in a query.
+	 *	References can be whitelisted functions (eg. "COUNT(*)"), readable columns or aliases of selected fields.
+	 *	@access		protected
+	 *	@param		string		$reference		Reference to validate
+	 *	@param		string[]	$aliases		List of aliases of selected fields
+	 *	@param		string		$label			Label of reference type for exception message
+	 *	@return		string		Masked reference, eg. "`label`" or "SUM(`amount`)"
+	 *	@throws		DomainException				if reference is neither a whitelisted function, a readable column nor an alias
+	 */
+	protected function secureReference( string $reference, array $aliases, string $label ): string
+	{
+		$allReadableColumns	= array_unique( array_merge( $this->columns, $this->generated ) );
+		if( 1 === preg_match( self::PATTERN_CONDITION_FUNCTION, $reference ) )
+			return $this->secureFunctionCondition( $reference, $allReadableColumns );
+		if( in_array( $reference, $allReadableColumns, TRUE ) || in_array( $reference, $aliases, TRUE ) )
+			return '`'.$reference.'`';
+		throw new DomainException( $label.' "'.$reference.'" is neither a column of table "'.$this->tableName.'" nor an alias of a selected field' );
+	}
+
+	/**
+	 *	Converts operator and value of a having condition string (eg. "COUNT(*) > 5") into a condition value (eg. "> 5").
+	 *	@access		protected
+	 *	@param		string		$operator		Operator, one of <=, >=, !=, <>, =, <, >
+	 *	@param		string		$value			Value, a number or a quoted string
+	 *	@return		string|int|float			Condition value
+	 *	@throws		InvalidArgumentException	if value is neither a number nor a quoted string
+	 */
+	protected function convertHavingStringValue( string $operator, string $value ): string|int|float
+	{
+		if( 1 === preg_match( '/^-?\d+$/', $value ) )
+			$value	= (int) $value;
+		else if( 1 === preg_match( '/^-?\d*\.\d+$/', $value ) )
+			$value	= (float) $value;
+		else if( 1 === preg_match( '/^\'([^\'\\\\]*)\'$|^"([^"\\\\]*)"$/', $value, $matches ) )
+			$value	= $matches[2] ?? $matches[1];
+		else
+			throw new InvalidArgumentException( 'Value "'.$value.'" of having condition must be a number or a quoted string, use a map like [\'COUNT(*)\' => \'> 5\']' );
+		if( '=' === $operator )
+			return $value;
+		return ( '<>' === $operator ? '!=' : $operator ).' '.$value;
+	}
+
+	/**
 	 *	Validates a function condition key (eg. "COUNT(*)", "SUM(amount)") against a whitelist
 	 *	of allowed functions and a validated column (or "*"), and returns it rebuilt with a
 	 *	masked column name, safe to embed in a query.
@@ -745,9 +906,8 @@ abstract class Abstraction
 		foreach( $columns as $column ){
 			if( '*' === $column || in_array( $column, $allReadableColumns, TRUE ) )
 				continue;
-			if( 1 === preg_match( '/ AS /i', $column ) )
-				continue;
-			throw new DomainException( 'Column key "'.$column.'" is not a valid column of table "'.$this->tableName.'"' );
+			//  aliased column or function, throws exception if not valid
+			$this->secureField( (string) $column );
 		}
 
 		//  FETCH_INTO (9) has all bits of FETCH_CLASS (8), so it must be excluded explicitly

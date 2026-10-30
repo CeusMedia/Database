@@ -108,10 +108,25 @@ class ConditionTest extends TestCase
 		self::assertSame( 0, $this->reader->count( ['label' => "x' OR '1'='1"] ) );
 	}
 
-	public function testUnknownConditionKeysAreIgnored(): void
+	public function testUnknownConditionKeyException(): void
 	{
-		self::assertSame( '', $this->getConditionQuery( ['not_a_column' => 1] ) );
-		self::assertSame( '', $this->getConditionQuery( ['COUNT(*)' => 1] ), 'function conditions only if allowed' );
+		$this->expectException( DomainException::class );
+		$this->expectExceptionMessage( 'Condition key "not_a_column" is not a column of table "transactions"' );
+		$this->getConditionQuery( ['not_a_column' => 1] );
+	}
+
+	public function testUnknownConditionKeyBesideValidColumnException(): void
+	{
+		//  a mistyped column must not remove a filter silently, so all entries would be found
+		$this->expectException( DomainException::class );
+		$this->reader->find( [], ['topic' => 'beta', 'labl' => 'banana'] );
+	}
+
+	public function testFunctionConditionExceptionIfNotAllowed(): void
+	{
+		$this->expectException( DomainException::class );
+		$this->expectExceptionMessage( 'Function condition "COUNT(*)" is not allowed here' );
+		$this->getConditionQuery( ['COUNT(*)' => 1] );
 	}
 
 	public function testFunctionConditions(): void
@@ -206,6 +221,148 @@ class ConditionTest extends TestCase
 		$this->expectException( \RuntimeException::class );
 		$this->expectExceptionMessage( 'Encoding value as JSON failed' );
 		$method->invoke( $this->reader, ['invalid' => "\xB1\x31"] );
+	}
+
+	public function testSecureField(): void
+	{
+		$method	= new ReflectionMethod( $this->reader, 'secureField' );
+		self::assertSame( '*', $method->invoke( $this->reader, '*' ) );
+		self::assertSame( '`label`', $method->invoke( $this->reader, ' label ' ) );
+		self::assertSame( '`label` AS `title`', $method->invoke( $this->reader, 'label AS title' ) );
+		self::assertSame( '`label` AS `title`', $method->invoke( $this->reader, 'label as  title' ), 'case insensitive, whitespace' );
+		self::assertSame( 'COUNT(*) AS `number`', $method->invoke( $this->reader, 'COUNT(*) AS number' ) );
+		self::assertSame( 'MAX(`id`) AS `last`', $method->invoke( $this->reader, 'max( id ) AS last' ) );
+	}
+
+	public function testFindWithAggregatedFieldsAndGrouping(): void
+	{
+		$result	= $this->reader->find( ['topic', 'COUNT(*) AS number'], [], ['topic' => 'ASC'], [], ['topic'] );
+		self::assertSame( [
+			['topic' => 'alpha', 'number' => 1],
+			['topic' => 'beta', 'number' => 2],
+			['topic' => 'gamma', 'number' => 1],
+			['topic' => 'start', 'number' => 1],
+		], $result );
+	}
+
+	/**
+	 *	@return		array<string,array{string}>
+	 */
+	public static function provideInvalidFields(): array
+	{
+		return [
+			'subquery as alias'			=> ['(SELECT USER()) AS who'],
+			'expression as alias'		=> ['id + 1 AS next'],
+			'not allowed function'		=> ['SLEEP(id) AS x'],
+			'function of unknown column'	=> ['MAX(password) AS x'],
+			'invalid alias'				=> ['label AS `x`'],
+			'alias with space'			=> ['label AS a b'],
+			'unknown column'			=> ['password'],
+			'wildcard as alias'			=> ['* AS all'],
+		];
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'provideInvalidFields' )]
+	public function testFindExceptionOnInvalidField( string $field ): void
+	{
+		$this->expectException( DomainException::class );
+		$this->reader->find( ['id', $field] );
+	}
+
+	public function testGetExceptionOnInvalidField(): void
+	{
+		$this->reader->focusPrimary( 1 );
+		$this->expectException( DomainException::class );
+		$this->reader->get( TRUE, [], [], ['id', '(SELECT USER()) AS who'] );
+	}
+
+	public function testGroupings(): void
+	{
+		$method	= new ReflectionMethod( $this->reader, 'getGroupingCondition' );
+		self::assertSame( '', $method->invoke( $this->reader, [] ) );
+		self::assertSame( ' GROUP BY `topic`, `label`', $method->invoke( $this->reader, ['topic', ' label '] ) );
+		self::assertSame( ' GROUP BY `title`', $method->invoke( $this->reader, ['title'], ['title'] ), 'alias of selected field' );
+
+		$result	= $this->reader->find( ['topic AS name', 'COUNT(*) AS number'], ['topic' => 'beta'], [], [], ['name'] );
+		self::assertSame( [['name' => 'beta', 'number' => 2]], $result );
+	}
+
+	/**
+	 *	@return		array<string,array{mixed}>
+	 */
+	public static function provideInvalidGroupings(): array
+	{
+		return [
+			'injected statement'	=> ['topic, (SELECT SLEEP(1))'],
+			'unknown column'		=> ['password'],
+			'unselected alias'		=> ['number'],
+			'not a string'			=> [1],
+		];
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'provideInvalidGroupings' )]
+	public function testGroupingExceptionOnInvalidGrouping( mixed $grouping ): void
+	{
+		$this->expectException( DomainException::class );
+		$this->reader->find( ['topic'], [], [], [], [$grouping] );
+	}
+
+	public function testHavingAsMap(): void
+	{
+		$method	= new ReflectionMethod( $this->reader, 'getHavingCondition' );
+		self::assertSame( '', $method->invoke( $this->reader, [] ) );
+		self::assertSame( ' HAVING COUNT(*)  >  \'1\'', $method->invoke( $this->reader, ['COUNT(*)' => '> 1'] ) );
+		self::assertSame( ' HAVING `number` = 2 AND `topic` = \'beta\'', $method->invoke( $this->reader, ['number' => 2, 'topic' => 'beta'], ['number'] ) );
+
+		$fields	= ['topic', 'COUNT(*) AS number'];
+		$expected	= [['topic' => 'beta', 'number' => 2]];
+		self::assertSame( $expected, $this->reader->find( $fields, [], [], [], ['topic'], ['COUNT(*)' => '> 1'] ) );
+		self::assertSame( $expected, $this->reader->find( $fields, [], [], [], ['topic'], ['number' => 2] ), 'alias as key' );
+		self::assertSame( $expected, $this->reader->find( $fields, [], [], [], ['topic'], ['number' => ['> 1', '< 0']] ), 'list of values' );
+	}
+
+	public function testHavingAsString(): void
+	{
+		$method	= new ReflectionMethod( $this->reader, 'getHavingCondition' );
+		self::assertSame( ' HAVING COUNT(*)  >  \'1\'', $method->invoke( $this->reader, ['COUNT(*) > 1'] ) );
+		self::assertSame( ' HAVING COUNT(*) = 2', $method->invoke( $this->reader, ['count( * )=2'] ) );
+		self::assertSame( ' HAVING SUM(`id`)  !=  \'1.5\'', $method->invoke( $this->reader, ['SUM(id) <> 1.5'] ) );
+		self::assertSame( ' HAVING `topic` = \'beta\'', $method->invoke( $this->reader, ["topic = 'beta'"] ) );
+
+		$fields	= ['topic', 'COUNT(*) AS number'];
+		$expected	= [['topic' => 'beta', 'number' => 2]];
+		self::assertSame( $expected, $this->reader->find( $fields, [], [], [], ['topic'], ['COUNT(*) > 1'] ) );
+		self::assertSame( $expected, $this->reader->find( $fields, [], [], [], ['topic'], ['number >= 2', "topic = 'beta'"] ) );
+	}
+
+	/**
+	 *	@return		array<string,array{array<int|string,mixed>, class-string<\Throwable>}>
+	 */
+	public static function provideInvalidHaving(): array
+	{
+		return [
+			'injected OR'				=> [['COUNT(*) > 1 OR 1=1'], InvalidArgumentException::class],
+			'subquery'					=> [['(SELECT 1) > 0'], InvalidArgumentException::class],
+			'unquoted string'			=> [['topic = beta'], InvalidArgumentException::class],
+			'quote in quoted string'	=> [["topic = 'a' OR 'b'"], InvalidArgumentException::class],
+			'not a string'				=> [[1], InvalidArgumentException::class],
+			'number as key'				=> [['1 = 1'], DomainException::class],
+			'unknown column'			=> [['password' => 1], DomainException::class],
+			'not allowed function'		=> [['SLEEP(id)' => 1], DomainException::class],
+			'injected key'				=> [['1=1 OR id' => 1], DomainException::class],
+			'unselected alias'			=> [['number' => 1], DomainException::class],
+		];
+	}
+
+	/**
+	 *	@param		array<int|string,mixed>			$having
+	 *	@param		class-string<\Throwable>		$exception
+	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'provideInvalidHaving' )]
+	public function testHavingExceptionOnInvalidCondition( array $having, string $exception ): void
+	{
+		$this->expectException( $exception );
+		$this->reader->find( ['topic'], [], [], [], ['topic'], $having );
 	}
 
 	//  --  PROTECTED  --  //

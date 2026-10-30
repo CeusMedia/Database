@@ -1,0 +1,157 @@
+site_name: CeusMedia Database
+site_description: PHP database access - an enhanced PDO connection and a table abstraction with entities, caching and a compact condition syntax.
+site_author: Christian Würker
+repo_url: https://github.com/CeusMedia/Database
+repo_name: CeusMedia/Database
+edit_uri: ""
+copyright: Copyright &copy; 2007-2026 Christian Würker &middot; GPL-3.0-or-later
+
+docs_dir: ../doc/Manual
+site_dir: ../doc/Site
+use_directory_urls: false
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/database-outline
+    repo: fontawesome/brands/github
+  favicon: assets/favicon.svg
+  font:
+    text: Fira Sans
+    code: Fira Code
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/theme-light-dark
+        name: "Theme: system – switch to light"
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: "Theme: light – switch to dark"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: "Theme: dark – switch to system"
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+
+extra_css:
+  - assets/extra.css
+
+plugins:
+  - search
+  - offline
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+      extend_pygments_lang:
+        - name: php
+          lang: php
+          options:
+            startinline: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/CeusMedia/Database
+    - icon: simple/packagist
+      link: https://packagist.org/packages/ceus-media/database
+
+nav:
+  - Home: index.md
+  - Guide:
+      - guide/installation.md
+      - guide/quickstart.md
+      - guide/connection.md
+      - guide/transactions.md
+      - guide/logging.md
+      - guide/tables.md
+      - guide/reading.md
+      - guide/conditions.md
+      - guide/writing.md
+      - guide/entities.md
+      - guide/json-datetime.md
+      - guide/caching.md
+      - guide/query-builder.md
+      - guide/recipes.md
+      - guide/utilities.md
+      - guide/development.md
+  - API Reference:
+    # api-nav:start
+    - api/index.md
+    - PDO:
+      - "Connection": api/PDO/Connection.md
+      - "DataSourceName": api/PDO/DataSourceName.md
+      - "Entity": api/PDO/Entity.md
+      - "Pool": api/PDO/Pool.md
+      - "Table": api/PDO/Table.md
+      - "Table\\Abstraction": api/PDO/Table/Abstraction.md
+      - "Table\\Reader": api/PDO/Table/Reader.md
+      - "Table\\Writer": api/PDO/Table/Writer.md
+    - Query builder:
+      - "Client": api/OSQL/Client.md
+      - "Condition": api/OSQL/Condition.md
+      - "Condition\\Group": api/OSQL/Condition/Group.md
+      - "Identifier": api/OSQL/Identifier.md
+      - "Query\\AbstractQuery": api/OSQL/Query/AbstractQuery.md
+      - "Query\\ConditionsTrait": api/OSQL/Query/ConditionsTrait.md
+      - "Query\\Delete": api/OSQL/Query/Delete.md
+      - "Query\\Insert": api/OSQL/Query/Insert.md
+      - "Query\\QueryInterface": api/OSQL/Query/QueryInterface.md
+      - "Query\\Select": api/OSQL/Query/Select.md
+      - "Query\\Update": api/OSQL/Query/Update.md
+      - "Table": api/OSQL/Table.md
+      - "Value": api/OSQL/Value.md
+    - Utilities:
+      - "MySQL\\Export": api/Utility/MySQL/Export.md
+      - "MySQL\\Import": api/Utility/MySQL/Import.md
+      - "MySQL\\OptionsFile": api/Utility/MySQL/OptionsFile.md
+      - "TempFile": api/Utility/TempFile.md
+    - Core:
+      - "SQLSTATE": api/SQLSTATE.md
+    # api-nav:end
+  - Changelog: changelog.md

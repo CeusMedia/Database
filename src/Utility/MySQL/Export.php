@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- *	...
+ *	Exports a MySQL database into a SQL file, using mysqldump.
  *
  *	(Imported from CeusMedia::Hymn)
  *
@@ -42,7 +42,7 @@ use CeusMedia\Database\PDO\DataSourceName as PdoDataSourceName;
 use CeusMedia\Database\Utility\TempFile;
 
 /**
- *	...
+ *	Exports a MySQL database into a SQL file, using mysqldump.
  *
  *	(Imported from CeusMedia::Hymn)
  *
@@ -61,6 +61,7 @@ class Export
 	protected OptionsFile $optionsFile;
 	protected string $prefixPlaceholder		= '<%?prefix%>';
 	protected bool $useTempOptionsFile		= TRUE;
+	protected bool $verbose					= TRUE;
 //	protected CliOutput $output;
 
 	public function __construct( PdoDataSourceName $dsn )
@@ -72,16 +73,6 @@ class Export
 
 		$this->optionsFile	= new OptionsFile( $dsn );
 //		$this->output		= new CliOutput();
-	}
-
-	protected static function validateDsn( PdoDataSourceName $dsn ): void
-	{
-		if( NULL === $dsn->getDatabase() )
-			throw new DataMissingException( 'No database set' );
-		if( NULL === $dsn->getUsername() )
-			throw new DataMissingException( 'No username set' );
-		if( NULL === $dsn->getPassword() )
-			throw new DataMissingException( 'No password set' );
 	}
 
 	public function exportToFile( string $fileName, string $tablePrefix = '', array $tablesToSkip = [] ): object
@@ -127,13 +118,13 @@ class Export
 				join( ' ', $tables ),													//  collected found tables
 			] );
 		}
-		Cli::out( 'Found '.count( $foundTables ).' table(s):' );
+		$this->out( 'Found '.count( $foundTables ).' table(s):' );
 		foreach( $foundTables as $table )
-			Cli::out( '- '.$table );
+			$this->out( '- '.$table );
 		$result	 = $this->execCommandLine( $line, 'mysqldump' );
 
 		$size	= UnitFormater::formatBytes( File::new( $fileName )->getSize() );
-		Cli::out( 'Wrote '.$fileName.' ('.$size.').' );
+		$this->out( 'Wrote '.$fileName.' ('.$size.').' );
 		if( $this->useTempOptionsFile && NULL !== $optionsFile )
 			$optionsFile->remove();
 		return $result;
@@ -154,7 +145,7 @@ class Export
 
 		rename( $fileName, $fileName.'_' );														//  move dump file to source file
 		$fpIn		= fopen( $fileName.'_', "r" );									//  open source file
-		$fpOut		= fopen( $fileName, "a" );												//  prepare empty target file
+		$fpOut		= fopen( $fileName, "w" );												//  prepare empty target file
 		if( FALSE === $fpIn )
 			throw IoException::create( 'Failed to open read stream' )
 				->setResource( $fileName.'_' );
@@ -162,11 +153,8 @@ class Export
 			throw IoException::create( 'Failed to open write stream' )
 				->setResource( $fileName );
 
-		while( !feof( $fpIn ) ){																	//  read input file until end
-			$line	= fgets( $fpIn );																//  read line buffer
-			if( FALSE === $line )
-				throw IoException::create( 'Reading from stream failed' )
-					->setResource( $fileName.'_' );
+		//  read input file line by line until end, fgets() delivers FALSE at end of file
+		while( FALSE !== ( $line = fgets( $fpIn ) ) ){
 			/** @var string $line */
 			$line	= preg_replace_callback( $regExp, $callback, $line );							//  perform replace in buffer
 //			$buffer	= fread( $fpIn, 4096 );															//  read 4K buffer
@@ -175,6 +163,9 @@ class Export
 				throw IoException::create( 'Writing to stream failed' )
 					->setResource( $fileName );
 		}
+		if( !feof( $fpIn ) )
+			throw IoException::create( 'Reading from stream failed' )
+				->setResource( $fileName.'_' );
 		fclose( $fpOut );																			//  close target file
 		fclose( $fpIn );																			//  close source file
 		unlink( $fileName.'_' );															//  remove source file
@@ -192,7 +183,41 @@ class Export
 		return $this;
 	}
 
+	/**
+	 *	Enables or disables progress messages on standard output (or as HTML output in a web context).
+	 *	Enabled by default.
+	 *	@param		bool		$verbose		Flag: print progress messages
+	 *	@return		self
+	 */
+	public function setVerbose( bool $verbose ): self
+	{
+		$this->verbose	= $verbose;
+		return $this;
+	}
+
 	/*  --  PROTECTED  --  */
+
+
+	protected static function validateDsn( PdoDataSourceName $dsn ): void
+	{
+		if( NULL === $dsn->getDatabase() )
+			throw new DataMissingException( 'No database set' );
+		if( NULL === $dsn->getUsername() )
+			throw new DataMissingException( 'No username set' );
+		if( NULL === $dsn->getPassword() )
+			throw new DataMissingException( 'No password set' );
+	}
+
+	/**
+	 *	Prints a progress message, if verbose mode is enabled.
+	 *	@param		string		$message		Message to print
+	 *	@return		void
+	 */
+	protected function out( string $message ): void
+	{
+		if( $this->verbose )
+			Cli::out( $message );
+	}
 
 	protected function _callbackReplacePrefix( array $matches ): string
 	{

@@ -5,6 +5,9 @@ namespace CeusMedia\Database\Utility;
 
 use RuntimeException;
 
+/**
+ *	Temporary file, removed on destruction.
+ */
 class TempFile
 {
 	protected string $prefix;

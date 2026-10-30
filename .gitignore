@@ -1,6 +1,10 @@
 /vendor
 ;/composer.lock
-/doc/
+/doc/*
+!/doc/Manual
+!/doc/Concepts
+/doc/Manual/api
+/util/docs/.venv
 /demo/demo.ini
 /test/config/test.ini
 /.php_cs.cache

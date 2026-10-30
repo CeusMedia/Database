@@ -132,7 +132,8 @@ abstract class Table
 	}
 
 	/**
-	 *	Returns Data of single Line by ID.
+	 *	Adds an entry and returns its ID.
+	 *	Values of NULL are left out, so the column gets its default value - unlike on edit, where NULL is written.
 	 *	@access		public
 	 *	@param		array|object	$data			Map of data (array | anonymous object | dictionary | traversable | iterator | entity object) to store
 	 *	@param		boolean			$stripTags		Flag: strip HTML Tags from values
@@ -220,6 +221,7 @@ abstract class Table
 
 	/**
 	 *	Modifies data of several rows by indices.
+	 *	Removes changed entries from cache, if caching is enabled.
 	 *	@access		public
 	 *	@param		array			$indices		Map of Index Keys and Values
 	 *	@param		array			$data			Data to edit
@@ -229,7 +231,11 @@ abstract class Table
 	public function editByIndices( array $indices, array $data, bool $stripTags = TRUE ): int
 	{
 		$this->checkIndices( $indices, TRUE, TRUE, TRUE );
-		return $this->writer->updateByConditions( $data, $indices, $stripTags );
+		//  read IDs before update, since the update may change the indices themselves
+		$ids	= $this->isCaching() ? $this->reader->getDistinctColumnValues( $this->primaryKey, $indices ) : [];
+		$number	= $this->writer->updateByConditions( $data, $indices, $stripTags );
+		$this->removeFromCache( $ids );
+		return $number;
 	}
 
 	/**
@@ -276,9 +282,9 @@ abstract class Table
 	 *	@param		array			$conditions		Map of Conditions to include in SQL Query
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
 	 *	@param		array			$limits			Map of Limits to include in SQL Query
-	 *	@param		array			$fields			Map of Columns to include in SQL Query
-	 *	@param		array			$groupings		List of columns to group by
-	 *	@param		array			$having			List of conditions to apply after grouping
+	 *	@param		array			$fields			List of columns, aliased columns or functions (eg. "COUNT(*) AS number") to select
+	 *	@param		array			$groupings		List of columns or aliases of selected fields to group by
+	 *	@param		array			$having			Map of conditions to apply after grouping, keys: functions (eg. COUNT(*)), columns or aliases
 	 *	@param		boolean			$strict			Flag: throw exception if result is empty and fields are selected (default: FALSE)
 	 *	@return		array
 	 */
@@ -414,8 +420,8 @@ abstract class Table
 	 *	@param		array			$conditions		Map of conditions to include in SQL query
 	 *	@param		array			$orders			Map of orders to include in SQL query
 	 *	@param		array			$limits			List of offset and limit
-	 *	@param		array			$groupings		List of columns to group by
-	 *	@param		array			$having			List of conditions to apply after grouping
+	 *	@param		array			$groupings		List of columns or aliases of selected fields to group by
+	 *	@param		array			$having			Map of conditions to apply after grouping, keys: functions (eg. COUNT(*)), columns or aliases
 	 *	@return		array<int,string|int|float|bool|array|object|NULL>	List of column values
 	 *	@throws		RangeException					If column is empty
 	 *	@throws		DomainException					If column is not a table column
@@ -439,8 +445,8 @@ abstract class Table
 	 *	@param		array			$conditions		Map of conditions to include in SQL query
 	 *	@param		array			$orders			Map of orders to include in SQL query
 	 *	@param		array			$limits			List of offset and limit
-	 *	@param		array			$groupings		List of columns to group by
-	 *	@param		array			$having			List of conditions to apply after grouping
+	 *	@param		array			$groupings		List of columns or aliases of selected fields to group by
+	 *	@param		array			$having			Map of conditions to apply after grouping, keys: functions (eg. COUNT(*)), columns or aliases
 	 *	@return		array<int,array|object>			List of reduced rows
 	 *	@throws		RangeException					If no column is given or a column is empty
 	 *	@throws		DomainException					If a column is not a table column
@@ -458,12 +464,12 @@ abstract class Table
 	 *	Returns list of distinct column values.
 	 *	@access		public
 	 *	@param		string			$column			Column to get distinct values for
-	 *	@param		array			$conditions		Map of Conditions to include in SQL Query
+	 *	@param		array			$conditions		Map of Conditions to include in SQL Query, default: none
 	 *	@param		array			$orders			Map of Orders to include in SQL Query
 	 *	@param		array			$limits			List of Limits to include in SQL Query
 	 *	@return		array			List of distinct column values
 	 */
-	public function getDistinct( string $column, array $conditions, array $orders = [], array $limits = [] ): array
+	public function getDistinct( string $column, array $conditions = [], array $orders = [], array $limits = [] ): array
 	{
 		return $this->reader->getDistinctColumnValues( $column, $conditions, $orders, $limits );
 	}
@@ -858,14 +864,17 @@ abstract class Table
 
 	/**
 	 *	Removes all data and resets incremental counter.
+	 *	Removes all entries from cache, if caching is enabled - which needs to read all IDs before.
 	 *	Note: This method does not return the number of removed rows.
 	 *	@access		public
-	 *	@return		self
+	 *	@return		static
 	 *	@see		https://dev.mysql.com/doc/refman/4.1/en/truncate.html
 	 */
-	public function truncate(): self
+	public function truncate(): static
 	{
+		$ids	= $this->isCaching() ? $this->reader->getDistinctColumnValues( $this->primaryKey ) : [];
 		$this->writer->truncate();
+		$this->removeFromCache( $ids );
 		return $this;
 	}
 
@@ -1224,12 +1233,31 @@ abstract class Table
 		finally{
 			$this->writer->defocus();
 		}
+		$this->removeFromCache( $ids );
+		return $number;
+	}
+
+	/**
+	 *	Indicates whether entries are cached, ie. the cache is not a no-op adapter.
+	 *	@return		bool
+	 */
+	private function isCaching(): bool
+	{
+		return !$this->cache instanceof NoopCache;
+	}
+
+	/**
+	 *	Removes entries from cache by their IDs, treating an invalid cache key as nothing to remove.
+	 *	@param		array		$ids			List of primary key values
+	 *	@return		void
+	 */
+	private function removeFromCache( array $ids ): void
+	{
 		foreach( $ids as $id ){
 			try{
 				$this->cache->delete( $this->cacheKey.( is_scalar( $id ) ? $id : '' ) );
 			}
 			catch( SimpleCacheInvalidArgumentException ){}
 		}
-		return $number;
 	}
 }

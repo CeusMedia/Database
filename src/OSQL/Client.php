@@ -1,7 +1,8 @@
-<?php /** @noinspection PhpMultipleClassDeclarationsInspection */
+<?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 
 /**
- *	Client wrapper to use OSQL with an existing PDO database connection.
+ *	Client to build and execute OSQL queries on an existing PDO database connection.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -28,18 +29,19 @@
 
 namespace CeusMedia\Database\OSQL;
 
-use CeusMedia\Common\Alg\Time\Clock;
 use CeusMedia\Common\Exception\SQL as SqlException;
-use CeusMedia\Database\OSQL\Query\AbstractQuery;
-use CeusMedia\Database\OSQL\Query\Delete as DeleteQuery;
-use CeusMedia\Database\OSQL\Query\Insert as InsertQuery;
-use CeusMedia\Database\OSQL\Query\Select as SelectQuery;
-use CeusMedia\Database\OSQL\Query\Update as UpdateQuery;
-use InvalidArgumentException;
+use CeusMedia\Database\OSQL\Query\Delete;
+use CeusMedia\Database\OSQL\Query\Insert;
+use CeusMedia\Database\OSQL\Query\QueryInterface;
+use CeusMedia\Database\OSQL\Query\Select;
+use CeusMedia\Database\OSQL\Query\Update;
+use CeusMedia\Database\PDO\Connection;
 use PDO;
+use PDOStatement;
+use Throwable;
 
 /**
- *	Client wrapper to use OSQL with an existing PDO database connection.
+ *	Client to build and execute OSQL queries on an existing PDO database connection.
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -52,138 +54,136 @@ class Client
 	public static int $defaultFetchMode	= PDO::FETCH_OBJ;
 
 	protected PDO $dbc;
+
 	protected int $fetchMode;
 
 	/**
 	 *	Constructor.
-	 *	@access		public
-	 *	@param		PDO		$dbc		Database connection using PDO
-	 *	@return		void
+	 *	@param		PDO		$dbc		Database connection, preferably a PDO\Connection (for logging and nested transactions)
 	 */
 	public function __construct( PDO $dbc )
 	{
-		$this->dbc	= $dbc;
-		$this->setFetchMode( self::$defaultFetchMode );
-	}
-
-	public function select(): SelectQuery
-	{
-		return new SelectQuery( $this );
-	}
-
-	public function update(): UpdateQuery
-	{
-		return new UpdateQuery( $this );
-	}
-
-	public function delete(): DeleteQuery
-	{
-		return new DeleteQuery( $this );
-	}
-
-	public function insert(): InsertQuery
-	{
-		return new InsertQuery( $this );
-	}
-/*
-	public function getStringFromQuery( $query )
-	{
-		$query	= $query->render();
-		return $query[0];
-	}
-*/
-
-	/**
-	 *	Executes query and returns result.
-	 *	@access		public
-	 *	@param		AbstractQuery		$query
-	 *	@return		object|array|int|float|string|bool|null
-	 */
-	public function execute( AbstractQuery $query ): float|object|int|bool|array|string|null
-	{
-		$clock		= new Clock();
-		/** @var object{query: string, parameters: array<string,array<string,string|int|float>>} $queryParts */
-		$queryParts	= $query->render();
-		$query->timing['render']	= $clock->stop( 0, 6 );
-		$query->statement			= $queryParts->query;
-		$query->parameters			= $queryParts->parameters;
-
-		$clock->start();
-		$stmt	= $this->dbc->prepare( $queryParts->query );
-		/**
-		 * @var string $name
-		 * @var array<string,string|int|float> $parameter
-		 */
-		foreach( $queryParts->parameters as $name => $parameter ){
-			$type	= $this->getPdoTypeFromValue( $parameter['value'] );
-			$stmt->bindParam( $name, $parameter['value'], $type );
-		}
-		$query->timing['prepare']	= $clock->stop( 0, 6 );
-
-		$clock->start();
-		$result	= $stmt->execute();
-		if( !$result ){
-			$info	= $stmt->errorInfo();
-			throw new SqlException( $info[2] ?? NULL, $info[1], $info[0] );
-		}
-		$query->timing['execute']	= $clock->stop( 0, 6 );
-		$query->timing['total']		= array_sum( $query->timing );
-
-		if( $query instanceof SelectQuery ){
-			if( str_contains( $queryParts->query, 'SQL_CALC_FOUND_ROWS' ) ){
-				$result	= $this->dbc->query( 'SELECT FOUND_ROWS()' );
-				if( FALSE !== $result ){
-					/** @var array<int> $count */
-					$count	= $result->fetch();
-					$query->foundRows	= 0 !== count( $count ) ? current( $count ) : 0;
-				}
-			}
-			$query->result	= $stmt->fetchAll( $this->fetchMode );
-			return $query->result;
-		}
-		else if( $query instanceof InsertQuery ){
-			$query->nrAffectedRows	= $stmt->rowCount();
-			$id	= $this->dbc->lastInsertId();
-			$query->lastInsertId	= FALSE !== $id ? $id : NULL;
-			return $query->lastInsertId;
-		}
-		else if( $query instanceof UpdateQuery || $query instanceof Query\Delete ){
-			$query->nrAffectedRows	= $stmt->rowCount();
-			return $query->nrAffectedRows;
-		}
-		return TRUE;
+		$this->dbc			= $dbc;
+		$this->fetchMode	= static::$defaultFetchMode;
 	}
 
 	/**
-	 *	@param		mixed		$value
-	 *	@return		int
+	 *	Returns new delete query.
+	 *	@param		Table|string|NULL	$table		Table to delete from
+	 *	@return		Delete
 	 */
-	protected function getPdoTypeFromValue( $value ): int
+	public function delete( Table|string|NULL $table = NULL ): Delete
 	{
-		$typeMap	= [
-			'boolean'	=> PDO::PARAM_BOOL,
-			'integer'	=> PDO::PARAM_INT,
-			'double'	=> PDO::PARAM_STR,
-			'string'	=> PDO::PARAM_STR,
-			'NULL'		=> PDO::PARAM_NULL,
-		];
-		$type		= gettype( $value );
-		if( !array_key_exists( $type, $typeMap ) )
-			throw new InvalidArgumentException( 'Value of type "'.$type.'" is not supported' );
-	 	return $typeMap[$type];
+		$query	= new Delete( $this );
+		return NULL !== $table ? $query->from( $table ) : $query;
+	}
+
+	public function getConnection(): PDO
+	{
+		return $this->dbc;
+	}
+
+	public function getFetchMode(): int
+	{
+		return $this->fetchMode;
 	}
 
 	/**
-	 *	@return		string|FALSE
+	 *	Returns new insert query.
+	 *	@param		Table|string|NULL	$table		Table to insert into
+	 *	@return		Insert
 	 */
-	public function getLastInsertId(): string|FALSE
+	public function insert( Table|string|NULL $table = NULL ): Insert
 	{
-		return $this->dbc->lastInsertId();
+		$query	= new Insert( $this );
+		return NULL !== $table ? $query->into( $table ) : $query;
 	}
 
+	/**
+	 *	Prepares and executes given query and returns statement.
+	 *	Notes statement and parameters on query, also if execution fails.
+	 *	Used by the queries - call execute() or the fetch methods of a query instead.
+	 *	@param		QueryInterface		$query
+	 *	@return		PDOStatement
+	 *	@throws		SqlException		if execution fails and connection does not throw exceptions itself
+	 */
+	public function run( QueryInterface $query ): PDOStatement
+	{
+		$parts	= $query->render();
+		if( property_exists( $query, 'statement' ) && property_exists( $query, 'parameters' ) ){
+			$query->statement	= $parts->query;
+			$query->parameters	= $parts->parameters;
+		}
+		$statement	= $this->dbc->prepare( $parts->query );
+		foreach( array_values( $parts->parameters ) as $index => $value ){
+			$type	= match( TRUE ){
+				is_int( $value )	=> PDO::PARAM_INT,
+				NULL === $value		=> PDO::PARAM_NULL,
+				default				=> PDO::PARAM_STR,
+			};
+			$statement->bindValue( $index + 1, $value, $type );
+		}
+		if( !$statement->execute() ){
+			$info	= $statement->errorInfo();
+			throw new SqlException( (string) ( $info[2] ?? 'Execution failed' ), $info[1] ?? 0, $info[0] ?? NULL );
+		}
+		return $statement;
+	}
+
+	/**
+	 *	Returns new select query.
+	 *	@param		Table|string|NULL	$table		Table to select from, may contain an alias, eg. "orders AS o"
+	 *	@return		Select
+	 */
+	public function select( Table|string|NULL $table = NULL ): Select
+	{
+		$query	= new Select( $this );
+		return NULL !== $table ? $query->from( $table ) : $query;
+	}
+
+	/**
+	 *	Sets default fetch mode for select queries of this client.
+	 *	@param		int		$mode		PDO fetch mode, eg. PDO::FETCH_ASSOC
+	 *	@return		self
+	 */
 	public function setFetchMode( int $mode ): self
 	{
 		$this->fetchMode	= $mode;
 		return $this;
+	}
+
+	/**
+	 *	Runs given callback within a transaction and returns its result.
+	 *	Commits, if the callback returns, and rolls back and rethrows, if it throws.
+	 *	Uses nestable transactions of PDO\Connection, if given.
+	 *	@template	T
+	 *	@param		callable(self): T	$callback		Callback to run, gets this client as argument
+	 *	@return		T
+	 */
+	public function transaction( callable $callback ): mixed
+	{
+		if( $this->dbc instanceof Connection )
+			return $this->dbc->transaction( fn() => $callback( $this ) );
+		$this->dbc->beginTransaction();
+		try{
+			$result	= $callback( $this );
+		}
+		catch( Throwable $e ){
+			$this->dbc->rollBack();
+			throw $e;
+		}
+		$this->dbc->commit();
+		return $result;
+	}
+
+	/**
+	 *	Returns new update query.
+	 *	@param		Table|string|NULL	$table		Table to update
+	 *	@return		Update
+	 */
+	public function update( Table|string|NULL $table = NULL ): Update
+	{
+		$query	= new Update( $this );
+		return NULL !== $table ? $query->table( $table ) : $query;
 	}
 }

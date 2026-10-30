@@ -11,7 +11,8 @@
 namespace CeusMedia\DatabaseTest\PDO;
 
 use CeusMedia\Common\Exception\SQL as SqlException;
-use CeusMedia\Database\PDO\Connection\Base;
+use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\DataSourceName;
 use Exception;
 use PDOStatement;
 
@@ -178,7 +179,7 @@ class ConnectionTest extends TestCase
 	{
 		$logFile	= $this->path."statement_log";
 		$this->connection->setStatementLogFile( $logFile );
-		$this->connection->setLogLevel( Base::LOG_LEVEL_ERROR | Base::LOG_LEVEL_STATEMENT );
+		$this->connection->setLogLevel( Connection::LOG_LEVEL_ERROR | Connection::LOG_LEVEL_STATEMENT );
 		try{
 			$this->connection->query( "SELECT none FROM nowhere" );
 		}
@@ -238,6 +239,122 @@ class ConnectionTest extends TestCase
 		self::assertTrue( $this->connection->commit() );
 	}
 
+	public function testTransactionCommitsAndReturnsResult(): void
+	{
+		$result	= $this->connection->transaction( function( Connection $dbc ){
+			$dbc->exec( "INSERT INTO transactions (topic,label) VALUES ('callback','committed')" );
+			return 'done';
+		} );
+		self::assertSame( 'done', $result );
+		self::assertSame( 0, $this->connection->getOpenTransactions() );
+		self::assertSame( 2, $this->countTransactions() );
+	}
+
+	public function testTransactionRollsBackAndRethrows(): void
+	{
+		$exception	= new \DomainException( 'failed in callback' );
+		try{
+			$this->connection->transaction( function( Connection $dbc ) use ( $exception ){
+				$dbc->exec( "INSERT INTO transactions (topic,label) VALUES ('callback','rolled back')" );
+				throw $exception;
+			} );
+			self::fail( 'Expected exception of callback' );
+		}
+		catch( \DomainException $e ){
+			self::assertSame( $exception, $e, 'same exception is rethrown' );
+		}
+		self::assertSame( 0, $this->connection->getOpenTransactions() );
+		self::assertFalse( $this->connection->inTransaction() );
+		self::assertSame( 1, $this->countTransactions() );
+	}
+
+	public function testTransactionNestedWithFailingInnerCallback(): void
+	{
+		try{
+			$this->connection->transaction( function( Connection $dbc ){
+				$dbc->exec( "INSERT INTO transactions (topic,label) VALUES ('outer','rolled back')" );
+				$dbc->transaction( function( Connection $dbc ){
+					throw new \DomainException( 'inner failed' );
+				} );
+			} );
+			self::fail( 'Expected exception of inner callback' );
+		}
+		catch( \DomainException $e ){
+			self::assertSame( 'inner failed', $e->getMessage() );
+		}
+		self::assertSame( 0, $this->connection->getOpenTransactions() );
+		self::assertSame( 1, $this->countTransactions(), 'outer transaction rolled back' );
+	}
+
+	public function testTransactionNestedWithCaughtInnerFailureFailsOnCommit(): void
+	{
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'nested transaction' );
+		try{
+			$this->connection->transaction( function( Connection $dbc ){
+				$dbc->exec( "INSERT INTO transactions (topic,label) VALUES ('outer','rolled back')" );
+				try{
+					$dbc->transaction( fn() => throw new \DomainException( 'inner failed' ) );
+				}
+				catch( \DomainException ){}
+			} );
+		}
+		finally{
+			self::assertSame( 0, $this->connection->getOpenTransactions() );
+			self::assertSame( 1, $this->countTransactions(), 'outer transaction rolled back' );
+		}
+	}
+
+	public function testDestructLogsOpenTransaction(): void
+	{
+		$logFile	= $this->path.'error_destruct_log';
+		@unlink( $logFile );
+		$connection	= new Connection( $this->dsn, $this->username, $this->password );
+		$connection->setErrorLogFile( $logFile );
+		$connection->beginTransaction();
+		$connection->exec( "INSERT INTO transactions (topic,label) VALUES ('open','lost')" );
+		unset( $connection );
+
+		self::assertFileExists( $logFile );
+		self::assertStringContainsString( 'Transaction not closed', (string) file_get_contents( $logFile ) );
+		self::assertSame( 1, $this->countTransactions(), 'open transaction has been rolled back' );
+		@unlink( $logFile );
+	}
+
+	public function testDestructDoesNotLogClosedOrImplicitlyCommittedTransaction(): void
+	{
+		$logFile	= $this->path.'error_destruct_log';
+		@unlink( $logFile );
+
+		$connection	= new Connection( $this->dsn, $this->username, $this->password );
+		$connection->setErrorLogFile( $logFile );
+		$connection->transaction( fn( Connection $dbc ) => $dbc->exec( "INSERT INTO transactions (topic,label) VALUES ('closed','committed')" ) );
+		unset( $connection );
+		self::assertFileDoesNotExist( $logFile, 'closed transaction' );
+
+		$connection	= new Connection( $this->dsn, $this->username, $this->password );
+		$connection->setErrorLogFile( $logFile );
+		$connection->beginTransaction();
+		//  DDL statements commit implicitly, the nesting counter does not notice
+		$connection->exec( "CREATE TABLE IF NOT EXISTS implicit_commit (id INT)" );
+		$connection->exec( "DROP TABLE implicit_commit" );
+		self::assertSame( 1, $connection->getOpenTransactions() );
+		unset( $connection );
+		self::assertFileDoesNotExist( $logFile, 'implicitly committed transaction' );
+	}
+
+	public function testDestructDoesNotLogWithoutErrorLogLevel(): void
+	{
+		$logFile	= $this->path.'error_destruct_log';
+		@unlink( $logFile );
+		$connection	= new Connection( $this->dsn, $this->username, $this->password );
+		$connection->setErrorLogFile( $logFile );
+		$connection->setLogLevel( Connection::LOG_LEVEL_NONE );
+		$connection->beginTransaction();
+		unset( $connection );
+		self::assertFileDoesNotExist( $logFile );
+	}
+
 	public function testExecThrowsSqlExceptionAndLogsError(): void
 	{
 		$logFile	= $this->path.'error_exec_log';
@@ -263,7 +380,7 @@ class ConnectionTest extends TestCase
 		$logFile	= $this->path.'error_none_log';
 		@unlink( $logFile );
 		$this->connection->setErrorLogFile( $logFile );
-		self::assertSame( $this->connection, $this->connection->setLogLevel( Base::LOG_LEVEL_NONE ) );
+		self::assertSame( $this->connection, $this->connection->setLogLevel( Connection::LOG_LEVEL_NONE ) );
 		try{
 			$this->connection->query( "SELECT none FROM nowhere" );
 			self::fail( 'Expected SqlException' );
@@ -286,11 +403,11 @@ class ConnectionTest extends TestCase
 		$this->connection->query( "SELECT 'not logged'" );
 		self::assertFileDoesNotExist( $logFile, 'statements are not logged by default' );
 
-		self::assertSame( $this->connection, $this->connection->setLogLevelForNextStatement( Base::LOG_LEVEL_STATEMENT ) );
+		self::assertSame( $this->connection, $this->connection->setLogLevelForNextStatement( Connection::LOG_LEVEL_STATEMENT ) );
 		$this->connection->query( "SELECT 'logged by query'" );
 		$this->connection->query( "SELECT 'not logged again'" );
 
-		$this->connection->setLogLevelForNextStatement( Base::LOG_LEVEL_STATEMENT );
+		$this->connection->setLogLevelForNextStatement( Connection::LOG_LEVEL_STATEMENT );
 		$this->connection->exec( "SET @x = 'logged by exec'" );
 		$this->connection->exec( "SET @x = 'not logged again'" );
 
@@ -312,7 +429,7 @@ class ConnectionTest extends TestCase
 		@unlink( $logFile );
 		$this->connection->setErrorLogFile( $logFile );
 
-		$this->connection->setLogLevelForNextStatement( Base::LOG_LEVEL_NONE );
+		$this->connection->setLogLevelForNextStatement( Connection::LOG_LEVEL_NONE );
 		try{
 			$this->connection->exec( "DELETE FROM nowhere" );
 		}
@@ -345,6 +462,36 @@ class ConnectionTest extends TestCase
 		self::assertInstanceOf( PDOStatement::class, $result );
 		self::assertSame( ['start'], $result->fetchAll() );
 		self::assertSame( "SELECT topic FROM transactions", $this->connection->lastQuery );
+	}
+
+	public function testConstructWithDataSourceNameObject(): void
+	{
+		$dsn	= DataSourceName::getInstance( 'mysql', $this->database )
+			->setHost( $this->host )
+			->setUsername( $this->username )
+			->setPassword( $this->password );
+		$connection	= new Connection( $dsn );
+		self::assertSame( 'mysql', $connection->getDriver() );
+		self::assertSame( $this->database, $connection->query( 'SELECT DATABASE()' )->fetchColumn() );
+	}
+
+	public function testConstructWithDataSourceNameObjectPrefersGivenCredentials(): void
+	{
+		$dsn	= DataSourceName::getInstance( 'mysql', $this->database )
+			->setHost( $this->host )
+			->setUsername( 'invalid-user-'.uniqid() )
+			->setPassword( 'invalid' );
+		$connection	= new Connection( $dsn, $this->username, $this->password );
+		self::assertSame( $this->database, $connection->query( 'SELECT DATABASE()' )->fetchColumn() );
+	}
+
+	public function testLastQueryIsSetByPrepareAndExec(): void
+	{
+		$this->connection->prepare( "SELECT topic FROM transactions WHERE id = ?" );
+		self::assertSame( "SELECT topic FROM transactions WHERE id = ?", $this->connection->lastQuery );
+
+		$this->connection->exec( "UPDATE transactions SET label = 'x' WHERE id = 0" );
+		self::assertSame( "UPDATE transactions SET label = 'x' WHERE id = 0", $this->connection->lastQuery );
 	}
 
 	public function testGetDriver(): void

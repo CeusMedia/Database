@@ -1,7 +1,8 @@
-<?php /** @noinspection PhpUnused */
+<?php
+/** @noinspection PhpMultipleClassDeclarationsInspection */
 
 /**
- *	...
+ *	Condition of a column (or aggregate function) and a value, as part of OSQL queries.
  *
  *	Copyright (c) 2010-2026 Christian Würker (ceusmedia.de)
  *
@@ -29,10 +30,10 @@
 namespace CeusMedia\Database\OSQL;
 
 use InvalidArgumentException;
-use Traversable;
 
 /**
- *	...
+ *	Condition of a column (or aggregate function) and a value, as part of OSQL queries.
+ *	Create by constructor or by the static factory methods, eg. Condition::gt( 'total', 100 ).
  *	@category		Library
  *	@package		CeusMedia_Database_OSQL
  *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
@@ -42,155 +43,233 @@ use Traversable;
  */
 class Condition
 {
-	public const OP_EQ		= '=';
-	public const OP_GT		= '>';
-	public const OP_GTE		= '>=';
-	public const OP_LT		= '<';
-	public const OP_LTE		= '<=';
-	public const OP_NEQ		= '!=';
-	public const OP_IS		= 'IS';
-	public const OP_ISN		= 'IS NOT';
-	public const OP_LIKE	= 'LIKE';
+	public const OP_EQ				= '=';
+	public const OP_NEQ				= '!=';
+	public const OP_GT				= '>';
+	public const OP_GTE				= '>=';
+	public const OP_LT				= '<';
+	public const OP_LTE				= '<=';
+	public const OP_LIKE			= 'LIKE';
+	public const OP_NOT_LIKE		= 'NOT LIKE';
+	public const OP_IN				= 'IN';
+	public const OP_NOT_IN			= 'NOT IN';
+	public const OP_BETWEEN			= 'BETWEEN';
+	public const OP_NOT_BETWEEN		= 'NOT BETWEEN';
+	public const OP_IS_NULL			= 'IS NULL';
+	public const OP_IS_NOT_NULL		= 'IS NOT NULL';
 
-	/** @var string|NULL $type */
-	protected ?string $type			= NULL;
+	public const OPERATORS			= [
+		self::OP_EQ,
+		self::OP_NEQ,
+		self::OP_GT,
+		self::OP_GTE,
+		self::OP_LT,
+		self::OP_LTE,
+		self::OP_LIKE,
+		self::OP_NOT_LIKE,
+		self::OP_IN,
+		self::OP_NOT_IN,
+		self::OP_BETWEEN,
+		self::OP_NOT_BETWEEN,
+		self::OP_IS_NULL,
+		self::OP_IS_NOT_NULL,
+	];
 
-	/** @var string|NULL $fieldName */
-	protected ?string $fieldName	= NULL;
+	protected string $field;
 
-	/** @var string $operation */
-	protected string $operation		= self::OP_EQ;
+	protected string $operator;
 
-	/** @var mixed|NULL $value */
-	protected $value				= NULL;
+	/** @var string|int|float|array<int,string|int|float|NULL>|NULL */
+	protected string|int|float|array|NULL $value;
 
 	/**
 	 *	Constructor.
-	 *	@access		public
-	 *	@param		string|NULL		$fieldName		Column name
-	 *	@param		mixed|NULL		$value			Value to match
-	 *	@param		string|NULL		$operation		Comparison operation
-	 *	@return		void
+	 *	A list of values turns "=" into "IN" and "!=" into "NOT IN".
+	 *	NULL turns "=" into "IS NULL" and "!=" into "IS NOT NULL".
+	 *	@param		string		$field		Column, qualified column (eg. "o.total") or aggregate function (eg. "COUNT(*)")
+	 *	@param		mixed		$value		Value, list of values for IN and BETWEEN
+	 *	@param		string		$operator	Operator, see constants OP_*, default: "="
+	 *	@throws		InvalidArgumentException	if field, operator or value is not valid
 	 */
-	public function __construct( string $fieldName = NULL, $value = NULL, ?string $operation = NULL )
+	public function __construct( string $field, mixed $value = NULL, string $operator = self::OP_EQ )
 	{
-		if( $fieldName !== NULL )
-			$this->setFieldName( $fieldName );
-		if( $operation !== NULL )
-			$this->setOperation( $operation );
-		if( $value !== NULL )
-			$this->setValue( $value );
+		Identifier::quoteExpression( $field );
+		$operator	= strtoupper( (string) preg_replace( '/\s+/', ' ', trim( $operator ) ) );
+		if( '<>' === $operator )
+			$operator	= self::OP_NEQ;
+		if( !in_array( $operator, self::OPERATORS, TRUE ) )
+			throw new InvalidArgumentException( 'Invalid operator "'.$operator.'"' );
+
+		if( is_array( $value ) && in_array( $operator, [self::OP_EQ, self::OP_NEQ], TRUE ) )
+			$operator	= self::OP_EQ === $operator ? self::OP_IN : self::OP_NOT_IN;
+		else if( NULL === $value && in_array( $operator, [self::OP_EQ, self::OP_NEQ], TRUE ) )
+			$operator	= self::OP_EQ === $operator ? self::OP_IS_NULL : self::OP_IS_NOT_NULL;
+
+		$this->field	= trim( $field );
+		$this->operator	= $operator;
+		$this->value	= self::validateValue( $operator, $value );
+	}
+
+	public static function between( string $field, mixed $from, mixed $to ): self
+	{
+		return new self( $field, [$from, $to], self::OP_BETWEEN );
+	}
+
+	public static function eq( string $field, mixed $value ): self
+	{
+		return new self( $field, $value, self::OP_EQ );
+	}
+
+	public static function gt( string $field, mixed $value ): self
+	{
+		return new self( $field, $value, self::OP_GT );
+	}
+
+	public static function gte( string $field, mixed $value ): self
+	{
+		return new self( $field, $value, self::OP_GTE );
 	}
 
 	/**
-	 *	Gets column name.
-	 *	@access		public
-	 *	@return		string|NULL
+	 *	@param		string			$field
+	 *	@param		array<mixed>	$values
+	 *	@return		self
 	 */
-	public function getFieldName(): ?string
+	public static function in( string $field, array $values ): self
 	{
-		return $this->fieldName;
+		return new self( $field, $values, self::OP_IN );
+	}
+
+	public static function isNotNull( string $field ): self
+	{
+		return new self( $field, NULL, self::OP_IS_NOT_NULL );
+	}
+
+	public static function isNull( string $field ): self
+	{
+		return new self( $field, NULL, self::OP_IS_NULL );
+	}
+
+	public static function like( string $field, string $pattern ): self
+	{
+		return new self( $field, $pattern, self::OP_LIKE );
+	}
+
+	public static function lt( string $field, mixed $value ): self
+	{
+		return new self( $field, $value, self::OP_LT );
+	}
+
+	public static function lte( string $field, mixed $value ): self
+	{
+		return new self( $field, $value, self::OP_LTE );
+	}
+
+	public static function neq( string $field, mixed $value ): self
+	{
+		return new self( $field, $value, self::OP_NEQ );
+	}
+
+	public static function notBetween( string $field, mixed $from, mixed $to ): self
+	{
+		return new self( $field, [$from, $to], self::OP_NOT_BETWEEN );
 	}
 
 	/**
-	 *	Returns comparison operation.
-	 *	@access		public
-	 *	@return		string
+	 *	@param		string			$field
+	 *	@param		array<mixed>	$values
+	 *	@return		self
 	 */
-	public function getOperation(): string
+	public static function notIn( string $field, array $values ): self
 	{
-		return $this->operation;
+		return new self( $field, $values, self::OP_NOT_IN );
+	}
+
+	public static function notLike( string $field, string $pattern ): self
+	{
+		return new self( $field, $pattern, self::OP_NOT_LIKE );
+	}
+
+	public function getField(): string
+	{
+		return $this->field;
+	}
+
+	public function getOperator(): string
+	{
+		return $this->operator;
 	}
 
 	/**
-	 *	Get value to match.
-	 *	@access		public
-	 *	@return		mixed
+	 *	@return		string|int|float|array<int,string|int|float|NULL>|NULL
 	 */
-	public function getValue()
+	public function getValue(): string|int|float|array|NULL
 	{
 		return $this->value;
 	}
 
 	/**
-	 *	Returns rendered SQL condition string and writes to a map of parameters for parameter binding.
-	 *	@access		public
-	 *	@param		array		$parameters		Reference to parameters map
+	 *	Renders condition with placeholders and appends values to given parameter list.
+	 *	@param		array<int,string|int|float|NULL>	$parameters		List of parameters to append values to
 	 *	@return		string
 	 */
-	public function render( array & $parameters ): string
+	public function render( array &$parameters ): string
 	{
-		$counter	= 0;
-
-		do{
-			$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ?? '' ).'_'.$counter;
-			$counter++;
+		$field	= Identifier::quoteExpression( $this->field );
+		switch( $this->operator ){
+			case self::OP_IS_NULL:
+			case self::OP_IS_NOT_NULL:
+				return $field.' '.$this->operator;
+			case self::OP_IN:
+			case self::OP_NOT_IN:
+				/** @var array<int,string|int|float|NULL> $values */
+				$values	= $this->value;
+				if( [] === $values )
+					return self::OP_IN === $this->operator ? '1 = 0' : '1 = 1';
+				foreach( $values as $value )
+					$parameters[]	= $value;
+				return $field.' '.$this->operator.' ('.implode( ', ', array_fill( 0, count( $values ), '?' ) ).')';
+			case self::OP_BETWEEN:
+			case self::OP_NOT_BETWEEN:
+				/** @var array<int,string|int|float|NULL> $values */
+				$values	= $this->value;
+				array_push( $parameters, $values[0], $values[1] );
+				return $field.' '.$this->operator.' ? AND ?';
+			default:
+				/** @var string|int|float $value */
+				$value	= $this->value;
+				$parameters[]	= $value;
+				return $field.' '.$this->operator.' ?';
 		}
-		while( isset( $parameters[$key] ) );
-
-		if( in_array( $this->type, ['array', 'object'], TRUE ) ){
-			$keyList	= [];
-			if( $this->value instanceof Traversable || is_array( $this->value ) ){
-				foreach( $this->value as $value ){
-					$keyList[]	= ':'.$key;
-					$parameters[$key]	= [
-						'type'	=> gettype( $value ),
-						'value'	=> $value
-					];
-					$key	= 'c_'.preg_replace( '/[^a-z\d]/i', '_', $this->fieldName ?? '' ).'_'.$counter;
-					$counter++;
-				}
-			}
-			$condition	= $this->fieldName.' '.$this->operation.' ('.implode( ',', $keyList ).')';
-		}
-		else{
-			$parameters[$key]	= [
-				'type'	=> $this->type,
-				'value'	=> $this->value
-			];
-			$condition	= $this->fieldName.' '.$this->operation.' :'.$key;
-		}
-		return $condition;
 	}
 
 	/**
-	 *	Sets column name.
-	 *	@access		public
-	 *	@param		string		$fieldName		Column name
-	 *	@return		self
+	 *	@param		string		$operator
+	 *	@param		mixed		$value
+	 *	@return		string|int|float|array<int,string|int|float|NULL>|NULL
 	 */
-	public function setFieldName( string $fieldName ): self
+	protected static function validateValue( string $operator, mixed $value ): string|int|float|array|NULL
 	{
-		$this->fieldName		= $fieldName;
-		return $this;
-	}
-
-	/**
-	 *	Sets equality operator for comparison operation.
-	 *	Allowed: = | < | <= | > | >= | != | IS | IS NOT
-	 *	@access		public
-	 *	@param		string		$operation		Operator between column key and value.
-	 *	@return		self
-	 */
-	public function setOperation( string $operation ): self
-	{
-		$this->operation	= $operation;
-		return $this;
-	}
-
-	/**
-	 *	Sets value to match.
-	 *	@access		public
-	 *	@param		mixed		$value			Value to match
-	 *	@return		self
-	 */
-	public function setValue( $value ): self
-	{
-		$type	= gettype( $value );
-		if( in_array( $type, ['object', 'resource', 'resource (closed)'], TRUE ) )
-			throw new InvalidArgumentException( 'Value of type "'.$type.'" is not allowed' );
-		$this->value	= $value;
-		$this->type		= $type;
-		return $this;
+		switch( $operator ){
+			case self::OP_IS_NULL:
+			case self::OP_IS_NOT_NULL:
+				if( NULL !== $value )
+					throw new InvalidArgumentException( 'Operator "'.$operator.'" does not take a value' );
+				return NULL;
+			case self::OP_IN:
+			case self::OP_NOT_IN:
+				if( !is_array( $value ) )
+					throw new InvalidArgumentException( 'Operator "'.$operator.'" needs a list of values' );
+				return array_values( array_map( [Value::class, 'normalize'], $value ) );
+			case self::OP_BETWEEN:
+			case self::OP_NOT_BETWEEN:
+				if( !is_array( $value ) || 2 !== count( $value ) )
+					throw new InvalidArgumentException( 'Operator "'.$operator.'" needs a list of two values' );
+				return array_values( array_map( [Value::class, 'normalize'], $value ) );
+			default:
+				if( is_array( $value ) || NULL === $value )
+					throw new InvalidArgumentException( 'Operator "'.$operator.'" needs a single value, not '.get_debug_type( $value ) );
+				return Value::normalize( $value );
+		}
 	}
 }

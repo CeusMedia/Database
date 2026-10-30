@@ -25,10 +25,475 @@
  *	@copyright		2007-2026 Christian Würker
  *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
  *	@link			https://github.com/CeusMedia/Database
- *	@codeCoverageIgnore
  */
 namespace CeusMedia\Database\PDO;
 
-use CeusMedia\Database\PDO\Connection\Php81;
+use CeusMedia\Common\Exception\SQL as SqlException;
 
-class Connection extends Php81 {}
+use PDO;
+use PDOException;
+use PDOStatement;
+use RuntimeException;
+use Throwable;
+
+/**
+ *	Enhanced PDO connection.
+ *	Raises errors as exceptions, supports nested transactions, logs errors and statements
+ *	and accepts a DSN object.
+ *	@category		Library
+ *	@package		CeusMedia_Database_PDO
+ *	@author			Christian Würker <christian.wuerker@ceusmedia.de>
+ *	@copyright		2007-2026 Christian Würker
+ *	@license		https://www.gnu.org/licenses/gpl-3.0.txt GPL 3
+ *	@link			https://github.com/CeusMedia/Database
+ */
+class Connection extends PDO
+{
+	public const LOG_LEVEL_UNSPECIFIED	= 0;
+	public const LOG_LEVEL_NONE			= 1;
+	public const LOG_LEVEL_ERROR		= 2;
+	public const LOG_LEVEL_STATEMENT	= 4;
+
+	/**	@var	string|NULL					$driver					PDO driver */
+	protected ?string $driver				= NULL;
+
+	/** @var	int							$logLevel				Bitmask of log level(s), default: log errors */
+	protected int $logLevel					= self::LOG_LEVEL_ERROR;
+
+	/** @var	int							$logLevel				Bitmask of log level(s) only for next statement/query */
+	protected int $logLevelForNextStatement	= self::LOG_LEVEL_UNSPECIFIED;
+
+	/**	@var	integer						$numberExecutes			Number of execute calls */
+	public int $numberExecutes				= 0;
+
+	/**	@var	integer						$numberStatements		Number of executed statements */
+	public int $numberStatements			= 0;
+
+	/** @var	?string						$logFileErrors			Path of error log file, eg. logs/db/pdo/error.log */
+	public ?string $logFileErrors			= NULL;
+
+	/** @var	?string						$logFileStatements		Path of statement log file, eg. logs/db/pdo/query.log */
+	public ?string $logFileStatements		= NULL;
+
+	/**	@var	integer						$openTransactions		Number of opened nested transactions */
+	protected int $openTransactions			= 0;
+
+	/** @var	?string						$lastQuery				Latest executed, queried or prepared statement */
+	public ?string $lastQuery				= NULL;
+
+	/** @var	boolean						$innerTransactionFail	Flag: inner (nested) Transaction has failed */
+	protected bool $innerTransactionFail	= FALSE;
+
+	/** @var	string						$errorTemplate			Template for error log */
+	public static string $errorTemplate		= "{time}: PDO:{pdoCode} SQL:{sqlCode} {sqlError} ({statement})\n";
+
+	/** @var	array						$defaultOptions			Map of default options */
+	public static array $defaultOptions		= [
+		PDO::ATTR_ERRMODE   => PDO::ERRMODE_EXCEPTION,
+	];
+
+	/**
+	 *	Constructor, establishes Database Connection using a DSN. Set Error Handling to use Exceptions.
+	 *	A DSN object also provides username and password, if they are not given as arguments.
+	 *	@access		public
+	 *	@param		string|DataSourceName	$dsn			Data Source Name, as string or object
+	 *	@param		?string					$username		Name of Database User
+	 *	@param		?string					$password		Password of Database User
+	 *	@param		array					$driverOptions	Array of Driver Options
+	 *	@return		void
+	 *	@see		https://php.net/manual/en/pdo.drivers.php
+	 */
+	public function __construct( string|DataSourceName $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] )
+	{
+		if( $dsn instanceof DataSourceName ){
+			$username	??= $dsn->getUsername();
+			$password	??= $dsn->getPassword();
+			$dsn		= $dsn->render();
+		}
+		//  extend given options by default options
+		$options	= $driverOptions + self::$defaultOptions;
+		parent::__construct( $dsn, $username, $password, $options );
+		//  note name of used driver
+		/** @var string|NULL $defaultDriver */
+		$defaultDriver	= $this->getAttribute( PDO::ATTR_DRIVER_NAME );
+		if( NULL !== $defaultDriver )
+			$this->driver	= $defaultDriver;
+	}
+
+	/**
+	 *	Destructor, notes a transaction left open in error log file, if configured.
+	 *	PDO rolls back an open transaction on closing the connection, so its changes are lost.
+	 *	Does not throw, since this would hide the reason of the open transaction (mostly an exception)
+	 *	and could not be handled on script shutdown.
+	 *	@access		public
+	 *	@return		void
+	 */
+	public function __destruct()
+	{
+		if( NULL === $this->logFileErrors || 0 === ( $this->logLevel & static::LOG_LEVEL_ERROR ) )
+			return;
+		try{
+			//  ask PDO, since the nesting counter does not notice implicit commits (eg. by TRUNCATE or DDL)
+			if( !$this->inTransaction() )
+				return;
+			$note	= self::$errorTemplate;
+			$note	= str_replace( "{time}", (string) time(), $note );
+			$note	= str_replace( ["{sqlError}", "{message}"], 'Transaction not closed, rolled back on closing connection', $note );
+			$note	= str_replace( ["{sqlCode}", "{pdoCode}"], '', $note );
+			$note	= str_replace( "{statement}", 'open transactions: '.$this->openTransactions, $note );
+			error_log( $note, 3, $this->logFileErrors );
+		}
+		catch( Throwable ){
+			//  never throw from destructor
+		}
+	}
+
+	/**
+	 *	Starts a Transaction.
+	 *	@access		public
+	 *	@return		bool
+	 */
+	public function beginTransaction(): bool
+	{
+		//  increase Transaction Counter
+		$this->openTransactions++;
+		//  no Transaction is open
+		if( 1 === $this->openTransactions )
+			//  begin Transaction
+			parent::beginTransaction();
+		return TRUE;
+	}
+
+	/**
+	 *	Commits a Transaction.
+	 *	@access		public
+	 *	@return		bool
+	 *	@throws		RuntimeException	if commit failed because a nested (inner) transaction has failed
+	 */
+	public function commit(): bool
+	{
+		//  there has been an inner RollBack or no Transaction was opened
+		if( 0 === $this->openTransactions )
+			//  ignore Commit
+			return FALSE;
+		//  commit of an outer Transaction
+		if( 1 === $this->openTransactions ){
+			//  remember about failed inner Transaction
+			if( $this->innerTransactionFail ){
+				//  rollback outer Transaction instead of committing
+				$this->rollBack();
+				//  make the failure visible instead of silently pretending success
+				throw new RuntimeException( 'Commit failed due to a nested transaction having failed' );
+			}
+			//  no failed inner Transaction
+			else
+				//  commit Transaction
+				parent::commit();
+		}
+		//  decrease Transaction Counter
+		$this->openTransactions--;
+		return TRUE;
+	}
+
+	/**
+	 *	Wrapper for PDO::exec to support lazy connection mode.
+	 *	Tries to connect database if not connected yet (lazy mode).
+	 *	@access		public
+	 *	@param		string		$statement		SQL statement to execute
+	 *	@return		integer		Number of affected rows
+	 *	@throws		SqlException	if the statement fails
+	 */
+	public function exec( string $statement ): int
+	{
+		$affectedRows	= 0;
+		$this->logStatement( $statement );
+		$this->lastQuery	= $statement;
+		try{
+			$this->numberExecutes++;
+			$this->numberStatements++;
+			$result	= parent::exec( $statement );
+			if( $result !== FALSE )
+				$affectedRows = $result;
+		}
+		catch( PDOException $e ){
+			//  logs Error and throws SQL Exception
+			$this->logError( $e, $statement );
+		}
+		finally{
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )					//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;					//  reset, even if the statement failed
+		}
+		return $affectedRows;
+	}
+
+	/**
+	 *	Returns PDO driver used for connection, detected only if the DSN was given as object.
+	 *	@access		public
+	 *	@return		string|NULL		Database Driver (dblib|firebird|informix|mysql|mssql|oci|odbc|pgsql|sqlite|sybase)
+	 */
+	public function getDriver(): ?string
+	{
+		return $this->driver;
+	}
+
+	/**
+	 *	Static constructor, establishes Database Connection using a DSN. Set Error Handling to use Exceptions.
+	 *	@access		public
+	 *	@param		string		$dsn			Data Source Name
+	 *	@param		?string		$username		Name of Database User
+	 *	@param		?string		$password		Password of Database User
+	 *	@param		array		$driverOptions	Array of Driver Options
+	 *	@return		self
+	 *	@see		https://php.net/manual/en/pdo.drivers.php
+	 */
+/*	public static function getInstance( string $dsn, ?string $username = NULL, ?string $password = NULL, array $driverOptions = [] ): self
+	{
+		return new static( $dsn, $username, $password, $driverOptions );
+	}*/
+
+	/**
+	 *	@return		int		Number of open nested transactions
+	 */
+	public function getOpenTransactions(): int
+	{
+		return $this->openTransactions;
+	}
+
+	/**
+	 *	Returns list of tables in database.
+	 *	With given prefix the returned list will be filtered.
+	 *	@access		public
+	 *	@param		?string		$prefix		Table prefix to filter by (optional).
+	 *	@return		array
+	 */
+	public function getTables( ?string $prefix = NULL ): array
+	{
+		$hasPrefix	= '' !== ( $prefix ?? '' );
+		$query		= "SHOW TABLES";
+		if( $hasPrefix )
+			$query	.= " LIKE ".$this->quote( $prefix."%" );
+		$result		= parent::query( $query );
+		if( FALSE === $result )
+			return [];
+		return $result->fetchAll( PDO::FETCH_COLUMN );
+	}
+
+	/**
+	 *	Checks whether set log level or log level for next statement is matching given log level.
+	 *	@param		int		$logLevel		Log level to check against, one level is typical, many are possible
+	 *	@return		bool
+	 */
+	protected function hasLogLevel( int $logLevel ): bool
+	{
+		if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement ){
+			if( 0 !== ( $this->logLevelForNextStatement & $logLevel ) )
+				return TRUE;
+		}
+		else if( 0 !== ( $this->logLevel & $logLevel ) )
+			return TRUE;
+		return FALSE;
+	}
+
+	/**
+	 *	Notes Information from PDO Exception in Error Log File, if configured, and always throws SQL Exception.
+	 *	@access		protected
+	 *	@param		PDOException	$exception		PDO Exception thrown by invalid SQL Statement
+	 *	@param		string			$statement		SQL Statement which originated PDO Exception
+	 *	@return		void
+	 *	@throws		SqlException	always, so that a failed statement is never silently swallowed
+	 */
+	protected function logError( PDOException $exception, string $statement ): void
+	{
+		$info		= $exception->errorInfo;
+		$sqlError	= $info[2] ?? '';
+		$sqlCode	= $info[1] ?? NULL;
+		$pdoCode	= $info[0] ?? NULL;
+		$message	= $exception->getMessage();
+
+		if( NULL !== $this->logFileErrors && $this->hasLogLevel( static::LOG_LEVEL_ERROR ) ){
+			/** @var string $statement */
+			$statement	= preg_replace( "@\r?\n@", " ", $statement );
+			/** @var string $statement */
+			$statement	= preg_replace( "@  +@", " ", $statement );
+
+			$note	= self::$errorTemplate;
+			$note	= str_replace( "{time}", (string) time(), $note );
+			$note	= str_replace( "{sqlError}", $sqlError, $note );
+			$note	= str_replace( "{sqlCode}", $sqlCode, $note );
+			$note	= str_replace( "{pdoCode}", $pdoCode, $note );
+			$note	= str_replace( "{message}", $message, $note );
+			$note	= str_replace( "{statement}", $statement, $note );
+
+			error_log( $note, 3, $this->logFileErrors );
+		}
+		throw new SqlException( $message, $sqlCode, $pdoCode );
+	}
+
+	/**
+	 *	Notes a SQL Statement in Statement Log File.
+	 *	@access		protected
+	 *	@param		string		$statement		SQL Statement
+	 *	@return		void
+	 */
+	protected function logStatement( string $statement ): void
+	{
+		if( $this->logFileStatements === NULL )
+			return;
+		if( !$this->hasLogLevel( static::LOG_LEVEL_STATEMENT ) )
+			return;
+
+		$statement	= preg_replace( "@(\r)?\n@", " ", $statement );
+		$message	= time()." ".getenv( 'REMOTE_ADDR' )." ".$statement."\n";
+		error_log( $message, 3, $this->logFileStatements);
+	}
+
+	/**
+	 *	Prepare statement.
+	 *	@access		public
+	 *	@param		string		$query			SQL Statement to prepare
+	 *	@param		?array		$options		Map of additional driver options
+	 *	@return		PDOStatement
+	 */
+	public function prepare( string $query, array $options = NULL ): PDOStatement
+	{
+		$this->numberStatements++;
+		$this->logStatement( $query );
+		$this->lastQuery	= $query;
+		return parent::prepare( $query, $options ?? [] );
+	}
+
+	/**
+	 *	Wrapper for PDO::query to support lazy connection mode.
+	 *	Tries to connect database if not connected yet (lazy mode).
+	 *	@access		public
+	 *	@param		string		$query			SQL statement to query
+	 *	@param		int|NULL	$fetchMode		... (default: 2)
+	 *	@param		mixed		$fetchModeArgs	Arguments of custom class constructor when the mode parameter is set to PDO::FETCH_CLASS.
+	 *	@return		PDOStatement|false			PDO statement containing fetchable results
+	 *	@throws		SqlException				if the query fails
+	 */
+	public function query( string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs ): PDOStatement|false
+	{
+		$this->logStatement( $query );
+		$this->lastQuery	= $query;
+		$this->numberStatements++;
+		try{
+			if( NULL !== $fetchMode )
+				return parent::query( $query, $fetchMode, ...$fetchModeArgs );
+			return parent::query( $query );
+		}
+		catch( PDOException $e ){
+			//  logs Error and throws SQL Exception
+			$this->logError( $e, $query );
+		}
+		finally{
+			if( static::LOG_LEVEL_UNSPECIFIED !== $this->logLevelForNextStatement )					//  one-time log level is set
+				$this->logLevelForNextStatement	= static::LOG_LEVEL_UNSPECIFIED;					//  reset, even if the query failed
+		}
+		return FALSE;
+	}
+
+	/**
+	 *	Rolls back a Transaction.
+	 *	@access		public
+	 *	@return		boolean
+	 */
+	public function rollBack(): bool
+	{
+		//  there has been an inner RollBack or no Transaction was opened
+		if( 0 === $this->openTransactions )
+			//  ignore Commit
+			return FALSE;
+		//  only 1 Transaction open
+		if( 1 === $this->openTransactions ){
+			//  roll back Transaction
+			parent::rollBack();
+			//  forget about failed inner Transactions
+			$this->innerTransactionFail	= FALSE;
+		}
+		else
+			//  note about failed inner Transactions
+			$this->innerTransactionFail	= TRUE;
+		//  decrease Transaction Counter
+		$this->openTransactions--;
+		return TRUE;
+	}
+
+	/**
+	 *	Sets File Name of Error Log.
+	 *	@access		public
+	 *	@param		string		$fileName		File Name of Statement Error File
+	 *	@return		self
+	 */
+	public function setErrorLogFile( string $fileName ): self
+	{
+		$this->logFileErrors	= $fileName;
+		if( 0 !== strlen( trim( $fileName ) ) && !file_exists( dirname( $fileName ) ) )
+			mkdir( dirname( $fileName ), 0700, TRUE );
+		return $this;
+	}
+
+	/**
+	 *	Sets log level.
+	 *	@access		public
+	 *	@param		int		$logLevel		Log level, one or many
+	 *	@return		self
+	 */
+	public function setLogLevel( int $logLevel ): self
+	{
+		$this->logLevel	= $logLevel;
+		return $this;
+	}
+
+	/**
+	 *	Sets log level only for next statement or query.
+	 *	Will be reset after next exec call.
+	 *	@access		public
+	 *	@param		int		$logLevel		Log level, one or many
+	 *	@return		self
+	 */
+	public function setLogLevelForNextStatement( int $logLevel ): self
+	{
+		$this->logLevelForNextStatement	= $logLevel;
+		return $this;
+	}
+
+	/**
+	 *	Sets File Name of Statement Log.
+	 *	@access		public
+	 *	@param		string		$fileName		File Name of Statement Log File
+	 *	@return		self
+	 */
+	public function setStatementLogFile( string $fileName ): self
+	{
+		$this->logFileStatements	= $fileName;
+		if( 0 !== strlen( trim( $fileName ) ) && !file_exists( dirname( $fileName ) ) )
+			mkdir( dirname( $fileName ), 0700, TRUE );
+		return $this;
+	}
+
+	/**
+	 *	Runs given callback within a transaction and returns its result.
+	 *	Commits, if the callback returns, and rolls back and rethrows, if it throws.
+	 *	Can be nested, like transactions themselves: a failing inner callback rolls back the outer transaction, too.
+	 *	@access		public
+	 *	@template	T
+	 *	@param		callable(self): T	$callback		Callback to run, gets this connection as argument
+	 *	@return		T					Result of callback
+	 *	@throws		Throwable			Any exception of callback, after rolling back
+	 *	@throws		RuntimeException	On commit, if a nested transaction has failed (and has been caught by callback)
+	 */
+	public function transaction( callable $callback ): mixed
+	{
+		$this->beginTransaction();
+		try{
+			$result	= $callback( $this );
+		}
+		catch( Throwable $e ){
+			$this->rollBack();
+			throw $e;
+		}
+		$this->commit();
+		return $result;
+	}
+}

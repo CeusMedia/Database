@@ -1,17 +1,19 @@
 <?php /** @noinspection PhpMultipleClassDeclarationsInspection */
 
+/**
+ *	Demo of joins over several tables.
+ *	Needs the tables "library_*" of a radio show library, which are not part of the demo SQL files.
+ */
+
 $pathLib	= dirname( __DIR__, 2 ).'/';
 require_once $pathLib.'vendor/autoload.php';
-require_once $pathLib.'test/PDO/TransactionTable.php';
 
 use CeusMedia\Common\UI\HTML\Exception\Page as HtmlExceptionPage;
 use CeusMedia\Common\UI\DevOutput;
-use CeusMedia\Database\PDO\DataSourceName;
-use CeusMedia\Database\OSQL\Condition;
-use CeusMedia\Database\OSQL\Connection;
 use CeusMedia\Database\OSQL\Client;
-use CeusMedia\Database\OSQL\Table;
-use CeusMedia\Database\OSQL\Query\Select;
+use CeusMedia\Database\PDO\Connection;
+use CeusMedia\Database\PDO\DataSourceName;
+
 new DevOutput;
 
 ( file_exists( $pathLib.'demo/demo.ini' ) ) or die( 'Missing demo ini file (demo/demo.ini)'.PHP_EOL );
@@ -19,49 +21,31 @@ new DevOutput;
 $config		= parse_ini_file( $pathLib.'demo/demo.ini', TRUE );
 $dbConfig	= (object) ( $config['demo'] ?? [] );
 
-$tableGallery	= new Table( 'galleries', 'g' );
-$tableImage		= new Table( 'gallery_images', 'gi' );
-
 try{
+	$dsn	= DataSourceName::getInstance( $dbConfig->driver, $dbConfig->database )
+		->setHost( $dbConfig->host )
+		->setPort( (int) $dbConfig->port )
+		->setUsername( $dbConfig->username )
+		->setPassword( $dbConfig->password );
+	$client	= new Client( new Connection( $dsn ) );
 
-	$dsn		= DataSourceName::renderStatic(
-		$dbConfig->driver,
-		$dbConfig->database,
-		$dbConfig->host,
-		$dbConfig->port,
-		$dbConfig->username,
-		$dbConfig->password
-	);
-
-	$dbc	= new Connection( $dsn, $dbConfig->username, $dbConfig->password );
-	$client	= new Client( $dbc );
-
-	$select	= Select::create( $client )
-		->get( [
-			't.title as trackTitle',
-			't.youtube as trackYoutube',
-			't.bandcamp as trackBandcamp',
+	$select	= $client->select( 'library_tracks AS t' )
+		->fields(
+			't.title AS trackTitle',
+			't.youtube AS trackYoutube',
+			't.bandcamp AS trackBandcamp',
 			'a.title AS artistTitle',
 			'r.title AS releaseTitle',
-			'e.title as episodeTitle',
-	//		'e.episodeId',
-		] )
-		->from( new Table( 'library_tracks', 't' ) )
-		->where( new Condition( 'e.episodeId', 42 ) )
-	//	->leftJoin( new Table( 'library_artists', 'a' ), 't.artistId', 'a.artistId' )
-	//	->leftJoin( new Table( 'library_albums', 'r' ), 'r.albumId', 't.albumId' )
-	//	->leftJoin( new Table( 'library_track_episodes', 'te' ), 'te.trackId', 't.trackId' )
-	//	->leftJoin( new Table( 'library_show_episodes', 'e' ), 'e.episodeId', 'te.episodeId' )
-		->leftJoin( new Table( 'library_artists', 'a' ), 'artistId' )
-		->leftJoin( new Table( 'library_albums', 'r' ), 'albumId' )
-		->leftJoin( new Table( 'library_track_episodes', 'te' ), 'trackId' )
-		->leftJoin( new Table( 'library_show_episodes', 'e' ), 'episodeId' )
-		->limit( 3 )
-		->offset( 6 )
+			'e.title AS episodeTitle'
+		)
+		->leftJoin( 'library_artists AS a', 't.artistId', 'a.artistId' )
+		->leftJoin( 'library_albums AS r', 't.albumId', 'r.albumId' )
+		->leftJoin( 'library_track_episodes AS te', 't.trackId', 'te.trackId' )
+		->leftJoin( 'library_show_episodes AS e', 'te.episodeId', 'e.episodeId' )
+		->where( 'e.episodeId', 42 )
 		->order( 't.trackId', 'DESC' )
-		->countRows( TRUE )
-	;
-
+		->limit( 3 )
+		->offset( 6 );
 
 	$query	= $select->render();
 	remark( 'Query:' );
@@ -69,11 +53,9 @@ try{
 	remark( 'Parameters:' );
 	print_m( $query->parameters );
 	remark( 'Result:' );
-	print_m( $select->execute() );
+	print_m( $select->all() );
 	remark( 'Rows:' );
-	print_m( $select->foundRows );
-	remark( 'Timing:' );
-	print_m( $select->timing );
+	print_m( $select->count() );
 }
 catch( Exception $e ){
 	HtmlExceptionPage::display( $e );
