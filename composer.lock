@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "90d2994dda45753043d030bb387490ed",
+    "content-hash": "18b233062f70dac4e6abceb953c0a1fc",
     "packages": [
         {
             "name": "ceus-media/cache",
@@ -73,16 +73,16 @@
         },
         {
             "name": "ceus-media/common",
-            "version": "1.1.x-dev",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/CeusMedia/Common.git",
-                "reference": "e0617b7af87abebe223be6d5dd8ea81c27aa0643"
+                "reference": "4e06985acfc8dbec4657dbc02cea5665cd9aa0fb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/CeusMedia/Common/zipball/e0617b7af87abebe223be6d5dd8ea81c27aa0643",
-                "reference": "e0617b7af87abebe223be6d5dd8ea81c27aa0643",
+                "url": "https://api.github.com/repos/CeusMedia/Common/zipball/4e06985acfc8dbec4657dbc02cea5665cd9aa0fb",
+                "reference": "4e06985acfc8dbec4657dbc02cea5665cd9aa0fb",
                 "shasum": ""
             },
             "require": {
@@ -93,7 +93,6 @@
                 "ceus-media/database": "0.7.* | 0.7.x-dev",
                 "ceus-media/doc-creator": "1.1.* | 1.1.x-dev",
                 "ceus-media/php-parser": "0.5.* | 0.5.x-dev",
-                "erusev/parsedown": "~1.0",
                 "ext-bz2": "*",
                 "ext-curl": "*",
                 "ext-dom": "*",
@@ -111,11 +110,10 @@
                 "ext-xsl": "*",
                 "ext-zip": "*",
                 "ext-zlib": "*",
-                "michelf/php-markdown": "^2",
-                "php-parallel-lint/php-parallel-lint": "1.4.*",
-                "phpstan/phpstan": "1.*",
-                "phpstan/phpstan-strict-rules": "1.*",
-                "phpunit/phpunit": "12.*",
+                "php-parallel-lint/php-parallel-lint": "1.*",
+                "phpstan/phpstan": "2.*",
+                "phpstan/phpstan-strict-rules": "2.*",
+                "phpunit/phpunit": ">=10",
                 "rector/rector": "*"
             },
             "type": "library",
@@ -139,13 +137,14 @@
                     "role": "Developer"
                 }
             ],
+            "description": "PHP library with 400+ classes for everyday tasks: file system, network and HTTP, CLI, UI and images, XML, data structures and algorithms.",
             "support": {
                 "email": "office@ceusmedia.de",
                 "issues": "https://github.com/CeusMedia/Common/issues",
                 "jabber": "cwuerker@ceusmedia.de",
-                "source": "https://github.com/CeusMedia/Common/tree/1.1.x"
+                "source": "https://github.com/CeusMedia/Common/tree/1.1.0"
             },
-            "time": "2026-10-22T15:12:55+00:00"
+            "time": "2026-11-02T03:30:34+00:00"
         },
         {
             "name": "psr/cache",
@@ -1350,11 +1349,11 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "2.3.1",
+            "version": "2.3.4",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/6155239b488e95d26d1ebd95c6b4bb294d7f09db",
-                "reference": "6155239b488e95d26d1ebd95c6b4bb294d7f09db",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/f20ce6f3c82556cfcfc086b152445a12d1d64fff",
+                "reference": "f20ce6f3c82556cfcfc086b152445a12d1d64fff",
                 "shasum": ""
             },
             "require": {
@@ -1410,20 +1409,20 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-08T21:09:11+00:00"
+            "time": "2026-10-28T22:38:53+00:00"
         },
         {
             "name": "phpstan/phpstan-strict-rules",
-            "version": "2.1.0",
+            "version": "2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpstan-strict-rules.git",
-                "reference": "24ec51589f896f048d0d36de373d993b5cf71786"
+                "reference": "fe4a0afae773eedf178fab17ed9361c0061d2804"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan-strict-rules/zipball/24ec51589f896f048d0d36de373d993b5cf71786",
-                "reference": "24ec51589f896f048d0d36de373d993b5cf71786",
+                "url": "https://api.github.com/repos/phpstan/phpstan-strict-rules/zipball/fe4a0afae773eedf178fab17ed9361c0061d2804",
+                "reference": "fe4a0afae773eedf178fab17ed9361c0061d2804",
                 "shasum": ""
             },
             "require": {
@@ -1460,9 +1459,9 @@
             ],
             "support": {
                 "issues": "https://github.com/phpstan/phpstan-strict-rules/issues",
-                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.1.0"
+                "source": "https://github.com/phpstan/phpstan-strict-rules/tree/2.1.1"
             },
-            "time": "2026-10-01T21:30:37+00:00"
+            "time": "2026-11-02T08:16:15+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -1823,16 +1822,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "12.5.40",
+            "version": "12.5.43",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "76bd3198f16aeb375a4d5f3626471445aed0966e"
+                "reference": "1d5a4a3c98fa1ca3a51402c74b66c2c8df85e0bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/76bd3198f16aeb375a4d5f3626471445aed0966e",
-                "reference": "76bd3198f16aeb375a4d5f3626471445aed0966e",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/1d5a4a3c98fa1ca3a51402c74b66c2c8df85e0bb",
+                "reference": "1d5a4a3c98fa1ca3a51402c74b66c2c8df85e0bb",
                 "shasum": ""
             },
             "require": {
@@ -1901,7 +1900,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.5.40"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/12.5.43"
             },
             "funding": [
                 {
@@ -1909,7 +1908,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2026-10-16T05:55:07+00:00"
+            "time": "2026-11-02T07:10:00+00:00"
         },
         {
             "name": "psr/event-dispatcher",
@@ -1963,21 +1962,21 @@
         },
         {
             "name": "rector/rector",
-            "version": "2.7.0",
+            "version": "2.8.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rectorphp/rector.git",
-                "reference": "4d6a39b7fff302cac0ce90cd959a53c2f6a32776"
+                "reference": "12ddb68d34acb91bcf3d00302bf1c7c1b5840bd6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/rectorphp/rector/zipball/4d6a39b7fff302cac0ce90cd959a53c2f6a32776",
-                "reference": "4d6a39b7fff302cac0ce90cd959a53c2f6a32776",
+                "url": "https://api.github.com/repos/rectorphp/rector/zipball/12ddb68d34acb91bcf3d00302bf1c7c1b5840bd6",
+                "reference": "12ddb68d34acb91bcf3d00302bf1c7c1b5840bd6",
                 "shasum": ""
             },
             "require": {
                 "php": "^7.4|^8.0",
-                "phpstan/phpstan": "^2.3.0"
+                "phpstan/phpstan": "^2.3.4"
             },
             "conflict": {
                 "rector/rector-doctrine": "*",
@@ -2008,7 +2007,7 @@
             ],
             "support": {
                 "issues": "https://github.com/rectorphp/rector/issues",
-                "source": "https://github.com/rectorphp/rector/tree/2.7.0"
+                "source": "https://github.com/rectorphp/rector/tree/2.8.3"
             },
             "funding": [
                 {
@@ -2016,7 +2015,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-06T08:46:45+00:00"
+            "time": "2026-10-29T05:51:41+00:00"
         },
         {
             "name": "sebastian/cli-parser",
@@ -3214,7 +3213,8 @@
     "stability-flags": {
         "ceus-media/common": 20,
         "ceus-media/cache": 20,
-        "ceus-media/doc-creator": 20
+        "ceus-media/doc-creator": 20,
+        "php-parallel-lint/php-parallel-lint": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

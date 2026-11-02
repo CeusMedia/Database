@@ -19,17 +19,17 @@
   "require": {
     "php": "^8.3",
     "ext-pdo": "*",
-    "ceus-media/common": "^1.1 | 1.1.x-dev",
-    "ceus-media/cache": "~0.7 | 0.7.x-dev"
+    "ceus-media/common": "1.1.* | 1.1.x-dev",
+    "ceus-media/cache": "0.7.* | 0.7.x-dev"
   },
   "require-dev": {
     "ext-mysqli": "*",
-    "ceus-media/doc-creator": "~1.1 | 1.1.x-dev",
-    "phpunit/phpunit": "~12",
-    "phpstan/phpstan": "~2",
-    "phpstan/phpstan-strict-rules": "~2",
-    "php-parallel-lint/php-parallel-lint": "~1",
-    "rector/rector": "*"
+    "ceus-media/doc-creator": "1.1.* | 1.1.x-dev",
+    "phpunit/phpunit": "^12",
+    "phpstan/phpstan": "^2",
+    "phpstan/phpstan-strict-rules": "^2",
+    "php-parallel-lint/php-parallel-lint": "1.4.* | 1.4.x-dev",
+    "rector/rector": "^2"
   },
   "autoload": {
     "psr-4": {
